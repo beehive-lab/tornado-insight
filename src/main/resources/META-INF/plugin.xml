@@ -14,8 +14,8 @@
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
+    The demo of plugins.<br>
+    <em>Some demos here to try the idea plugs dev</em>
   ]]></description>
 
     <!-- Product and plugin compatibility requirements.
@@ -38,4 +38,10 @@
 
     </extensions>
 
+    <actions>
+        <action id="com.example.Annotation" class="com.tais.tornado_plugins.GetAnnotation" text="GetAnnotation"
+                description="Print the annoations of Java file">
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+        </action>
+    </actions>
 </idea-plugin>

@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.ir.backend.js.compile
+
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.8.21"
@@ -16,8 +18,11 @@ repositories {
 intellij {
     version.set("2022.2.5")
     type.set("IC") // Target IDE Platform
-
     plugins.set(listOf("com.intellij.java"))
+}
+
+dependencies {
+    implementation("com.alibaba:fastjson:2.0.28")
 }
 
 tasks {
