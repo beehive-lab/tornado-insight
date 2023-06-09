@@ -1,1 +1,1 @@
-# Idea-Plugins-Demo-Code-Inspection
+# tornadovm-intelij-plugin
