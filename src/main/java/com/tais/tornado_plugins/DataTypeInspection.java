@@ -42,9 +42,7 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
                                     reportedVariable.add(var);
                                     holder.registerProblem(
                                             var,
-                                            "TornadoVM currently supports array of primitive Java types" +
-                                                    "as well as some object types such as VectorFloat, VectorFloat4 and " +
-                                                    "all variations with types as well as matrices types.",
+                                            "Unsupported datatype in TornadoVM.",
                                             ProblemHighlightType.ERROR
                                     );
                         }

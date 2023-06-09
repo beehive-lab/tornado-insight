@@ -6,11 +6,12 @@ import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
 
 public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
     public @NotNull PsiElementVisitor buildVisitor(@NotNull final ProblemsHolder holder, boolean isOnTheFly) {
+        HashSet<PsiMethod> reportedMethod = new HashSet<>();
         return new JavaElementVisitor() {
             @Override
             public void visitAnnotation(PsiAnnotation annotation) {
@@ -24,10 +25,12 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                         public void visitCallExpression(PsiCallExpression callExpression) {
                             super.visitCallExpression(callExpression);
                             PsiMethod calledMethod = callExpression.resolveMethod();
-                            if (parent.equals(calledMethod)){
+                            if (parent.equals(calledMethod) && !reportedMethod.contains(parent)){
+                                reportedMethod.add(parent);
                                 holder.registerProblem(
                                         calledMethod,
-                                        "Recursive calls are not allowed in a method with @Reduce or @Parallel parameters",
+                                        "Recursive calls are not allowed in a method with @Reduce " +
+                                                "or @Parallel parameters",
                                         ProblemHighlightType.ERROR);
                             }
                         }
