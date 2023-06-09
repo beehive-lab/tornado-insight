@@ -22,7 +22,7 @@ intellij {
 }
 
 dependencies {
-    implementation("com.alibaba:fastjson:2.0.28")
+    implementation("com.google.code.gson:gson:2.10.1")
 }
 
 tasks {

@@ -26,22 +26,22 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
+
     <localInspection language="JAVA"
-                     bundle="messages.InspectionBundle"
-                     key="inspection.comparing.string.references.display.name"
+                     displayName="Data type check"
                      groupPath="Java"
-                     groupBundle="messages.InspectionsBundle"
-                     groupKey="group.names.probable.bugs"
+                     groupName="Java issues"
+                     shortName="ReduceMethodInspection"
+                     level="ERROR"
                      enabledByDefault="true"
-                     level="WARNING"
-                     implementationClass="com.tais.tornado_plugins.ComparingStringReferencesInspection"/>
-
+                     implementationClass="com.tais.tornado_plugins.DataTypeInspection"/>
+    <localInspection language="JAVA"
+                     displayName="Recursion check"
+                     groupPath="Java"
+                     groupName="Java issues"
+                     shortName="RecursionInspection"
+                     level="ERROR"
+                     enabledByDefault="true"
+                     implementationClass="com.tais.tornado_plugins.RecursionInspection"/>
     </extensions>
-
-    <actions>
-        <action id="com.example.Annotation" class="com.tais.tornado_plugins.GetAnnotation" text="GetAnnotation"
-                description="Print the annoations of Java file">
-            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
-        </action>
-    </actions>
 </idea-plugin>
