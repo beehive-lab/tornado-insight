@@ -32,6 +32,7 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
                         annotation.getQualifiedName().endsWith("Reduce")){
                     PsiMethod parent = PsiTreeUtil.getParentOfType(annotation,PsiMethod.class);
                     assert parent != null;
+                    PsiParameter[] parameterList = parent.getParameterList().getParameters();
                     PsiCodeBlock method_body = parent.getBody();
                     PsiVariable[] variables_list = PsiTreeUtil.collectElementsOfType(method_body, PsiVariable.class).
                             toArray(new PsiVariable[0]);
@@ -47,6 +48,21 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
                                     );
                         }
                     }
+
+                    for (PsiParameter parameter:parameterList){
+                        if (!(parameter.getType() instanceof PsiPrimitiveType) &&
+                            !(supportedType.contains(parameter.getType().toString().replace("PsiType:",""))) &&
+                            !reportedVariable.contains(parameter)){
+                            reportedVariable.add(parameter);
+                            holder.registerProblem(
+                                    parameter,
+                                    "Unsupported datatype in TornadoVM.",
+                                    ProblemHighlightType.ERROR
+                            );
+                        }
+                    }
+
+
                 }
             }
         };
