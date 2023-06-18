@@ -43,5 +43,21 @@
                      level="ERROR"
                      enabledByDefault="true"
                      implementationClass="com.tais.tornado_plugins.RecursionInspection"/>
+    <localInspection language="JAVA"
+                     displayName="Method Throw check"
+                     groupPath="Java"
+                     groupName="Java issues"
+                     shortName="ThrowInspection"
+                     level="ERROR"
+                     enabledByDefault="true"
+                     implementationClass="com.tais.tornado_plugins.ThrowInspection"/>
+    <localInspection language="JAVA"
+                     displayName="System call check"
+                     groupPath="Java"
+                     groupName="Java issues"
+                     shortName="SystemCallInspection"
+                     level="ERROR"
+                     enabledByDefault="true"
+                     implementationClass="com.tais.tornado_plugins.SystemCallInspection"/>
     </extensions>
 </idea-plugin>

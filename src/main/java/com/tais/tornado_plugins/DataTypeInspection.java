@@ -32,37 +32,39 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
                         annotation.getQualifiedName().endsWith("Reduce")){
                     PsiMethod parent = PsiTreeUtil.getParentOfType(annotation,PsiMethod.class);
                     assert parent != null;
-                    PsiParameter[] parameterList = parent.getParameterList().getParameters();
-                    PsiCodeBlock method_body = parent.getBody();
-                    PsiVariable[] variables_list = PsiTreeUtil.collectElementsOfType(method_body, PsiVariable.class).
-                            toArray(new PsiVariable[0]);
-                    for (PsiVariable var: variables_list){
-                        if (!(var.getType() instanceof PsiPrimitiveType) &&
-                                !(supportedType.contains(var.getType().toString().replace("PsiType:",""))) &&
-                                !reportedVariable.contains(var)){
-                                    reportedVariable.add(var);
-                                    holder.registerProblem(
-                                            var,
-                                            "Unsupported datatype in TornadoVM.",
-                                            ProblemHighlightType.ERROR
-                                    );
+                    parent.accept(new JavaRecursiveElementVisitor() {
+                        @Override
+                        public void visitLocalVariable(PsiLocalVariable variable) {
+                            checkVariable(variable.getType(),variable);
                         }
-                    }
 
-                    for (PsiParameter parameter:parameterList){
-                        if (!(parameter.getType() instanceof PsiPrimitiveType) &&
-                            !(supportedType.contains(parameter.getType().toString().replace("PsiType:",""))) &&
-                            !reportedVariable.contains(parameter)){
-                            reportedVariable.add(parameter);
-                            holder.registerProblem(
-                                    parameter,
-                                    "Unsupported datatype in TornadoVM.",
-                                    ProblemHighlightType.ERROR
-                            );
+                        @Override
+                        public void visitField(PsiField field) {
+                            checkVariable(field.getType(),field);
                         }
-                    }
 
+                        @Override
+                        public void visitParameter(PsiParameter parameter) {
+                            checkVariable(parameter.getType(),parameter);
+                        }
 
+                        private void checkVariable(PsiType type, PsiVariable variable){
+                            if (!type.equalsToText("int") && !type.equalsToText("boolean") && !type.equalsToText("double")
+                                    && !type.equalsToText("long") && !type.equalsToText("char") && !type.equalsToText("float")
+                                    && !type.equalsToText("byte") && !type.equalsToText("short")
+                                    && !type.getCanonicalText().startsWith("int[]") && !type.getCanonicalText().startsWith("boolean[]")
+                                    && !type.getCanonicalText().startsWith("double[]") && !type.getCanonicalText().startsWith("long[]")
+                                    && !type.getCanonicalText().startsWith("char[]") && !type.getCanonicalText().startsWith("float[]")
+                                    && !type.getCanonicalText().startsWith("byte[]") && !type.getCanonicalText().startsWith("short[]")
+                                    && !type.equalsToText("Int3") && !(supportedType.contains(type.toString().replace("PsiType:","")))){
+                                holder.registerProblem(
+                                        variable,
+                                        "Unsupported datatype in TornadoVM.",
+                                        ProblemHighlightType.ERROR
+                                );
+                            }
+                        }
+                    });
                 }
             }
         };
