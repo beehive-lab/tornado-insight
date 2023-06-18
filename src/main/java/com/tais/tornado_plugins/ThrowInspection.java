@@ -32,6 +32,17 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool{
                                 reportedStatement.add(statement);
                             }
                         }
+
+                        //Check if the method body have try/catch code block
+                        @Override
+                        public void visitTryStatement(PsiTryStatement statement) {
+                            super.visitTryStatement(statement);
+                            holder.registerProblem(statement,
+                                    "TornadoVM dose not support for Traps/Exceptions." +
+                                            "The code block in Catch will be ignored, and the exception " +
+                                            "that may be thrown in Try block will not be handled",
+                                    ProblemHighlightType.WARNING);
+                        }
                     });
                     //Check if an exception is thrown in the function declaration
                     if(!reportedMethod.contains(parent)){
