@@ -8,10 +8,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
     public @NotNull PsiElementVisitor buildVisitor(@NotNull final ProblemsHolder holder, boolean isOnTheFly) {
-        HashSet<PsiMethod> reportedMethod = new HashSet<>();
         return new JavaElementVisitor() {
             @Override
             public void visitAnnotation(PsiAnnotation annotation) {
@@ -25,8 +25,8 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                         public void visitCallExpression(PsiCallExpression callExpression) {
                             super.visitCallExpression(callExpression);
                             PsiMethod calledMethod = callExpression.resolveMethod();
-                            if (parent.equals(calledMethod) && !reportedMethod.contains(parent)){
-                                reportedMethod.add(parent);
+                            Set<PsiMethod> visited = new HashSet<>();
+                            if (isRecursive(calledMethod, visited)){
                                 holder.registerProblem(
                                         calledMethod,
                                         "Recursive calls are not allowed in a method with @Reduce " +
@@ -38,5 +38,21 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                 }
             };
         };
+    }
+    private boolean isRecursive(PsiMethod method, Set<PsiMethod> visited) {
+        if (!visited.add(method)) {
+            return true;
+        }
+        PsiCodeBlock body = method.getBody();
+        if (body != null) {
+            for (PsiMethodCallExpression call : PsiTreeUtil.findChildrenOfType(body, PsiMethodCallExpression.class)) {
+                PsiMethod calledMethod = call.resolveMethod();
+                if (calledMethod != null && isRecursive(calledMethod, visited)) {
+                    return true;
+                }
+            }
+        }
+        visited.remove(method);
+        return false;
     }
 }
