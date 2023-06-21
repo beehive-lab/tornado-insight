@@ -31,7 +31,7 @@
                      displayName="Data type check"
                      groupPath="Java"
                      groupName="Java issues"
-                     shortName="ReduceMethodInspection"
+                     shortName="DataTypeInspection"
                      level="ERROR"
                      enabledByDefault="true"
                      implementationClass="com.tais.tornado_plugins.DataTypeInspection"/>
