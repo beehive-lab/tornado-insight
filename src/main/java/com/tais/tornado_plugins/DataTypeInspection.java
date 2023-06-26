@@ -59,7 +59,7 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
                                     && !type.equalsToText("Int3") && !(supportedType.contains(type.toString().replace("PsiType:","")))){
                                 holder.registerProblem(
                                         variable,
-                                        "Unsupported datatype in TornadoVM.",
+                                        "TornadoVM:Unsupported datatype in TornadoVM.",
                                         ProblemHighlightType.ERROR
                                 );
                             }

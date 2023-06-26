@@ -29,7 +29,7 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                             if (isRecursive(calledMethod, visited)){
                                 holder.registerProblem(
                                         calledMethod,
-                                        "Recursive calls are not allowed in a method with @Reduce " +
+                                        "TornadoVM: Recursive calls are not allowed in a method with @Reduce " +
                                                 "or @Parallel parameters",
                                         ProblemHighlightType.ERROR);
                             }

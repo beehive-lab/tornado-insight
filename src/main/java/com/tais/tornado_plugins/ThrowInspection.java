@@ -38,7 +38,7 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool{
                         public void visitTryStatement(PsiTryStatement statement) {
                             super.visitTryStatement(statement);
                             holder.registerProblem(statement,
-                                    "TornadoVM dose not support for Traps/Exceptions." +
+                                    "TornadoVM: TornadoVM dose not support for Traps/Exceptions." +
                                             "The code block in Catch will be ignored, and the exception " +
                                             "that may be thrown in Try block will not be handled",
                                     ProblemHighlightType.WARNING);
@@ -47,7 +47,7 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool{
                     //Check if an exception is thrown in the function declaration
                     if(!reportedMethod.contains(parent)){
                         for(PsiClassType exception : parent.getThrowsList().getReferencedTypes()) {
-                            holder.registerProblem(parent.getThrowsList(), "Incompatible thrown types " +
+                            holder.registerProblem(parent.getThrowsList(), "TornadoVM: Incompatible thrown types " +
                                             "Exception in functional expression\n " + exception.getCanonicalText(),
                                     ProblemHighlightType.ERROR);
                         }

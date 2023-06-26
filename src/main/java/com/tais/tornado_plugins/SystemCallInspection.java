@@ -29,7 +29,7 @@ public class SystemCallInspection extends AbstractBaseJavaLocalInspectionTool {
                                 PsiClass containingClass = field.getContainingClass();
                                 if (containingClass != null && "java.lang.System".equals(containingClass.getQualifiedName())) {
                                     holder.registerProblem(expression,
-                                            "TornadoVM does not support System class",
+                                            "TornadoVM: TornadoVM does not support System class",
                                             ProblemHighlightType.ERROR);
                                 }
                             }

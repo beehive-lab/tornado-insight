@@ -59,5 +59,13 @@
                      level="ERROR"
                      enabledByDefault="true"
                      implementationClass="com.tais.tornado_plugins.SystemCallInspection"/>
+    <localInspection language="JAVA"
+                     displayName="System call check"
+                     groupPath="Java"
+                     groupName="Java issues"
+                     shortName="StaticTaskGraphInspection"
+                     level="ERROR"
+                     enabledByDefault="true"
+                     implementationClass="com.tais.tornado_plugins.StaticTaskGraphInspection"/>
     </extensions>
 </idea-plugin>
