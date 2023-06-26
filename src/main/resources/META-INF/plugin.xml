@@ -60,12 +60,20 @@
                      enabledByDefault="true"
                      implementationClass="com.tais.tornado_plugins.SystemCallInspection"/>
     <localInspection language="JAVA"
-                     displayName="System call check"
+                     displayName="Static Taskgraph check"
                      groupPath="Java"
                      groupName="Java issues"
                      shortName="StaticTaskGraphInspection"
                      level="ERROR"
                      enabledByDefault="true"
                      implementationClass="com.tais.tornado_plugins.StaticTaskGraphInspection"/>
+    <localInspection language="JAVA"
+                     displayName="Assert statement check"
+                     groupPath="Java"
+                     groupName="Java issues"
+                     shortName="AssertInspection"
+                     level="ERROR"
+                     enabledByDefault="true"
+                     implementationClass="com.tais.tornado_plugins.AssertInspection"/>
     </extensions>
 </idea-plugin>

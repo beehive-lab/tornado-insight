@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 public class StaticTaskGraphInspection extends AbstractBaseJavaLocalInspectionTool {
     @Override
     public @NotNull PsiElementVisitor buildVisitor(@NotNull ProblemsHolder holder, boolean isOnTheFly) {
-        return new JavaRecursiveElementVisitor() {
+        return new JavaElementVisitor() {
             @Override
             public void visitReferenceExpression(PsiReferenceExpression expression) {
                 super.visitReferenceExpression(expression);
