@@ -1,15 +1,30 @@
 package com.tais.tornado_plugins;
 
 import com.google.gson.stream.JsonReader;
-import com.intellij.codeInspection.*;
-import com.intellij.psi.*;
-import com.intellij.psi.util.PsiTreeUtil;
 import com.google.gson.Gson;
+
+import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
+import com.intellij.codeInspection.ProblemHighlightType;
+import com.intellij.codeInspection.ProblemsHolder;
+import com.intellij.psi.JavaElementVisitor;
+import com.intellij.psi.JavaRecursiveElementVisitor;
+import com.intellij.psi.PsiAnnotation;
+import com.intellij.psi.PsiElementVisitor;
+import com.intellij.psi.PsiField;
+import com.intellij.psi.PsiLocalVariable;
+import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiParameter;
+import com.intellij.psi.PsiType;
+import com.intellij.psi.PsiVariable;
+import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
-import java.util.*;
 import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
 
 public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
     static List<String> supportedType;

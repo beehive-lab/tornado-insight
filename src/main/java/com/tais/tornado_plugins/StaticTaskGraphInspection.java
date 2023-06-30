@@ -1,7 +1,17 @@
 package com.tais.tornado_plugins;
 
-import com.intellij.codeInspection.*;
-import com.intellij.psi.*;
+import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
+import com.intellij.codeInspection.ProblemsHolder;
+import com.intellij.psi.JavaElementVisitor;
+import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiElementVisitor;
+import com.intellij.psi.PsiField;
+import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiMethodCallExpression;
+import com.intellij.psi.PsiModifier;
+import com.intellij.psi.PsiReferenceExpression;
+import com.intellij.psi.PsiType;
 import org.jetbrains.annotations.NotNull;
 
 public class StaticTaskGraphInspection extends AbstractBaseJavaLocalInspectionTool {
