@@ -1,6 +1,5 @@
 package com.tais.tornado_plugins;
 
-import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.*;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -27,6 +26,7 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                             PsiMethod calledMethod = callExpression.resolveMethod();
                             Set<PsiMethod> visited = new HashSet<>();
                             if (isRecursive(calledMethod, visited)){
+                                assert calledMethod != null;
                                 holder.registerProblem(
                                         calledMethod,
                                         "TornadoVM: Recursive calls are not allowed in a method with @Reduce " +
@@ -43,6 +43,7 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
         if (!visited.add(method)) {
             return true;
         }
+        assert method != null;
         PsiCodeBlock body = method.getBody();
         if (body != null) {
             for (PsiMethodCallExpression call : PsiTreeUtil.findChildrenOfType(body, PsiMethodCallExpression.class)) {

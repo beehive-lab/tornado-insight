@@ -1,6 +1,5 @@
 package com.tais.tornado_plugins;
 
-import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.*;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;

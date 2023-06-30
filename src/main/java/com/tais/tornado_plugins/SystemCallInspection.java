@@ -1,17 +1,14 @@
 package com.tais.tornado_plugins;
 
-import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.*;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashSet;
 import java.util.Objects;
 
 public class SystemCallInspection extends AbstractBaseJavaLocalInspectionTool {
     public @NotNull PsiElementVisitor buildVisitor(@NotNull final ProblemsHolder holder, boolean isOnTheFly) {
-        HashSet<PsiMethod> reportedMethod = new HashSet<>();
         return new JavaElementVisitor() {
             @Override
             public void visitAnnotation(PsiAnnotation annotation) {
