@@ -1,4 +1,4 @@
-package com.tais.tornado_plugins;
+package com.tais.tornado_plugins.inspector;
 
 import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.ProblemHighlightType;

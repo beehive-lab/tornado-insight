@@ -1,4 +1,4 @@
-package com.tais.tornado_plugins;
+package com.tais.tornado_plugins.inspector;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.Gson;
@@ -22,7 +22,6 @@ import org.jetbrains.annotations.NotNull;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,11 +34,9 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
         Conf types = new Gson().fromJson(reader, Conf.class);
         supportedType = Arrays.asList(types.datatype);
     }
-
     @NotNull
     @Override
     public PsiElementVisitor buildVisitor(@NotNull final ProblemsHolder holder, boolean isOnTheFly) {
-        HashSet<PsiVariable> reportedVariable = new HashSet<>();
         return new JavaElementVisitor() {
             @Override
             public void visitAnnotation(PsiAnnotation annotation) {
@@ -75,7 +72,7 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
                                 holder.registerProblem(
                                         variable,
                                         "TornadoVM:Unsupported datatype in TornadoVM.",
-                                        ProblemHighlightType.ERROR
+                                        ProblemHighlightType.GENERIC_ERROR_OR_WARNING
                                 );
                             }
                         }

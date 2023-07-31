@@ -27,53 +27,83 @@
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
 
-    <localInspection language="JAVA"
-                     displayName="Data type check"
-                     groupPath="Java"
-                     groupName="Java issues"
-                     shortName="DataTypeInspection"
-                     level="ERROR"
-                     enabledByDefault="true"
-                     implementationClass="com.tais.tornado_plugins.DataTypeInspection"/>
-    <localInspection language="JAVA"
-                     displayName="Recursion check"
-                     groupPath="Java"
-                     groupName="Java issues"
-                     shortName="RecursionInspection"
-                     level="ERROR"
-                     enabledByDefault="true"
-                     implementationClass="com.tais.tornado_plugins.RecursionInspection"/>
-    <localInspection language="JAVA"
-                     displayName="Method Throw check"
-                     groupPath="Java"
-                     groupName="Java issues"
-                     shortName="ThrowInspection"
-                     level="ERROR"
-                     enabledByDefault="true"
-                     implementationClass="com.tais.tornado_plugins.ThrowInspection"/>
-    <localInspection language="JAVA"
-                     displayName="System call check"
-                     groupPath="Java"
-                     groupName="Java issues"
-                     shortName="SystemCallInspection"
-                     level="ERROR"
-                     enabledByDefault="true"
-                     implementationClass="com.tais.tornado_plugins.SystemCallInspection"/>
-    <localInspection language="JAVA"
-                     displayName="Static Taskgraph check"
-                     groupPath="Java"
-                     groupName="Java issues"
-                     shortName="StaticTaskGraphInspection"
-                     level="ERROR"
-                     enabledByDefault="true"
-                     implementationClass="com.tais.tornado_plugins.StaticTaskGraphInspection"/>
-    <localInspection language="JAVA"
-                     displayName="Assert statement check"
-                     groupPath="Java"
-                     groupName="Java issues"
-                     shortName="AssertInspection"
-                     level="ERROR"
-                     enabledByDefault="true"
-                     implementationClass="com.tais.tornado_plugins.AssertInspection"/>
+        <localInspection language="JAVA"
+                         displayName="Data type check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="DataTypeInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.inspector.DataTypeInspection"/>
+        <localInspection language="JAVA"
+                         displayName="Recursion check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="RecursionInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.inspector.RecursionInspection"/>
+        <localInspection language="JAVA"
+                         displayName="Method Throw check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="ThrowInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.inspector.ThrowInspection"/>
+        <localInspection language="JAVA"
+                         displayName="System call check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="SystemCallInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.inspector.SystemCallInspection"/>
+        <localInspection language="JAVA"
+                         displayName="Static Taskgraph check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="StaticTaskGraphInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.inspector.StaticTaskGraphInspection"/>
+        <localInspection language="JAVA"
+                         displayName="Assert statement check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="AssertInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.inspector.AssertInspection"/>
+        <localInspection language="JAVA"
+                         displayName="Mock execution"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="MockInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.mockExecution.Trigger"/>
+
+        <problemFileHighlightFilter implementation="com.tais.tornado_plugins.mockExecution.HighLightControl"/>
+        <toolWindow factoryClass="com.tais.tornado_plugins.ui.TornadoToolsWindow" id="TornadoVM" anchor="right"/>
     </extensions>
+    <projectListeners>
+        <listener class="com.tais.tornado_plugins.GetRunOutputAction"
+                  topic="com.intellij.execution.ExecutionListener"/>
+        <listener class="com.tais.tornado_plugins.listener.ToolWindowOpen"
+                  topic="com.intellij.openapi.wm.ex.ToolWindowManagerListener"/>
+        <listener class="com.tais.tornado_plugins.listener.EditorSwitch"
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+    </projectListeners>
+
+    <actions>
+        <action id="com.tais.tornado_plugins.ShellTestAction" class="com.tais.tornado_plugins.ShellTestAction"
+                text="Run ls" description="run ls">
+            <add-to-group group-id="CodeMenu" anchor="first"/>
+        </action>
+        <action id="com.tais.tornado_plugins.TestButton" class="com.tais.tornado_plugins.TestButton" text="test"
+                description="test">
+            <add-to-group group-id="EditMenu" anchor="first"/>
+        </action>
+    </actions>
 </idea-plugin>
