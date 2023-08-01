@@ -17,29 +17,34 @@ import javax.swing.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 public class TornadoTWTask {
     private static List<PsiMethod> taskList;
+    private static Map<String,PsiMethod> taskMap;
     public static void addTask(Project project, DefaultListModel model){
         //ToolWindow maybe created before the Psi index,
         // so when the Psi index is not finished creating, skip
-        if (DumbService.isDumb(project)) return;
+        if (DumbService.isDumb(project) || model == null) return;
         model.clear();
         taskList = new ArrayList<>();
+        taskMap = new HashMap<>();
+
         PsiManagerImpl manager = new PsiManagerImpl(project);
-        if (FileEditorManager.getInstance(project).getSelectedFiles().length == 0){
-            return;
-        }
+        if (FileEditorManager.getInstance(project).getSelectedFiles().length == 0) return;
+
         PsiFile file = manager.findFile(Objects.requireNonNull(FileEditorManager.getInstance(project).getSelectedFiles()[0]));
         assert file != null;
         taskList = findAnnotatedVariables(file);
         if (taskList == null) return;
         for (PsiMethod task:taskList) {
             String displayName = psiMethodFormat(task);
+            taskMap.put(displayName, task);
             model.addElement(displayName);
         }
         TornadoToolsWindow.getList().repaint();
@@ -78,11 +83,21 @@ public class TornadoTWTask {
             if (methodParameters.isEmpty()) {
                 methodParameters.append(Objects.requireNonNull(parameter.getTypeElement()).getText());
             }else {
-                methodParameters.append(" ,").append(Objects.requireNonNull(parameter.getTypeElement()).getText());
+                methodParameters.append(", ").append(Objects.requireNonNull(parameter.getTypeElement()).getText());
             }
 
         }
-
         return methodName + "(" + methodParameters + "): " + Objects.requireNonNull(method.getReturnType()).getCanonicalText();
+    }
+
+    public static ArrayList<PsiMethod> getMethods(List<Object> methodsList){
+        if (methodsList == null || methodsList.isEmpty()) return null;
+        ArrayList<PsiMethod> psiMethodsList =  new ArrayList<>();
+        for (Object method: methodsList){
+            if (taskMap.containsKey(method.toString())){
+                psiMethodsList.add(taskMap.get(method.toString()));
+            }
+        }
+        return psiMethodsList;
     }
 }

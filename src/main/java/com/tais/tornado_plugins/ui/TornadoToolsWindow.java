@@ -25,9 +25,11 @@ public class TornadoToolsWindow implements ToolWindowFactory {
     private static DefaultListModel listModel;
     private static DefaultListModel inspectorListModel;
 
+    private static TornadoVM toolsWindow;
+
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
-        TornadoVM toolsWindow = new TornadoVM(toolWindow);
+        toolsWindow = new TornadoVM(toolWindow);
         list = toolsWindow.getTasksList();
         listModel = (DefaultListModel) list.getModel();
         inspectorListModel = (DefaultListModel) toolsWindow.getInspectorList().getModel();
@@ -48,5 +50,9 @@ public class TornadoToolsWindow implements ToolWindowFactory {
 
     public static DefaultListModel getInspectorListModel() {
         return inspectorListModel;
+    }
+
+    public static TornadoVM getToolsWindow() {
+        return toolsWindow;
     }
 }
