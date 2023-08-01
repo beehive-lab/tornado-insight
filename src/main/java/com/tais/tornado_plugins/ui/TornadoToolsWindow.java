@@ -10,6 +10,7 @@ import com.intellij.psi.impl.PsiManagerImpl;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
+import com.tais.tornado_plugins.message.RefreshListener;
 import com.tais.tornado_plugins.util.TornadoTWTask;
 import org.jetbrains.annotations.NotNull;
 import com.tais.tornado_plugins.ui.TornadoVM;

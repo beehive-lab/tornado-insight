@@ -17,13 +17,16 @@ import com.intellij.psi.PsiParameter;
 import com.intellij.psi.PsiType;
 import com.intellij.psi.PsiVariable;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.tais.tornado_plugins.message.TornadoTaskRefreshListener;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
     static List<String> supportedType;
@@ -40,6 +43,7 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
         return new JavaElementVisitor() {
             @Override
             public void visitAnnotation(PsiAnnotation annotation) {
+
                 if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
                         annotation.getQualifiedName().endsWith("Reduce")){
                     PsiMethod parent = PsiTreeUtil.getParentOfType(annotation,PsiMethod.class);
