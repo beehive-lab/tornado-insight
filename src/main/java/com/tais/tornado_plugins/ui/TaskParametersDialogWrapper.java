@@ -19,10 +19,10 @@ import java.util.HashMap;
 import java.util.Objects;
 
 public class TaskParametersDialogWrapper extends DialogWrapper {
-    private ArrayList<PsiMethod> methodsList;
-    private ArrayList<JBLabel> labelArrayList;
-    private JPanel dialogPanel;
-    private HashMap<String, JBTextField> textFieldsList;
+    private final ArrayList<PsiMethod> methodsList;
+    private final ArrayList<JBLabel> labelArrayList;
+    private final JPanel dialogPanel;
+    private final HashMap<String, JBTextField> textFieldsList;
     public TaskParametersDialogWrapper(ArrayList<PsiMethod> methodsList) {
         super(true);
         setTitle("Method Parameters");
@@ -36,12 +36,12 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
                 textFieldsList.put(methodName+parameter.getText(), new JBTextField());
             }
         }
+        dialogPanel = new JPanel();
         init();
     }
 
     @Override
     protected @Nullable JComponent createCenterPanel() {
-        dialogPanel = new JPanel();
         VerticalFlowLayout layout = new VerticalFlowLayout();
         VerticalFlowLayout layout1 = new VerticalFlowLayout(VerticalFlowLayout.CENTER);
         layout1.setHPadding(20);
@@ -62,6 +62,12 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
 
     @Override
     protected void doOKAction() {
+        for (PsiMethod method: methodsList){
+            String methodName = TornadoTWTask.psiMethodFormat(method);
+            for (PsiParameter parameter: method.getParameterList().getParameters()) {
+                textFieldsList.get(methodName+parameter.getText()).getEmptyText();
+            }
+        }
         super.doOKAction();
     }
 
