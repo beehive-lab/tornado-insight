@@ -14,21 +14,26 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Objects;
 
 public class TaskParametersDialogWrapper extends DialogWrapper {
     private ArrayList<PsiMethod> methodsList;
     private ArrayList<JBLabel> labelArrayList;
     private JPanel dialogPanel;
-    private ArrayList<JBTextField> textFieldsList;
+    private HashMap<String, JBTextField> textFieldsList;
     public TaskParametersDialogWrapper(ArrayList<PsiMethod> methodsList) {
         super(true);
         setTitle("Method Parameters");
         this.methodsList = methodsList;
         labelArrayList = new ArrayList<>();
-        textFieldsList = new ArrayList<>();
+        textFieldsList = new HashMap<>();
         for (PsiMethod method:methodsList) {
-            labelArrayList.add(new JBLabel(TornadoTWTask.psiMethodFormat(method)));
+            String methodName = TornadoTWTask.psiMethodFormat(method);
+            labelArrayList.add(new JBLabel(methodName));
+            for (PsiParameter parameter: method.getParameterList().getParameters()) {
+                textFieldsList.put(methodName+parameter.getText(), new JBTextField());
+            }
         }
         init();
     }
@@ -41,12 +46,13 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
         layout1.setHPadding(20);
         dialogPanel.setLayout(layout);
         for (PsiMethod method:methodsList){
-            dialogPanel.add(new JBLabel(TornadoTWTask.psiMethodFormat(method)+ ":"));
+            String methodName = TornadoTWTask.psiMethodFormat(method);
+            dialogPanel.add(new JBLabel(methodName + ":"));
             JPanel panel = new JPanel();
             panel.setLayout(layout1);
             for (PsiParameter parameter: method.getParameterList().getParameters()) {
                 panel.add(new JBLabel(Objects.requireNonNull(parameter.getText())+":"));
-                panel.add(new JBTextField());
+                panel.add(textFieldsList.get(methodName+parameter.getText()));
             }
             dialogPanel.add(panel);
         }
@@ -55,12 +61,17 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
 
     @Override
     protected void doOKAction() {
-
         super.doOKAction();
     }
 
     @Override
     protected @Nullable ValidationInfo doValidate() {
+        for (PsiMethod method:methodsList) {
+            String methodName = TornadoTWTask.psiMethodFormat(method);
+            for (PsiParameter parameter: method.getParameterList().getParameters()) {
+                System.out.println(textFieldsList.get(methodName + parameter.getText()).getText());
+            }
+        }
         return super.doValidate();
     }
 }
