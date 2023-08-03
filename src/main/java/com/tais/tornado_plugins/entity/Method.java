@@ -5,8 +5,8 @@ import com.intellij.psi.PsiMethod;
 import java.util.ArrayList;
 
 public class Method {
-    PsiMethod method;
-    ArrayList<String> parameterValues;
+    private final PsiMethod method;
+    private final ArrayList<String> parameterValues;
 
     public Method(PsiMethod method, ArrayList<String> parameterValues) {
         this.method = method;

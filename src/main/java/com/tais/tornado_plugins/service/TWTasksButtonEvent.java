@@ -3,6 +3,8 @@ package com.tais.tornado_plugins.service;
 import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
+import com.tais.tornado_plugins.entity.Method;
+import com.tais.tornado_plugins.entity.MethodsCollection;
 import com.tais.tornado_plugins.ui.TaskParametersDialogWrapper;
 import com.tais.tornado_plugins.ui.TornadoToolsWindow;
 import com.tais.tornado_plugins.ui.TornadoVM;
@@ -24,6 +26,13 @@ public class TWTasksButtonEvent {
         if (selectedValuesList.isEmpty()) System.out.println("None Selected");
         ArrayList<PsiMethod> methodList = TornadoTWTask.getMethods(selectedValuesList);
         new TaskParametersDialogWrapper(methodList).showAndGet();
+    }
+
+    public void fileCreationHandler(MethodsCollection methodsCollection){
+        for (Method method:methodsCollection.getMethodArrayList()) {
+            //TODO: creat files for each method with given parameters value
+            System.out.println(method.getParameterValues());
+        }
     }
 
     private void creatFile(PsiMethod method){

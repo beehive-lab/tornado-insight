@@ -8,7 +8,11 @@ import com.intellij.psi.PsiParameter;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.JBFont;
+import com.tais.tornado_plugins.entity.Method;
+import com.tais.tornado_plugins.entity.MethodsCollection;
+import com.tais.tornado_plugins.service.TWTasksButtonEvent;
 import com.tais.tornado_plugins.util.InputValidation;
+import com.tais.tornado_plugins.util.MessageBundle;
 import com.tais.tornado_plugins.util.TornadoTWTask;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,6 +41,7 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
             }
         }
         dialogPanel = new JPanel();
+        //TODO: The user needs to decide the parameters of TransfertoHost and TransferToDevice
         init();
     }
 
@@ -62,11 +67,16 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
 
     @Override
     protected void doOKAction() {
+        MethodsCollection methodsCollection = new MethodsCollection();
         for (PsiMethod method: methodsList){
+            ArrayList<String> parameterValue = new ArrayList<>();
             String methodName = TornadoTWTask.psiMethodFormat(method);
             for (PsiParameter parameter: method.getParameterList().getParameters()) {
-                textFieldsList.get(methodName+parameter.getText()).getEmptyText();
+                String value = textFieldsList.get(methodName+parameter.getText()).getText();
+                parameterValue.add(value);
             }
+            methodsCollection.addMethod(new Method(method,parameterValue));
+            new TWTasksButtonEvent().fileCreationHandler(methodsCollection);
         }
         super.doOKAction();
     }
@@ -74,56 +84,77 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
     @Override
     protected @Nullable ValidationInfo doValidate() {
         for (PsiMethod method:methodsList) {
+            String methodName = TornadoTWTask.psiMethodFormat(method);
             for (PsiParameter parameter: method.getParameterList().getParameters()) {
                 String elementType = Objects.requireNonNull(parameter.getTypeElement()).getText();
+                JComponent component = textFieldsList.get(methodName+parameter.getText());
+                String input = textFieldsList.get(methodName+parameter.getText()).getText();
+                if (Objects.equals(input, ""))
+                    return new ValidationInfo(MessageBundle.message("ui.dialog.validate.empty"),component);
                 switch (elementType){
                     case "int" -> {
-                        if (!InputValidation.isInteger(elementType)) return new ValidationInfo("Error");
+                        if (!InputValidation.isInteger(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.int"),component);
                     }
                     case "char" -> {
-                        if (!InputValidation.isChar(elementType)) return new ValidationInfo("Error");
+                        if (!InputValidation.isChar(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.char"),component);
                     }
                     case "short" -> {
-                        if (!InputValidation.isShort(elementType)) return new ValidationInfo("Error");
+                        if (!InputValidation.isShort(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.short"),component);
                     }
                     case "long" -> {
-                        if (!InputValidation.isLong(elementType)) return new ValidationInfo("");
+                        if (!InputValidation.isLong(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.long"),component);
                     }
                     case "double" -> {
-                        if (!InputValidation.isDouble(elementType)) return new ValidationInfo("");
+                        if (!InputValidation.isDouble(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.double"),component);
                     }
                     case "byte" -> {
-                        if (!InputValidation.isByte(elementType)) return new ValidationInfo("");
+                        if (!InputValidation.isByte(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.byte"),component);
                     }
                     case "float" -> {
-                        if (!InputValidation.isFloat(elementType)) return new ValidationInfo("");
+                        if (!InputValidation.isFloat(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.float"),component);
                     }
                     case "boolean" -> {
-                        if (!InputValidation.isBoolean(elementType)) return new ValidationInfo("");
+                        if (!InputValidation.isBoolean(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.boolean"),component);
                     }
                     case "int[]" -> {
-                        if (!InputValidation.isIntArray(elementType)) return new ValidationInfo("Error");
+                        if (!InputValidation.isIntArray(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.intArray"),component);
                     }
                     case "char[]" -> {
-                        if (!InputValidation.isCharArray(elementType)) return new ValidationInfo("Error");
+                        if (!InputValidation.isCharArray(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.charArray"),component);
                     }
                     case "short[]" -> {
-                        if (!InputValidation.isShortArray(elementType)) return new ValidationInfo("Error");
+                        if (!InputValidation.isShortArray(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.shortArray"),component);
                     }
                     case "long[]" -> {
-                        if (!InputValidation.isLongArray(elementType)) return new ValidationInfo("");
+                        if (!InputValidation.isLongArray(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.longArray"),component);
                     }
                     case "double[]" -> {
-                        if (!InputValidation.isDoubleArray(elementType)) return new ValidationInfo("");
+                        if (!InputValidation.isDoubleArray(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.doubleArray"),component);
                     }
                     case "byte[]" -> {
-                        if (!InputValidation.isByteArray(elementType)) return new ValidationInfo("");
+                        if (!InputValidation.isByteArray(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.byteArray"),component);
                     }
                     case "float[]" -> {
-                        if (!InputValidation.isFloatArray(elementType)) return new ValidationInfo("");
+                        if (!InputValidation.isFloatArray(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.floatArray"),component);
                     }
                     case "boolean[]" -> {
-                        if (!InputValidation.isBooleanArray(elementType)) return new ValidationInfo("");
+                        if (!InputValidation.isBooleanArray(input))
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.booleanArray"),component);
                     }
                 }
             }

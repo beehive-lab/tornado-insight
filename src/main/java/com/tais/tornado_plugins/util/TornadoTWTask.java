@@ -28,6 +28,7 @@ public class TornadoTWTask {
     private static List<PsiMethod> taskList;
     private static Map<String,PsiMethod> taskMap;
     public static void addTask(Project project, DefaultListModel model){
+        //TODO:Also need validate the Tornado Task
         //ToolWindow maybe created before the Psi index,
         // so when the Psi index is not finished creating, skip
         if (DumbService.isDumb(project) || model == null) return;
