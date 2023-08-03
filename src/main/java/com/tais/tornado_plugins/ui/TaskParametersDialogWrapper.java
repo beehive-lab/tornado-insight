@@ -8,6 +8,7 @@ import com.intellij.psi.PsiParameter;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.JBFont;
+import com.tais.tornado_plugins.util.InputValidation;
 import com.tais.tornado_plugins.util.TornadoTWTask;
 import org.jetbrains.annotations.Nullable;
 
@@ -67,9 +68,58 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
     @Override
     protected @Nullable ValidationInfo doValidate() {
         for (PsiMethod method:methodsList) {
-            String methodName = TornadoTWTask.psiMethodFormat(method);
             for (PsiParameter parameter: method.getParameterList().getParameters()) {
-                System.out.println(textFieldsList.get(methodName + parameter.getText()).getText());
+                String elementType = Objects.requireNonNull(parameter.getTypeElement()).getText();
+                switch (elementType){
+                    case "int" -> {
+                        if (!InputValidation.isInteger(elementType)) return new ValidationInfo("Error");
+                    }
+                    case "char" -> {
+                        if (!InputValidation.isChar(elementType)) return new ValidationInfo("Error");
+                    }
+                    case "short" -> {
+                        if (!InputValidation.isShort(elementType)) return new ValidationInfo("Error");
+                    }
+                    case "long" -> {
+                        if (!InputValidation.isLong(elementType)) return new ValidationInfo("");
+                    }
+                    case "double" -> {
+                        if (!InputValidation.isDouble(elementType)) return new ValidationInfo("");
+                    }
+                    case "byte" -> {
+                        if (!InputValidation.isByte(elementType)) return new ValidationInfo("");
+                    }
+                    case "float" -> {
+                        if (!InputValidation.isFloat(elementType)) return new ValidationInfo("");
+                    }
+                    case "boolean" -> {
+                        if (!InputValidation.isBoolean(elementType)) return new ValidationInfo("");
+                    }
+                    case "int[]" -> {
+                        if (!InputValidation.isIntArray(elementType)) return new ValidationInfo("Error");
+                    }
+                    case "char[]" -> {
+                        if (!InputValidation.isCharArray(elementType)) return new ValidationInfo("Error");
+                    }
+                    case "short[]" -> {
+                        if (!InputValidation.isShortArray(elementType)) return new ValidationInfo("Error");
+                    }
+                    case "long[]" -> {
+                        if (!InputValidation.isLongArray(elementType)) return new ValidationInfo("");
+                    }
+                    case "double[]" -> {
+                        if (!InputValidation.isDoubleArray(elementType)) return new ValidationInfo("");
+                    }
+                    case "byte[]" -> {
+                        if (!InputValidation.isByteArray(elementType)) return new ValidationInfo("");
+                    }
+                    case "float[]" -> {
+                        if (!InputValidation.isFloatArray(elementType)) return new ValidationInfo("");
+                    }
+                    case "boolean[]" -> {
+                        if (!InputValidation.isBooleanArray(elementType)) return new ValidationInfo("");
+                    }
+                }
             }
         }
         return super.doValidate();

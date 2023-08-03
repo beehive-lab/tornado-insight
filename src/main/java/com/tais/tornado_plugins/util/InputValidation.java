@@ -41,7 +41,7 @@ public class InputValidation {
         return isInteger(str);
     }
 
-    public boolean isBoolean(String str) {
+    public static boolean isBoolean(String str) {
         return str.equalsIgnoreCase("true") || str.equalsIgnoreCase("false");
     }
 
@@ -57,7 +57,7 @@ public class InputValidation {
         } else return false;
     }
 
-    public boolean isShortArray(String str) {
+    public static boolean isShortArray(String str) {
         if (str.startsWith("{") && str.endsWith("}")) {
             String[] parts = str.substring(1, str.length() - 1).split(",");
             for (String part : parts) {
@@ -71,11 +71,11 @@ public class InputValidation {
         }
     }
 
-    public boolean isLongArray(String str) {
+    public static boolean isLongArray(String str) {
         return isIntArray(str);
     }
 
-    public boolean isByteArray(String str) {
+    public static boolean isByteArray(String str) {
         if (str.startsWith("{") && str.endsWith("}")) {
             String[] parts = str.substring(1, str.length() - 1).split(",");
             for (String part : parts) {
@@ -88,7 +88,7 @@ public class InputValidation {
             return false;
         }
     }
-    public boolean isFloatArray(String str) {
+    public static boolean isFloatArray(String str) {
         if (str.startsWith("{") && str.endsWith("}")) {
             String[] parts = str.substring(1, str.length() - 1).split(",");
             for (String part : parts) {
@@ -102,11 +102,11 @@ public class InputValidation {
         }
     }
 
-    public boolean isDoubleArray(String str){
+    public static boolean isDoubleArray(String str){
         return isFloatArray(str);
     }
 
-    public boolean isCharArray(String str) {
+    public static boolean isCharArray(String str) {
         if (str.startsWith("{") && str.endsWith("}")) {
             String[] parts = str.substring(1, str.length() - 1).split(",");
             for (String part : parts) {
@@ -120,7 +120,7 @@ public class InputValidation {
         }
     }
 
-    public boolean isBooleanArray(String str) {
+    public static boolean isBooleanArray(String str) {
         if (str.startsWith("{") && str.endsWith("}")) {
             String[] parts = str.substring(1, str.length() - 1).split(",");
             for (String part : parts) {
