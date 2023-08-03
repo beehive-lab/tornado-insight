@@ -75,7 +75,7 @@ public class TornadoTWTask {
         return tornadoTask.stream().toList();
     }
 
-    private static String psiMethodFormat(PsiMethod method){
+    public static String psiMethodFormat(PsiMethod method){
         String methodName = method.getName();
         StringBuilder methodParameters = new StringBuilder();
         if (!method.hasParameters()) return methodName+"(): "+ Objects.requireNonNull(method.getReturnType()).getCanonicalText();

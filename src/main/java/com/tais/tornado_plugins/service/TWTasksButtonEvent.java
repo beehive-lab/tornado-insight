@@ -3,6 +3,7 @@ package com.tais.tornado_plugins.service;
 import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
+import com.tais.tornado_plugins.ui.TaskParametersDialogWrapper;
 import com.tais.tornado_plugins.ui.TornadoToolsWindow;
 import com.tais.tornado_plugins.ui.TornadoVM;
 import com.tais.tornado_plugins.util.TornadoTWTask;
@@ -22,10 +23,10 @@ public class TWTasksButtonEvent {
         List selectedValuesList = TornadoToolsWindow.getToolsWindow().getTasksList().getSelectedValuesList();
         if (selectedValuesList.isEmpty()) System.out.println("None Selected");
         ArrayList<PsiMethod> methodList = TornadoTWTask.getMethods(selectedValuesList);
-        creatFile(methodList);
+        new TaskParametersDialogWrapper(methodList).showAndGet();
     }
 
-    private void creatFile(List<PsiMethod> methodList){
+    private void creatFile(PsiMethod method){
         File javaFile;
         try {
              javaFile = FileUtilRt.createTempFile("testCode", ".java", true);
@@ -58,14 +59,14 @@ public class TWTasksButtonEvent {
         try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(javaFile))) {
             System.out.println(javaFile.getPath());
             bufferedWriter.write(importCode);
+            bufferedWriter.write("\n");
             bufferedWriter.write("public class "+javaFile.getName().replace(".java","")+"{");
-            for (PsiMethod method:methodList) {
-                bufferedWriter.write(method.getText());
-            }
+            bufferedWriter.write(method.getText());
             bufferedWriter.write(mainCode);
             bufferedWriter.write("}");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
+
 }
