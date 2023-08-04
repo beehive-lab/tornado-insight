@@ -1,10 +1,12 @@
 package com.tais.tornado_plugins.util;
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
 import com.intellij.codeInspection.LocalInspectionEP;
 import com.intellij.codeInspection.ex.LocalInspectionToolWrapper;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectManager;
 import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
@@ -66,7 +68,6 @@ public class TornadoTWTask {
         Set<PsiMethod> tornadoTask = new HashSet<>();
         Collection<PsiAnnotation> annotationList = PsiTreeUtil.findChildrenOfType(psiFile, PsiAnnotation.class);
         if (annotationList.isEmpty()) return null;
-
         for (PsiAnnotation annotation : annotationList) {
             if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
                     annotation.getQualifiedName().endsWith("Reduce")) {

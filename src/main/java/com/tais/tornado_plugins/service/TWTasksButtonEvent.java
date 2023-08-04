@@ -3,6 +3,7 @@ package com.tais.tornado_plugins.service;
 import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiParameter;
 import com.tais.tornado_plugins.entity.Method;
 import com.tais.tornado_plugins.entity.MethodsCollection;
 import com.tais.tornado_plugins.ui.TaskParametersDialogWrapper;
@@ -32,32 +33,58 @@ public class TWTasksButtonEvent {
         for (Method method:methodsCollection.getMethodArrayList()) {
             //TODO: creat files for each method with given parameters value
             System.out.println(method.getParameterValues());
+            System.out.println("To device: " + method.getToDeviceParameters());
+            creatFile(method);
         }
     }
 
-    private void creatFile(PsiMethod method){
+    private void creatFile(Method method){
         File javaFile;
         try {
-             javaFile = FileUtilRt.createTempFile("testCode", ".java", true);
+            javaFile = FileUtilRt.createTempFile("testCode", ".java", true);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
+        //TODO:May need more import code
         String importCode = "import uk.ac.manchester.tornado.api.ImmutableTaskGraph;\n" +
                 "import uk.ac.manchester.tornado.api.TaskGraph;\n" +
                 "import uk.ac.manchester.tornado.api.TornadoExecutionPlan;\n" +
                 "import uk.ac.manchester.tornado.api.annotations.Parallel;\n" +
                 "import uk.ac.manchester.tornado.api.enums.DataTransferMode;";
+        //TODO: parameters assignment
+        StringBuilder parametersIn = new StringBuilder();
+        StringBuilder methodWithParameters = new StringBuilder();
+        StringBuilder parameterOut = new StringBuilder();
+        String methodWithClass = javaFile.getName() +":"+ method.getMethod().getName();
+        String variableInit = "";
 
-        String parametersIn = "";
-        String methodWithParameters = "";
-        String parameterOut = "";
+        for (PsiParameter p: method.getToDeviceParameters()) {
+            if (parametersIn.isEmpty()){
+                parametersIn.append(p.getName());
+            }else {
+                parametersIn.append(", ").append(p.getName());
+            }
+        }
+
+        for (PsiParameter p: method.getMethod().getParameterList().getParameters()) {
+            methodWithParameters.append(", ").append(p.getName());
+        }
+
+        for (PsiParameter p: method.getToHostParameters()) {
+            if (parameterOut.isEmpty()){
+                parameterOut.append(p.getName());
+            }else {
+                parameterOut.append(", ").append(p.getName());
+            }
+        }
 
         String mainCode = "public static void main(String[] args) {\n" +
                 "\n" +
-                "        TaskGraph taskGraph = new TaskGraph(\"s0\") //\n" +
-                "                .transferToDevice(DataTransferMode.FIRST_EXECUTION, "+ parametersIn +") //\n" +
-                "                .task(\"t0\", "+ methodWithParameters + ") //\n" +
+                    variableInit +
+                "\n"+
+                "        TaskGraph taskGraph = new TaskGraph(\"s0\") \n" +
+                "                .transferToDevice(DataTransferMode.FIRST_EXECUTION, "+ parametersIn +") \n" +
+                "                .task(\"t0\", "+methodWithClass +methodWithParameters + ") \n" +
                 "                .transferToHost(DataTransferMode.EVERY_EXECUTION, "+ parameterOut +");\n" +
                 "\n" +
                 "        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" +
@@ -70,7 +97,7 @@ public class TWTasksButtonEvent {
             bufferedWriter.write(importCode);
             bufferedWriter.write("\n");
             bufferedWriter.write("public class "+javaFile.getName().replace(".java","")+"{");
-            bufferedWriter.write(method.getText());
+            bufferedWriter.write(method.getMethod().getText());
             bufferedWriter.write(mainCode);
             bufferedWriter.write("}");
         } catch (IOException e) {

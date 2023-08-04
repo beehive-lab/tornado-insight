@@ -1,13 +1,13 @@
 package com.tais.tornado_plugins.ui;
 
-import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.ValidationInfo;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
+import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
+import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.JBTextField;
-import com.intellij.util.ui.JBFont;
 import com.tais.tornado_plugins.entity.Method;
 import com.tais.tornado_plugins.entity.MethodsCollection;
 import com.tais.tornado_plugins.service.TWTasksButtonEvent;
@@ -27,21 +27,26 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
     private final ArrayList<JBLabel> labelArrayList;
     private final JPanel dialogPanel;
     private final HashMap<String, JBTextField> textFieldsList;
+    private final HashMap<PsiParameter, JPanel> copiesSettingList;
+
     public TaskParametersDialogWrapper(ArrayList<PsiMethod> methodsList) {
         super(true);
         setTitle("Method Parameters");
         this.methodsList = methodsList;
         labelArrayList = new ArrayList<>();
         textFieldsList = new HashMap<>();
+        copiesSettingList = new HashMap<>();
         for (PsiMethod method:methodsList) {
             String methodName = TornadoTWTask.psiMethodFormat(method);
             labelArrayList.add(new JBLabel(methodName));
             for (PsiParameter parameter: method.getParameterList().getParameters()) {
                 textFieldsList.put(methodName+parameter.getText(), new JBTextField());
+                if (parameter.getType().getArrayDimensions()>0){
+                    copiesSettingList.put(parameter, new JBPanel<>());
+                }
             }
         }
         dialogPanel = new JPanel();
-        //TODO: The user needs to decide the parameters of TransfertoHost and TransferToDevice
         init();
     }
 
@@ -59,6 +64,11 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
             for (PsiParameter parameter: method.getParameterList().getParameters()) {
                 panel.add(new JBLabel(Objects.requireNonNull(parameter.getText())+":"));
                 panel.add(textFieldsList.get(methodName+parameter.getText()));
+                if (parameter.getType().getArrayDimensions() > 0){
+                    copiesSettingList.get(parameter).add(new JBCheckBox("To GPU"));
+                    copiesSettingList.get(parameter).add(new JBCheckBox("To CPU"));
+                    panel.add(copiesSettingList.get(parameter));
+                }
             }
             dialogPanel.add(panel);
         }
@@ -70,17 +80,35 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
         MethodsCollection methodsCollection = new MethodsCollection();
         for (PsiMethod method: methodsList){
             ArrayList<String> parameterValue = new ArrayList<>();
+            ArrayList<PsiParameter> defaultList = new ArrayList<>();
+            ArrayList<PsiParameter> toDeviceList = new ArrayList<>();
+            ArrayList<PsiParameter> toHostList = new ArrayList<>();
             String methodName = TornadoTWTask.psiMethodFormat(method);
             for (PsiParameter parameter: method.getParameterList().getParameters()) {
                 String value = textFieldsList.get(methodName+parameter.getText()).getText();
                 parameterValue.add(value);
+                if (parameter.getType().getArrayDimensions()>0){
+                    for (Component c:copiesSettingList.get(parameter).getComponents()) {
+                        JBCheckBox checkBox = (JBCheckBox) c;
+                        if (checkBox.isSelected()){
+                            if (checkBox.getText().equals("To GPU")) {
+                                toDeviceList.add(parameter);
+                            }else {
+                                toHostList.add(parameter);
+                            }
+                        }
+                    }
+                }else {
+                    defaultList.add(parameter);
+                }
             }
-            methodsCollection.addMethod(new Method(method,parameterValue));
+
+            methodsCollection.addMethod(new Method(method, parameterValue,defaultList,toDeviceList,toHostList));
             new TWTasksButtonEvent().fileCreationHandler(methodsCollection);
         }
         super.doOKAction();
     }
-
+    //TODO:Multi-Dimension Array？
     @Override
     protected @Nullable ValidationInfo doValidate() {
         for (PsiMethod method:methodsList) {
