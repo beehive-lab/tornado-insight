@@ -382,17 +382,6 @@ public class VerticalFlowLayout implements LayoutManager, Serializable {
     }
 
     public static void main(String[] args) {
-
-        // 推荐一套超级漂亮的UI
-        // FlatLaf：干净、优雅、扁平化的现代开源跨平台外观
-        // https://weibo.com/ttarticle/p/show?id=2309404704477499490781
-        // 官方: https://www.formdev.com/flatlaf/
-        // 分两个包, 核心包和扩展主题包, 核心包自带4个主题, 使用如下代码启用对应主题
-//		FlatIntelliJLaf.setup();
-//		FlatLightLaf.setup();
-//		FlatDarculaLaf.setup();
-//		FlatDarkLaf.setup();
-
         JFrame frame = new JFrame("VerticalFlowLayout Test");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 

@@ -34,6 +34,7 @@
     "Matrix4x4Float",
     "Short2",
     "Short3",
+    "Vector",
     "VectorDouble",
     "VectorDouble2",
     "VectorDouble3",

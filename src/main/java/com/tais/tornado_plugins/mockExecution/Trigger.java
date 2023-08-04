@@ -35,7 +35,6 @@ public class Trigger extends AbstractBaseJavaLocalInspectionTool {
                         /*System.out.println("Ready to do mock execution");*/
                     }
                 }
-
             }
 
             private boolean hasCompileErrors(Project project){

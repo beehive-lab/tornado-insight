@@ -6,6 +6,7 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import com.tais.tornado_plugins.entity.Method;
 import com.tais.tornado_plugins.entity.MethodsCollection;
+import com.tais.tornado_plugins.mockExecution.VariableInit;
 import com.tais.tornado_plugins.ui.TaskParametersDialogWrapper;
 import com.tais.tornado_plugins.ui.TornadoToolsWindow;
 import com.tais.tornado_plugins.ui.TornadoVM;
@@ -50,13 +51,14 @@ public class TWTasksButtonEvent {
                 "import uk.ac.manchester.tornado.api.TaskGraph;\n" +
                 "import uk.ac.manchester.tornado.api.TornadoExecutionPlan;\n" +
                 "import uk.ac.manchester.tornado.api.annotations.Parallel;\n" +
+                "import uk.ac.manchester.tornado.api.annotations.Reduce;\n" +
                 "import uk.ac.manchester.tornado.api.enums.DataTransferMode;";
         //TODO: parameters assignment
         StringBuilder parametersIn = new StringBuilder();
         StringBuilder methodWithParameters = new StringBuilder();
         StringBuilder parameterOut = new StringBuilder();
-        String methodWithClass = javaFile.getName() +":"+ method.getMethod().getName();
-        String variableInit = "";
+        String methodWithClass = javaFile.getName().substring(0,javaFile.getName().lastIndexOf(".")) +"::"+ method.getMethod().getName();
+        String variableInit = VariableInit.variableInitHelper(method);
 
         for (PsiParameter p: method.getToDeviceParameters()) {
             if (parametersIn.isEmpty()){
@@ -80,8 +82,7 @@ public class TWTasksButtonEvent {
 
         String mainCode = "public static void main(String[] args) {\n" +
                 "\n" +
-                    variableInit +
-                "\n"+
+                "        " + variableInit +
                 "        TaskGraph taskGraph = new TaskGraph(\"s0\") \n" +
                 "                .transferToDevice(DataTransferMode.FIRST_EXECUTION, "+ parametersIn +") \n" +
                 "                .task(\"t0\", "+methodWithClass +methodWithParameters + ") \n" +
