@@ -84,6 +84,7 @@
                          enabledByDefault="true"
                          implementationClass="com.tais.tornado_plugins.mockExecution.Trigger"/>
         <toolWindow factoryClass="com.tais.tornado_plugins.ui.TornadoToolsWindow" id="TornadoVM" anchor="right"/>
+        <toolWindow factoryClass="com.tais.tornado_plugins.ui.ConsoleOutputToolWindow" id="TornadoVM Console" anchor="bottom"/>
     </extensions>
     <projectListeners>
         <listener class="com.tais.tornado_plugins.GetRunOutputAction"

@@ -4,6 +4,7 @@ import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.process.CapturingProcessHandler;
 import com.intellij.execution.process.ProcessOutput;
+import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.execution.util.ExecUtil;
 import com.intellij.ide.BrowserUtil;
 import com.intellij.notification.Notification;
@@ -19,6 +20,7 @@ import com.intellij.openapi.projectRoots.JavaSdkType;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.tais.tornado_plugins.entity.Method;
+import com.tais.tornado_plugins.ui.ConsoleOutputToolWindow;
 import org.jetbrains.annotations.NotNull;
 
 import javax.tools.JavaCompiler;
@@ -169,7 +171,8 @@ public class ExecutionEngine {
             }
         }
     }
-
+    //TODO: BUG: "tornado" does not exist in env, you need to find the path to execute it,
+    // or call the user's “source setvars.sh”.
     private void executeJars(String jarFolderPath){
         GeneralCommandLine commandLine = new GeneralCommandLine();
         //Detecting if the user has correctly installed TornadoVM
@@ -192,7 +195,12 @@ public class ExecutionEngine {
                 return;
             }
         } catch (ExecutionException ignored) {
-            System.out.println("Tornado Broken!");
+            ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                    print("Tornado Broken\n", ConsoleViewContentType.ERROR_OUTPUT);
+            ApplicationManager.getApplication().invokeLater(() ->{
+                ConsoleOutputToolWindow.toolWindow.activate(null, false);
+            } );
+
             return;
         }
 
