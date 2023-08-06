@@ -18,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
@@ -104,7 +105,11 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
             }
 
             methodsCollection.addMethod(new Method(method, parameterValue,defaultList,toDeviceList,toHostList));
-            new TWTasksButtonEvent().fileCreationHandler(methodsCollection);
+            try {
+                new TWTasksButtonEvent().fileCreationHandler(methodsCollection);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
         //TODO: May need to create a thread to avoid EDT thread blocking
         super.doOKAction();

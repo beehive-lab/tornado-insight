@@ -1,11 +1,14 @@
 package com.tais.tornado_plugins.service;
 
+import com.intellij.openapi.application.Application;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import com.tais.tornado_plugins.entity.Method;
 import com.tais.tornado_plugins.entity.MethodsCollection;
+import com.tais.tornado_plugins.mockExecution.ExecutionEngine;
 import com.tais.tornado_plugins.mockExecution.VariableInit;
 import com.tais.tornado_plugins.ui.TaskParametersDialogWrapper;
 import com.tais.tornado_plugins.ui.TornadoToolsWindow;
@@ -19,6 +22,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,19 +34,24 @@ public class TWTasksButtonEvent {
         new TaskParametersDialogWrapper(methodList).showAndGet();
     }
 
-    public void fileCreationHandler(MethodsCollection methodsCollection){
+    public void fileCreationHandler(MethodsCollection methodsCollection) throws IOException {
+        HashMap<String, Method> methodFile = new HashMap<>();
+        File dir = FileUtilRt.createTempDirectory("files",null);
         for (Method method:methodsCollection.getMethodArrayList()) {
-            //TODO: creat files for each method with given parameters value
             System.out.println(method.getParameterValues());
             System.out.println("To device: " + method.getToDeviceParameters());
-            creatFile(method);
+            String fileName = method.getMethod().getName() + method.getMethod().hashCode();
+            File file = creatFile(method, fileName,dir);
+            methodFile.put(file.getAbsolutePath(), method);
         }
+
+        ExecutionEngine.run(methodFile);
     }
 
-    private void creatFile(Method method){
+    private File creatFile(Method method, String filename, File dir){
         File javaFile;
         try {
-            javaFile = FileUtilRt.createTempFile("testCode", ".java", true);
+            javaFile = FileUtilRt.createTempFile(dir, filename, ".java", true);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -53,11 +62,10 @@ public class TWTasksButtonEvent {
                 "import uk.ac.manchester.tornado.api.annotations.Parallel;\n" +
                 "import uk.ac.manchester.tornado.api.annotations.Reduce;\n" +
                 "import uk.ac.manchester.tornado.api.enums.DataTransferMode;";
-        //TODO: parameters assignment
         StringBuilder parametersIn = new StringBuilder();
         StringBuilder methodWithParameters = new StringBuilder();
         StringBuilder parameterOut = new StringBuilder();
-        String methodWithClass = javaFile.getName().substring(0,javaFile.getName().lastIndexOf(".")) +"::"+ method.getMethod().getName();
+        String methodWithClass = filename +"::"+ method.getMethod().getName();
         String variableInit = VariableInit.variableInitHelper(method);
 
         for (PsiParameter p: method.getToDeviceParameters()) {
@@ -82,7 +90,7 @@ public class TWTasksButtonEvent {
 
         String mainCode = "public static void main(String[] args) {\n" +
                 "\n" +
-                "        " + variableInit +
+                variableInit +
                 "        TaskGraph taskGraph = new TaskGraph(\"s0\") \n" +
                 "                .transferToDevice(DataTransferMode.FIRST_EXECUTION, "+ parametersIn +") \n" +
                 "                .task(\"t0\", "+methodWithClass +methodWithParameters + ") \n" +
@@ -104,6 +112,7 @@ public class TWTasksButtonEvent {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        return javaFile;
     }
 
 }

@@ -83,8 +83,6 @@
                          level="ERROR"
                          enabledByDefault="true"
                          implementationClass="com.tais.tornado_plugins.mockExecution.Trigger"/>
-
-        <problemFileHighlightFilter implementation="com.tais.tornado_plugins.mockExecution.HighLightControl"/>
         <toolWindow factoryClass="com.tais.tornado_plugins.ui.TornadoToolsWindow" id="TornadoVM" anchor="right"/>
     </extensions>
     <projectListeners>
