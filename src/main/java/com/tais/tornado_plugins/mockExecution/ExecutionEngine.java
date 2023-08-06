@@ -26,14 +26,18 @@ import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
@@ -41,23 +45,72 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
 public class ExecutionEngine {
-    private static final String jars = "/Users/tais/Coding/Tornado_Plugins/Tornado_Plugins/src/main/resources/tornado-api-0.15.2.jar:" +
-            "/Users/tais/Coding/Tornado_Plugins/Tornado_Plugins/src/main/resources/tornado-matrices-0.15.2.jar";
-    public static void run(HashMap<String, Method> fileMethodHashMap){
+    private final String jars;
+
+    private final String tempFolderPath;
+
+    private final HashMap<String, Method> fileMethodMap;
+
+    //TODO: Error handling could be improved, for example,
+    // by returning a message to the user when a compilation fails.
+    public ExecutionEngine(String tempFolderPath, HashMap<String, Method> fileMethodMap) {
+        this.tempFolderPath = tempFolderPath;
+        this.fileMethodMap = fileMethodMap;
+        String jar1 = extractResourceToFile("tornado-matrices-0.15.2.jar");
+        String jar2 = extractResourceToFile("tornado-api-0.15.2.jar");
+        jars = jar1 +":" + jar2;
+    }
+
+    /**
+     * Extracts a resource from the current classpath (assuming it's encapsulated within a JAR)
+     * and writes it to a temporary file on the disk.
+     *
+     * @param resourceName The name of the resource to extract (e.g., "tornado-api-1.0.jar").
+     * @return A File object pointing to the extracted resource or null if the resource was not found.
+     * @throws IOException if there's an error during the extraction.
+     */
+    public String extractResourceToFile(String resourceName) {
+        // Use the class loader to get the resource's input stream
+        InputStream resourceStream = this.getClass().getClassLoader().getResourceAsStream(resourceName);
+        if (resourceStream == null) {
+            return null;
+        }
+        // Create a temporary file to store the resource
+        File tempFile = null;
+        try {
+            tempFile = File.createTempFile("extractedResource", ".jar");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        tempFile.deleteOnExit();  // Ensure the temporary file is deleted when the JVM exits
+        // Copy content from the resource stream to the temporary file
+        try (OutputStream outStream = new FileOutputStream(tempFile)) {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = resourceStream.read(buffer)) != -1) {
+                outStream.write(buffer, 0, bytesRead);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return tempFile.getAbsolutePath();
+    }
+
+    public void run(){
         Application application = ApplicationManager.getApplication();
         application.executeOnPooledThread(() ->{
-            ArrayList<String> files = new ArrayList<>(fileMethodHashMap.keySet());
+            ArrayList<String> files = new ArrayList<>(fileMethodMap.keySet());
             try {
-                compile(jars,"/Users/tais/Downloads/source",files);
-                packFolder("/Users/tais/Downloads/source","/Users/tais/Downloads/source");
-                executeJars("/Users/tais/Downloads/source");
+                compile(jars,tempFolderPath,files);
+                packFolder(tempFolderPath,tempFolderPath);
+                executeJars(tempFolderPath);
             } catch (ExecutionException | IOException e) {
                 throw new RuntimeException(e);
             }
         });
     }
 
-    private static String getJavacPath(Project project) {
+    private String getJavacPath(Project project) {
         Sdk sdk = ProjectRootManager.getInstance(project).getProjectSdk();
         if (sdk != null && sdk.getSdkType() instanceof JavaSdkType) {
             return ((JavaSdkType) sdk.getSdkType()).getBinPath(sdk) + (System.getProperty("os.name").startsWith("Win") ? "\\javac.exe" : "/javac");
@@ -65,7 +118,7 @@ public class ExecutionEngine {
         return null;  // Consider throwing an exception if no appropriate JDK is found.
     }
 
-    private static void compile(String classpath, String outputDir, ArrayList<String> javaFiles) throws ExecutionException {
+    private void compile(String classpath, String outputDir, ArrayList<String> javaFiles) throws ExecutionException {
             //String javacPath = getJavacPath(ProjectManager.getInstance().getDefaultProject());
 //            if (javacPath == null) {
 //                throw new IllegalStateException("Javac path not found!");
@@ -87,7 +140,7 @@ public class ExecutionEngine {
             }
     }
 
-    private static void packFolder(String classFolderPath, String outputFolderPath) throws IOException {
+    private void packFolder(String classFolderPath, String outputFolderPath) throws IOException {
         File classFolder = new File(classFolderPath);
         File[] classFiles = classFolder.listFiles((dir, name) -> name.endsWith(".class"));
 
@@ -117,7 +170,7 @@ public class ExecutionEngine {
         }
     }
 
-    private static void executeJars(String jarFolderPath){
+    private void executeJars(String jarFolderPath){
         GeneralCommandLine commandLine = new GeneralCommandLine();
         //Detecting if the user has correctly installed TornadoVM
         commandLine.setExePath("tornado");
@@ -138,7 +191,10 @@ public class ExecutionEngine {
                 Notifications.Bus.notify(notification);
                 return;
             }
-        } catch (ExecutionException ignored) {}
+        } catch (ExecutionException ignored) {
+            System.out.println("Tornado Broken!");
+            return;
+        }
 
         File folder = new File(jarFolderPath);
         File[] listOfFiles = folder.listFiles();
@@ -155,7 +211,7 @@ public class ExecutionEngine {
         }
     }
 
-    private static void runTornadoOnJar(String jarPath){
+    private void runTornadoOnJar(String jarPath){
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.setExePath("tornado");
         commandLine.addParameter("--fullDebug");

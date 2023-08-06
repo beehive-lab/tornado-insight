@@ -44,8 +44,9 @@ public class TWTasksButtonEvent {
             File file = creatFile(method, fileName,dir);
             methodFile.put(file.getAbsolutePath(), method);
         }
-
-        ExecutionEngine.run(methodFile);
+        ExecutionEngine executionEngine = new ExecutionEngine(dir.getAbsolutePath(), methodFile);
+        executionEngine.run();
+        dir.delete();
     }
 
     private File creatFile(Method method, String filename, File dir){
