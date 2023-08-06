@@ -176,7 +176,7 @@ public class ExecutionEngine {
     private void executeJars(String jarFolderPath){
         GeneralCommandLine commandLine = new GeneralCommandLine();
         //Detecting if the user has correctly installed TornadoVM
-        commandLine.setExePath("tornado");
+        commandLine.setExePath("/Users/tais/Coding/TornadoVM/bin/bin/tornado");
         commandLine.addParameter("--device");
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
@@ -197,6 +197,8 @@ public class ExecutionEngine {
         } catch (ExecutionException ignored) {
             ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
                     print("Tornado Broken\n", ConsoleViewContentType.ERROR_OUTPUT);
+            // Performing UI related operations on a non-EDT is not allowed.
+            // To ensure that the code executes on EDT, need use Application.invokeLater().
             ApplicationManager.getApplication().invokeLater(() ->{
                 ConsoleOutputToolWindow.toolWindow.activate(null, false);
             } );
@@ -221,10 +223,12 @@ public class ExecutionEngine {
 
     private void runTornadoOnJar(String jarPath){
         GeneralCommandLine commandLine = new GeneralCommandLine();
-        commandLine.setExePath("tornado");
-        commandLine.addParameter("--fullDebug");
-        commandLine.addParameter("-jar");
-        commandLine.addParameter(jarPath);
+
+        commandLine.setExePath("/bin/sh");
+        commandLine.addParameter("-c");
+        commandLine.addParameter("source /Users/tais/Coding/TornadoVM/setvars.sh;tornado --fullDebug -jar "+jarPath);
+//        commandLine.addParameter("-jar");
+//        commandLine.addParameter(jarPath);
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
             ProcessOutput output = handler.runProcess();
@@ -233,6 +237,7 @@ public class ExecutionEngine {
                 // Print error output if the command failed
                 System.err.println(output.getStderr());
             } else {
+                System.out.println("No Error");
                 System.out.println(output.getStdout());
             }
         } catch (ExecutionException e) {
