@@ -95,6 +95,8 @@
                   topic="com.intellij.openapi.wm.ex.ToolWindowManagerListener"/>
         <listener class="com.tais.tornado_plugins.listener.EditorSwitch"
                   topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+        <listener class="com.tais.tornado_plugins.listener.TornadoSettingListener"
+                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
     </projectListeners>
 
     <actions>
