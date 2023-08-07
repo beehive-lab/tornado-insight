@@ -1,19 +1,28 @@
 package com.tais.tornado_plugins.util;
 
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
+import com.intellij.codeInspection.GlobalInspectionContext;
+import com.intellij.codeInspection.InspectionEngine;
+import com.intellij.codeInspection.InspectionManager;
 import com.intellij.codeInspection.LocalInspectionEP;
+import com.intellij.codeInspection.LocalInspectionTool;
+import com.intellij.codeInspection.ProblemDescriptor;
+import com.intellij.codeInspection.ex.InspectionManagerEx;
 import com.intellij.codeInspection.ex.LocalInspectionToolWrapper;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
 import com.intellij.psi.PsiAnnotation;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiErrorElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.impl.PsiManagerImpl;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.tais.tornado_plugins.ui.TornadoToolsWindow;
+import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.util.ArrayList;
@@ -46,9 +55,11 @@ public class TornadoTWTask {
         taskList = findAnnotatedVariables(file);
         if (taskList == null) return;
         for (PsiMethod task:taskList) {
-            String displayName = psiMethodFormat(task);
-            taskMap.put(displayName, task);
-            model.addElement(displayName);
+            if (validateTask(task)){
+                String displayName = psiMethodFormat(task);
+                taskMap.put(displayName, task);
+                model.addElement(displayName);
+            }
         }
         TornadoToolsWindow.getList().repaint();
     }
@@ -101,5 +112,11 @@ public class TornadoTWTask {
             }
         }
         return psiMethodsList;
+    }
+
+    private static boolean validateTask(PsiMethod method){
+        PsiElement[] errorElements = PsiTreeUtil.collectElements(method,
+                element -> element instanceof PsiErrorElement);
+        return errorElements.length == 0;
     }
 }

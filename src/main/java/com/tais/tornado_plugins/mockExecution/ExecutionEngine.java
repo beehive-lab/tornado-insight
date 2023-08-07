@@ -20,6 +20,7 @@ import com.intellij.openapi.projectRoots.JavaSdkType;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.tais.tornado_plugins.entity.Method;
+import com.tais.tornado_plugins.entity.TornadoSetting;
 import com.tais.tornado_plugins.ui.ConsoleOutputToolWindow;
 import org.jetbrains.annotations.NotNull;
 
@@ -100,8 +101,13 @@ public class ExecutionEngine {
 
     public void run(){
         Application application = ApplicationManager.getApplication();
+        ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                print("Testing is starting...\n", ConsoleViewContentType.NORMAL_OUTPUT);
         application.executeOnPooledThread(() ->{
             ArrayList<String> files = new ArrayList<>(fileMethodMap.keySet());
+            ApplicationManager.getApplication().invokeLater(() ->{
+                ConsoleOutputToolWindow.toolWindow.activate(null, false);
+            } );
             try {
                 compile(jars,tempFolderPath,files);
                 packFolder(tempFolderPath,tempFolderPath);
@@ -171,13 +177,14 @@ public class ExecutionEngine {
             }
         }
     }
-    //TODO: BUG: "tornado" does not exist in env, you need to find the path to execute it,
-    // or call the user's “source setvars.sh”.
+
     private void executeJars(String jarFolderPath){
         GeneralCommandLine commandLine = new GeneralCommandLine();
         //Detecting if the user has correctly installed TornadoVM
-        commandLine.setExePath("/Users/tais/Coding/TornadoVM/bin/bin/tornado");
-        commandLine.addParameter("--device");
+        String sourceFile = TornadoSetting.getInstance().setVarFile;
+        commandLine.setExePath("/bin/sh");
+        commandLine.addParameter("-c");
+        commandLine.addParameter("source "+ sourceFile +";tornado --device");
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
             ProcessOutput output = handler.runProcess();
@@ -185,13 +192,14 @@ public class ExecutionEngine {
                 // TornadoVM is not properly installed on the user's machine
                 Notification notification = new Notification("Print", "TornadoVM not detected",
                         "TornadoVM is not properly installed or configured", NotificationType.ERROR);
-                notification.addAction(new NotificationAction("Get information on how to install and configure TornadoVM") {
+                notification.addAction(new NotificationAction("How to install and configure TornadoVM") {
                     @Override
                     public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
                         BrowserUtil.browse("https://tornadovm.readthedocs.io/en/latest/installation.html#");
                     }
                 });
                 Notifications.Bus.notify(notification);
+                System.out.println(output.getStderr());
                 return;
             }
         } catch (ExecutionException ignored) {
@@ -199,10 +207,6 @@ public class ExecutionEngine {
                     print("Tornado Broken\n", ConsoleViewContentType.ERROR_OUTPUT);
             // Performing UI related operations on a non-EDT is not allowed.
             // To ensure that the code executes on EDT, need use Application.invokeLater().
-            ApplicationManager.getApplication().invokeLater(() ->{
-                ConsoleOutputToolWindow.toolWindow.activate(null, false);
-            } );
-
             return;
         }
 
@@ -222,23 +226,23 @@ public class ExecutionEngine {
     }
 
     private void runTornadoOnJar(String jarPath){
+        String sourceFile = TornadoSetting.getInstance().setVarFile;
         GeneralCommandLine commandLine = new GeneralCommandLine();
-
         commandLine.setExePath("/bin/sh");
         commandLine.addParameter("-c");
-        commandLine.addParameter("source /Users/tais/Coding/TornadoVM/setvars.sh;tornado --fullDebug -jar "+jarPath);
-//        commandLine.addParameter("-jar");
-//        commandLine.addParameter(jarPath);
+        commandLine.addParameter("source "+ sourceFile +";tornado --debug -jar "+jarPath);
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
             ProcessOutput output = handler.runProcess();
-
-            if (output.getExitCode() != 0) {
-                // Print error output if the command failed
-                System.err.println(output.getStderr());
-            } else {
-                System.out.println("No Error");
-                System.out.println(output.getStdout());
+            //Cannot use the exit code to determine if TornadoVM is running with an error or not.
+            System.out.println(output);
+            if (!output.getStderr().isEmpty()){
+                ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                        print("Your method has exceptions\n", ConsoleViewContentType.ERROR_OUTPUT);
+            }
+            else {
+                ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                        print("Your method has no exceptions\n", ConsoleViewContentType.NORMAL_OUTPUT);
             }
         } catch (ExecutionException e) {
             e.printStackTrace();

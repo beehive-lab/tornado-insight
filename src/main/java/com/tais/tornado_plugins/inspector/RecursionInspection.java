@@ -35,7 +35,7 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                             PsiMethod calledMethod = callExpression.resolveMethod();
                             Set<PsiMethod> visited = new HashSet<>();
                             if (isRecursive(calledMethod, visited)){
-                                assert calledMethod != null;
+                                if (calledMethod == null) return;
                                 holder.registerProblem(
                                         calledMethod,
                                         "TornadoVM: Recursive calls are not allowed in a method with @Reduce " +
@@ -52,7 +52,7 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
         if (!visited.add(method)) {
             return true;
         }
-        assert method != null;
+        if (method == null) return false;
         PsiCodeBlock body = method.getBody();
         if (body != null) {
             for (PsiMethodCallExpression call : PsiTreeUtil.findChildrenOfType(body, PsiMethodCallExpression.class)) {
