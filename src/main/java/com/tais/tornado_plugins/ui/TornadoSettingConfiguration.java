@@ -9,6 +9,7 @@ import com.intellij.openapi.util.NlsContexts;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.components.JBPanel;
 import com.intellij.util.ui.UI;
+import com.tais.tornado_plugins.entity.TornadoSetting;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
@@ -17,13 +18,14 @@ public class TornadoSettingConfiguration implements Configurable {
     private final TextFieldWithBrowseButton fileChooser;
     private final JComponent component;
     private final static String title = "TornadoVM environment variable file:";
-    private final static String hint = "The environment variable file for TornadoVM is usually \"TornadoVM/setvars.sh\".\n" +
-            "This file allows the plugin to call your host's TornadoVM for further analysis of Tornado methods.";
 
     public TornadoSettingConfiguration() {
         component = new JBPanel<>(new VerticalFlowLayout(VerticalFlowLayout.LEFT));
 
         fileChooser = new TextFieldWithBrowseButton();
+        if (TornadoSetting.getInstance().setVarFile != null){
+            fileChooser.setText(TornadoSetting.getInstance().setVarFile);
+        }
         fileChooser.addBrowseFolderListener(title, "Choose the .sh file",
                 ProjectManager.getInstance().getOpenProjects()[0],
                 new FileChooserDescriptor(true, false, false, false, false, false) {
@@ -58,6 +60,7 @@ public class TornadoSettingConfiguration implements Configurable {
     @Override
     public void apply() throws ConfigurationException {
         //TODO: Validate file
+        TornadoSetting.getInstance().setVarFile = fileChooser.getText();
         System.out.println(fileChooser.getText());
     }
 }
