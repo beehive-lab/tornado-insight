@@ -11,17 +11,20 @@ import com.intellij.psi.JavaRecursiveElementVisitor;
 import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.PsiField;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiLocalVariable;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.PsiType;
 import com.intellij.psi.PsiVariable;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.tais.tornado_plugins.entity.ProblemMethods;
 import com.tais.tornado_plugins.message.TornadoTaskRefreshListener;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -73,6 +76,7 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
                                     && !type.getCanonicalText().startsWith("char[]") && !type.getCanonicalText().startsWith("float[]")
                                     && !type.getCanonicalText().startsWith("byte[]") && !type.getCanonicalText().startsWith("short[]")
                                     && !type.equalsToText("Int3") && !(supportedType.contains(type.toString().replace("PsiType:","")))){
+                                ProblemMethods.getInstance().addMethod(parent);
                                 holder.registerProblem(
                                         variable,
                                         "TornadoVM:Unsupported datatype in TornadoVM.",
@@ -80,9 +84,15 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
                                 );
                             }
                         }
+
                     });
                 }
             }
+//            @Override
+//            public void visitFile(@NotNull PsiFile file) {
+//                super.visitFile(file);
+//                ProblemMethods.getInstance().addMethod(DataTypeInspection.this, methods);
+//            }
         };
     }
 }

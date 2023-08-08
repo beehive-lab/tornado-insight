@@ -21,6 +21,7 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.impl.PsiManagerImpl;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.tais.tornado_plugins.entity.ProblemMethods;
 import com.tais.tornado_plugins.ui.TornadoToolsWindow;
 import org.jetbrains.annotations.NotNull;
 
@@ -42,26 +43,28 @@ public class TornadoTWTask {
         //TODO:Also need validate the Tornado Task
         //ToolWindow maybe created before the Psi index,
         // so when the Psi index is not finished creating, skip
-        if (DumbService.isDumb(project) || model == null) return;
-        model.clear();
-        taskList = new ArrayList<>();
-        taskMap = new HashMap<>();
+        synchronized (TornadoTWTask.class){
+            if (DumbService.isDumb(project) || model == null) return;
+            model.clear();
+            taskList = new ArrayList<>();
+            taskMap = new HashMap<>();
 
-        PsiManagerImpl manager = new PsiManagerImpl(project);
-        if (FileEditorManager.getInstance(project).getSelectedFiles().length == 0) return;
+            PsiManagerImpl manager = new PsiManagerImpl(project);
+            if (FileEditorManager.getInstance(project).getSelectedFiles().length == 0) return;
 
-        PsiFile file = manager.findFile(Objects.requireNonNull(FileEditorManager.getInstance(project).getSelectedFiles()[0]));
-        assert file != null;
-        taskList = findAnnotatedVariables(file);
-        if (taskList == null) return;
-        for (PsiMethod task:taskList) {
-            if (validateTask(task)){
-                String displayName = psiMethodFormat(task);
-                taskMap.put(displayName, task);
-                model.addElement(displayName);
+            PsiFile file = manager.findFile(Objects.requireNonNull(FileEditorManager.getInstance(project).getSelectedFiles()[0]));
+            assert file != null;
+            taskList = findAnnotatedVariables(file);
+            if (taskList == null) return;
+            for (PsiMethod task:taskList) {
+                if (validateTask(task)){
+                    String displayName = psiMethodFormat(task);
+                    taskMap.put(displayName, task);
+                    model.addElement(displayName);
+                }
             }
+            TornadoToolsWindow.getList().repaint();
         }
-        TornadoToolsWindow.getList().repaint();
     }
 
     public static void updateInspectorList(DefaultListModel model){
@@ -117,6 +120,7 @@ public class TornadoTWTask {
     private static boolean validateTask(PsiMethod method){
         PsiElement[] errorElements = PsiTreeUtil.collectElements(method,
                 element -> element instanceof PsiErrorElement);
-        return errorElements.length == 0;
+        if (errorElements.length != 0) return false;
+        return !ProblemMethods.getInstance().getMethodSet().contains(method.getText());
     }
 }

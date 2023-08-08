@@ -7,12 +7,17 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.PsiField;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.PsiModifier;
 import com.intellij.psi.PsiReferenceExpression;
 import com.intellij.psi.PsiType;
+import com.intellij.psi.util.PsiTreeUtil;
+import com.tais.tornado_plugins.entity.ProblemMethods;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
 
 public class StaticTaskGraphInspection extends AbstractBaseJavaLocalInspectionTool {
     @Override
@@ -29,6 +34,7 @@ public class StaticTaskGraphInspection extends AbstractBaseJavaLocalInspectionTo
 
                     if (containingClass != null && "TaskGraph".equals(type.getPresentableText())) {
                         if (field.hasModifierProperty(PsiModifier.STATIC)) {
+                            ProblemMethods.getInstance().addMethod(PsiTreeUtil.getParentOfType(expression, PsiMethod.class));
                             holder.registerProblem(expression,
                                     "TornadoVM: TornadoVM currently does not support static TaskGraph and Tasks");
                         }
@@ -47,12 +53,20 @@ public class StaticTaskGraphInspection extends AbstractBaseJavaLocalInspectionTo
 
                     if (containingClass != null && "TaskGraph".equals(containingClass.getName()) && "task".equals(method.getName())) {
                         if (method.hasModifierProperty(PsiModifier.STATIC)) {
+                            ProblemMethods.getInstance().addMethod(PsiTreeUtil.getParentOfType(expression, PsiMethod.class));
                             holder.registerProblem(expression,
                                     "TornadoVM: TornadoVM currently does not support static TaskGraph and Tasks");
                         }
                     }
                 }
             }
+//
+//            @Override
+//            public void visitFile(@NotNull PsiFile file) {
+//                super.visitFile(file);
+//                ProblemMethods.getInstance().addMethod(StaticTaskGraphInspection.this, methods);
+//                methods.clear();
+//            }
         };
 
     }

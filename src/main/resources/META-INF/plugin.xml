@@ -87,6 +87,7 @@
         <toolWindow factoryClass="com.tais.tornado_plugins.ui.ConsoleOutputToolWindow" id="TornadoVM Console" anchor="bottom"/>
         <applicationConfigurable instance="com.tais.tornado_plugins.ui.TornadoSettingConfiguration"/>
         <applicationService serviceImplementation="com.tais.tornado_plugins.entity.TornadoSetting"/>
+        <psi.treeChangeListener implementation="com.tais.tornado_plugins.listener.PsiChangeListener"/>
     </extensions>
     <projectListeners>
         <listener class="com.tais.tornado_plugins.GetRunOutputAction"

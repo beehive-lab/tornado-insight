@@ -8,12 +8,15 @@ import com.intellij.psi.JavaRecursiveElementVisitor;
 import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiClassType;
 import com.intellij.psi.PsiElementVisitor;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiThrowStatement;
 import com.intellij.psi.PsiTryStatement;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.tais.tornado_plugins.entity.ProblemMethods;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Objects;
 public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool{
@@ -34,6 +37,7 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool{
                         public void visitThrowStatement(PsiThrowStatement statement) {
                             super.visitThrowStatement(statement);
                             if (!reportedStatement.contains(statement)){
+                                ProblemMethods.getInstance().addMethod(parent);
                                 holder.registerProblem(statement,
                                         "TornadoVM dose not support for Traps/Exceptions",
                                         ProblemHighlightType.ERROR);
@@ -45,11 +49,12 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool{
                         @Override
                         public void visitTryStatement(PsiTryStatement statement) {
                             super.visitTryStatement(statement);
+                            ProblemMethods.getInstance().addMethod(parent);
                             holder.registerProblem(statement,
                                     "TornadoVM: TornadoVM dose not support for Traps/Exceptions." +
                                             "The code block in Catch will be ignored, and the exception " +
                                             "that may be thrown in Try block will not be handled",
-                                    ProblemHighlightType.WARNING);
+                                    ProblemHighlightType.ERROR);
                         }
                     });
                     //Check if an exception is thrown in the function declaration
@@ -58,11 +63,19 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool{
                             holder.registerProblem(parent.getThrowsList(), "TornadoVM: Incompatible thrown types " +
                                             "Exception in functional expression\n " + exception.getCanonicalText(),
                                     ProblemHighlightType.ERROR);
+                            ProblemMethods.getInstance().addMethod(parent);
                         }
                         reportedMethod.add(parent);
                     }
                 }
             };
+//
+//            @Override
+//            public void visitFile(@NotNull PsiFile file) {
+//                super.visitFile(file);
+//                ProblemMethods.getInstance().addMethod(ThrowInspection.this, methods);
+//                methods.clear();
+//            }
         };
     }
 }

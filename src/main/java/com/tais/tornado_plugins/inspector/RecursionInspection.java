@@ -9,11 +9,14 @@ import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiCallExpression;
 import com.intellij.psi.PsiCodeBlock;
 import com.intellij.psi.PsiElementVisitor;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.tais.tornado_plugins.entity.ProblemMethods;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -36,6 +39,7 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                             Set<PsiMethod> visited = new HashSet<>();
                             if (isRecursive(calledMethod, visited)){
                                 if (calledMethod == null) return;
+                                ProblemMethods.getInstance().addMethod(calledMethod);
                                 holder.registerProblem(
                                         calledMethod,
                                         "TornadoVM: Recursive calls are not allowed in a method with @Reduce " +

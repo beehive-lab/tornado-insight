@@ -3,6 +3,7 @@ package com.tais.tornado_plugins.ui;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.psi.PsiFile;
@@ -25,7 +26,6 @@ public class TornadoToolsWindow implements ToolWindowFactory {
     private static JList list;
     private static DefaultListModel listModel;
     private static DefaultListModel inspectorListModel;
-
     private static TornadoVM toolsWindow;
 
     @Override
@@ -37,6 +37,7 @@ public class TornadoToolsWindow implements ToolWindowFactory {
         Content content = ContentFactory.getInstance().
                 createContent(toolsWindow.getMainPanel(),"",false);
         toolWindow.getContentManager().addContent(content);
+        RefreshListener.init(project.getMessageBus());
         TornadoTWTask.addTask(project,listModel);
         TornadoTWTask.updateInspectorList(inspectorListModel);
     }
@@ -56,4 +57,6 @@ public class TornadoToolsWindow implements ToolWindowFactory {
     public static TornadoVM getToolsWindow() {
         return toolsWindow;
     }
+
+
 }
