@@ -22,6 +22,7 @@ import com.intellij.openapi.roots.ProjectRootManager;
 import com.tais.tornado_plugins.entity.Method;
 import com.tais.tornado_plugins.entity.TornadoSetting;
 import com.tais.tornado_plugins.ui.ConsoleOutputToolWindow;
+import com.tais.tornado_plugins.util.TornadoTWTask;
 import org.jetbrains.annotations.NotNull;
 
 import javax.tools.JavaCompiler;
@@ -54,8 +55,6 @@ public class ExecutionEngine {
 
     private final HashMap<String, Method> fileMethodMap;
 
-    //TODO: Error handling could be improved, for example,
-    // by returning a message to the user when a compilation fails.
     public ExecutionEngine(String tempFolderPath, HashMap<String, Method> fileMethodMap) {
         this.tempFolderPath = tempFolderPath;
         this.fileMethodMap = fileMethodMap;
@@ -100,6 +99,8 @@ public class ExecutionEngine {
     }
 
     public void run(){
+        // Performing UI related operations on a non-EDT is not allowed.
+        // To ensure that the code executes on EDT, need use Application.invokeLater().
         Application application = ApplicationManager.getApplication();
         ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
                 print("Testing is starting...\n", ConsoleViewContentType.NORMAL_OUTPUT);
@@ -223,8 +224,7 @@ public class ExecutionEngine {
             ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
                     print("TornadoVM environment variable file is not set correctly.\n",
                             ConsoleViewContentType.ERROR_OUTPUT);
-            // Performing UI related operations on a non-EDT is not allowed.
-            // To ensure that the code executes on EDT, need use Application.invokeLater().
+
             return;
         }
 
@@ -255,15 +255,33 @@ public class ExecutionEngine {
             //Cannot use the exit code to determine if TornadoVM is running with an error or not.
             System.out.println(output);
             if (!output.getStderr().isEmpty()){
+                printResults(jarPath, true, output);
                 ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
                         print("Your method has exceptions\n", ConsoleViewContentType.ERROR_OUTPUT);
             }
             else {
+                printResults(jarPath, false, output);
                 ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
                         print("Your method has no exceptions\n", ConsoleViewContentType.NORMAL_OUTPUT);
             }
         } catch (ExecutionException e) {
             e.printStackTrace();
+        }
+    }
+
+    //Statistics of test results for each method
+    private void printResults(String jarPath, boolean hasException, ProcessOutput output){
+        String javaPath = jarPath.substring(0, jarPath.lastIndexOf(".jar")) + ".java";
+        String methodName = TornadoTWTask.psiMethodFormat(fileMethodMap.get(javaPath).getMethod());
+        if (hasException){
+            String outputAnalysis = OutputAnalysis.analysis(output);
+            ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                    print(methodName +": " + outputAnalysis,
+                            ConsoleViewContentType.ERROR_OUTPUT);
+        }else {
+            ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                    print(methodName +": " + "Your method has no exceptions\n",
+                            ConsoleViewContentType.LOG_INFO_OUTPUT);
         }
     }
 }
