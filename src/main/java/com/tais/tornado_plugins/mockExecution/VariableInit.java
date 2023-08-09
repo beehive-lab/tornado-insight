@@ -1,7 +1,5 @@
 package com.tais.tornado_plugins.mockExecution;
 
-import com.intellij.psi.PsiParameter;
-import com.intellij.psi.PsiPrimitiveType;
 import com.tais.tornado_plugins.entity.Method;
 import org.jetbrains.annotations.NotNull;
 

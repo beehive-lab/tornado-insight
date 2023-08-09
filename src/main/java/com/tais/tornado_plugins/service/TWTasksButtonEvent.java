@@ -1,9 +1,6 @@
 package com.tais.tornado_plugins.service;
 
-import com.intellij.openapi.application.Application;
-import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.util.io.FileUtilRt;
-import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import com.tais.tornado_plugins.entity.Method;
@@ -13,19 +10,15 @@ import com.tais.tornado_plugins.mockExecution.VariableInit;
 import com.tais.tornado_plugins.ui.EmptySelectionWarningDialog;
 import com.tais.tornado_plugins.ui.TaskParametersDialogWrapper;
 import com.tais.tornado_plugins.ui.TornadoToolsWindow;
-import com.tais.tornado_plugins.ui.TornadoVM;
 import com.tais.tornado_plugins.util.TornadoTWTask;
-import org.apache.tools.ant.taskdefs.Java;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 
 public class TWTasksButtonEvent {
     public void pressButton(){

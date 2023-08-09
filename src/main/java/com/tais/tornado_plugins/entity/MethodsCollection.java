@@ -1,7 +1,5 @@
 package com.tais.tornado_plugins.entity;
 
-import com.intellij.psi.PsiMethod;
-
 import java.util.ArrayList;
 
 public class MethodsCollection {

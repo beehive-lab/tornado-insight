@@ -1,6 +1,5 @@
 package com.tais.tornado_plugins.util;
 
-import com.intellij.openapi.application.ApplicationManager;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Locale;

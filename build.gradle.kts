@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.ir.backend.js.compile
-
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.8.21"
