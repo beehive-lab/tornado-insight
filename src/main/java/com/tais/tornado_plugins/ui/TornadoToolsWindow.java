@@ -24,18 +24,18 @@ public class TornadoToolsWindow implements ToolWindowFactory {
         listModel = (DefaultListModel) list.getModel();
         inspectorListModel = (DefaultListModel) toolsWindow.getInspectorList().getModel();
         Content content = ContentFactory.getInstance().
-                createContent(toolsWindow.getMainPanel(),"",false);
+                createContent(toolsWindow.getMainPanel(), "", false);
         toolWindow.getContentManager().addContent(content);
         ToolWindowOpen.RefreshListener.init(project.getMessageBus());
-        TornadoTWTask.addTask(project,listModel);
+        TornadoTWTask.addTask(project, listModel);
         TornadoTWTask.updateInspectorList(inspectorListModel);
     }
 
-    public static DefaultListModel getListModel(){
+    public static DefaultListModel getListModel() {
         return listModel;
     }
 
-    public static JList getList(){
+    public static JList getList() {
         return list;
     }
 

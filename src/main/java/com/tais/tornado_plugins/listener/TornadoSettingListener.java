@@ -22,7 +22,7 @@ public class TornadoSettingListener implements ProjectManagerListener {
         Notifications.Bus.notify(notification, project);
     }
 
-    static class OpenTornadoSettingAction extends NotificationAction{
+    static class OpenTornadoSettingAction extends NotificationAction {
 
         public OpenTornadoSettingAction() {
             super("Configure TornadoVM");

@@ -51,7 +51,7 @@ public class ExecutionEngine {
         this.fileMethodMap = fileMethodMap;
         String jar1 = extractResourceToFile("tornado-matrices-0.15.2.jar");
         String jar2 = extractResourceToFile("tornado-api-0.15.2.jar");
-        jars = jar1 +":" + jar2;
+        jars = jar1 + ":" + jar2;
     }
 
     /**
@@ -89,20 +89,20 @@ public class ExecutionEngine {
         return tempFile.getAbsolutePath();
     }
 
-    public void run(){
+    public void run() {
         // Performing UI related operations on a non-EDT is not allowed.
         // To ensure that the code executes on EDT, need use Application.invokeLater().
         Application application = ApplicationManager.getApplication();
         ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
                 print("Testing is starting...\n", ConsoleViewContentType.NORMAL_OUTPUT);
-        application.executeOnPooledThread(() ->{
+        application.executeOnPooledThread(() -> {
             ArrayList<String> files = new ArrayList<>(fileMethodMap.keySet());
-            ApplicationManager.getApplication().invokeLater(() ->{
+            ApplicationManager.getApplication().invokeLater(() -> {
                 ConsoleOutputToolWindow.toolWindow.activate(null, false);
-            } );
+            });
             try {
-                compile(jars,tempFolderPath,files);
-                packFolder(tempFolderPath,tempFolderPath);
+                compile(jars, tempFolderPath, files);
+                packFolder(tempFolderPath, tempFolderPath);
                 executeJars(tempFolderPath);
             } catch (ExecutionException | IOException e) {
                 throw new RuntimeException(e);
@@ -119,7 +119,7 @@ public class ExecutionEngine {
     }
 
     private void compile(String classpath, String outputDir, ArrayList<String> javaFiles) throws ExecutionException {
-            //String javacPath = getJavacPath(ProjectManager.getInstance().getDefaultProject());
+        //String javacPath = getJavacPath(ProjectManager.getInstance().getDefaultProject());
 //            if (javacPath == null) {
 //                throw new IllegalStateException("Javac path not found!");
 //            }
@@ -174,16 +174,16 @@ public class ExecutionEngine {
                 jos.putNextEntry(new JarEntry(classPath.getFileName().toString()));
                 Files.copy(classPath, jos);
                 jos.closeEntry();
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
                         print("Failed to package test files\n",
                                 ConsoleViewContentType.ERROR_OUTPUT);
             }
         }
     }
+
     //TODO: Bug submission interface
-    private void executeJars(String jarFolderPath){
+    private void executeJars(String jarFolderPath) {
         ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
                 print("Tests are being executed...\n",
                         ConsoleViewContentType.NORMAL_OUTPUT);
@@ -192,7 +192,7 @@ public class ExecutionEngine {
         String sourceFile = TornadoSetting.getInstance().setVarFile;
         commandLine.setExePath("/bin/sh");
         commandLine.addParameter("-c");
-        commandLine.addParameter("source "+ sourceFile +";tornado --device");
+        commandLine.addParameter("source " + sourceFile + ";tornado --device");
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
             ProcessOutput output = handler.runProcess();
@@ -233,23 +233,22 @@ public class ExecutionEngine {
         }
     }
 
-    private void runTornadoOnJar(String jarPath){
+    private void runTornadoOnJar(String jarPath) {
         String sourceFile = TornadoSetting.getInstance().setVarFile;
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.setExePath("/bin/sh");
         commandLine.addParameter("-c");
-        commandLine.addParameter("source "+ sourceFile +";tornado --debug -jar "+jarPath);
+        commandLine.addParameter("source " + sourceFile + ";tornado --debug -jar " + jarPath);
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
             ProcessOutput output = handler.runProcess();
             //Cannot use the exit code to determine if TornadoVM is running with an error or not.
             System.out.println(output);
-            if (!output.getStderr().isEmpty()){
+            if (!output.getStderr().isEmpty()) {
                 printResults(jarPath, true, output);
                 ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
                         print("Your method has exceptions\n", ConsoleViewContentType.ERROR_OUTPUT);
-            }
-            else {
+            } else {
                 printResults(jarPath, false, output);
                 ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
                         print("Your method has no exceptions\n", ConsoleViewContentType.NORMAL_OUTPUT);
@@ -260,17 +259,17 @@ public class ExecutionEngine {
     }
 
     //Statistics of test results for each method
-    private void printResults(String jarPath, boolean hasException, ProcessOutput output){
+    private void printResults(String jarPath, boolean hasException, ProcessOutput output) {
         String javaPath = jarPath.substring(0, jarPath.lastIndexOf(".jar")) + ".java";
         String methodName = TornadoTWTask.psiMethodFormat(fileMethodMap.get(javaPath).getMethod());
-        if (hasException){
+        if (hasException) {
             String outputAnalysis = OutputAnalysis.analysis(output);
             ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
-                    print(methodName +": " + outputAnalysis,
+                    print(methodName + ": " + outputAnalysis,
                             ConsoleViewContentType.ERROR_OUTPUT);
-        }else {
+        } else {
             ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
-                    print(methodName +": " + "Your method has no exceptions\n",
+                    print(methodName + ": " + "Your method has no exceptions\n",
                             ConsoleViewContentType.LOG_INFO_OUTPUT);
         }
     }

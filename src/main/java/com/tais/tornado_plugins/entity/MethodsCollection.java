@@ -21,7 +21,7 @@ public class MethodsCollection {
         this.methodArrayList = methodArrayList;
     }
 
-    public void addMethod(Method method){
+    public void addMethod(Method method) {
         this.methodArrayList.add(method);
     }
 }

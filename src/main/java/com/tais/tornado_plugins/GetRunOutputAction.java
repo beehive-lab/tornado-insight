@@ -14,7 +14,7 @@ public class GetRunOutputAction implements ExecutionListener {
     @Override
     public void processStarting(@NotNull String executorId, @NotNull ExecutionEnvironment env, @NotNull ProcessHandler handler) {
         System.out.println("Process Started");
-        handler.addProcessListener(new ProcessAdapter(){
+        handler.addProcessListener(new ProcessAdapter() {
             @Override
             public void onTextAvailable(@NotNull ProcessEvent event, @NotNull Key outputType) {
                 if (outputType != ProcessOutputTypes.STDERR) return;

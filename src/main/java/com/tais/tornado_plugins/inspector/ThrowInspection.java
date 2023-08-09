@@ -17,7 +17,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
 import java.util.Objects;
-public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool{
+
+public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
     public @NotNull PsiElementVisitor buildVisitor(@NotNull final ProblemsHolder holder, boolean isOnTheFly) {
         HashSet<PsiThrowStatement> reportedStatement = new HashSet<>();
         HashSet<PsiMethod> reportedMethod = new HashSet<>();
@@ -26,15 +27,15 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool{
             public void visitAnnotation(PsiAnnotation annotation) {
                 super.visitAnnotation(annotation);
                 if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
-                        annotation.getQualifiedName().endsWith("Reduce")){
-                    PsiMethod parent = PsiTreeUtil.getParentOfType(annotation,PsiMethod.class);
+                        annotation.getQualifiedName().endsWith("Reduce")) {
+                    PsiMethod parent = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
                     assert parent != null;
                     parent.accept(new JavaRecursiveElementVisitor() {
                         //Check if an exception is thrown in the function body
                         @Override
                         public void visitThrowStatement(PsiThrowStatement statement) {
                             super.visitThrowStatement(statement);
-                            if (!reportedStatement.contains(statement)){
+                            if (!reportedStatement.contains(statement)) {
                                 ProblemMethods.getInstance().addMethod(parent);
                                 holder.registerProblem(statement,
                                         "TornadoVM dose not support for Traps/Exceptions",
@@ -56,8 +57,8 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool{
                         }
                     });
                     //Check if an exception is thrown in the function declaration
-                    if(!reportedMethod.contains(parent)){
-                        for(PsiClassType exception : parent.getThrowsList().getReferencedTypes()) {
+                    if (!reportedMethod.contains(parent)) {
+                        for (PsiClassType exception : parent.getThrowsList().getReferencedTypes()) {
                             holder.registerProblem(parent.getThrowsList(), "TornadoVM: Incompatible thrown types " +
                                             "Exception in functional expression\n " + exception.getCanonicalText(),
                                     ProblemHighlightType.ERROR);
@@ -66,7 +67,9 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool{
                         reportedMethod.add(parent);
                     }
                 }
-            };
+            }
+
+            ;
 //
 //            @Override
 //            public void visitFile(@NotNull PsiFile file) {

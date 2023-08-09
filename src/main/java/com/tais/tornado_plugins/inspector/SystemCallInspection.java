@@ -25,8 +25,8 @@ public class SystemCallInspection extends AbstractBaseJavaLocalInspectionTool {
             public void visitAnnotation(PsiAnnotation annotation) {
                 super.visitAnnotation(annotation);
                 if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
-                        annotation.getQualifiedName().endsWith("Reduce")){
-                    PsiMethod parent = PsiTreeUtil.getParentOfType(annotation,PsiMethod.class);
+                        annotation.getQualifiedName().endsWith("Reduce")) {
+                    PsiMethod parent = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
                     assert parent != null;
                     parent.accept(new JavaRecursiveElementVisitor() {
                         public void visitReferenceExpression(PsiReferenceExpression expression) {
@@ -44,7 +44,9 @@ public class SystemCallInspection extends AbstractBaseJavaLocalInspectionTool {
                         }
                     });
                 }
-            };
+            }
+
+            ;
 //
 //            @Override
 //            public void visitFile(@NotNull PsiFile file) {

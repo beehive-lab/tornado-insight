@@ -16,7 +16,6 @@ public class Method {
     public static final int TransferToHost = 2;
 
 
-
     public Method(PsiMethod method, ArrayList<String> parameterValues) {
         this.method = method;
         this.parameterValues = parameterValues;

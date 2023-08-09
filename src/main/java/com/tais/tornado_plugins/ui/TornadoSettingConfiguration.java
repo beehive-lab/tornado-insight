@@ -23,7 +23,7 @@ public class TornadoSettingConfiguration implements Configurable {
         component = new JBPanel<>(new VerticalFlowLayout(VerticalFlowLayout.LEFT));
 
         fileChooser = new TextFieldWithBrowseButton();
-        if (TornadoSetting.getInstance().setVarFile != null){
+        if (TornadoSetting.getInstance().setVarFile != null) {
             fileChooser.setText(TornadoSetting.getInstance().setVarFile);
         }
         fileChooser.addBrowseFolderListener(title, "Choose the .sh file",

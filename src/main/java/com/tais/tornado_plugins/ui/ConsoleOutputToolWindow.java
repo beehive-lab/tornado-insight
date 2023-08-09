@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
+
 public class ConsoleOutputToolWindow implements ToolWindowFactory {
 
     private static final Map<Project, ConsoleView> consoleViews = new HashMap<>();

@@ -7,7 +7,10 @@ import java.util.ResourceBundle;
 
 public class MessageBundle {
     static String langCode = "en";
-    private MessageBundle(){}
+
+    private MessageBundle() {
+    }
+
     public static @NotNull String message(String key) {
         return ResourceBundle.getBundle("messages.plugin", Locale.forLanguageTag(langCode)).getString(key);
     }

@@ -21,12 +21,11 @@ import java.util.HashMap;
 import java.util.List;
 
 public class TWTasksButtonEvent {
-    public void pressButton(){
+    public void pressButton() {
         List selectedValuesList = TornadoToolsWindow.getToolsWindow().getTasksList().getSelectedValuesList();
         if (selectedValuesList.isEmpty()) {
             new EmptySelectionWarningDialog().show();
-        }
-        else {
+        } else {
             ArrayList<PsiMethod> methodList = TornadoTWTask.getMethods(selectedValuesList);
             new TaskParametersDialogWrapper(methodList).showAndGet();
         }
@@ -34,8 +33,8 @@ public class TWTasksButtonEvent {
 
     public void fileCreationHandler(MethodsCollection methodsCollection, String importCodeBlock) throws IOException {
         HashMap<String, Method> methodFile = new HashMap<>();
-        File dir = FileUtilRt.createTempDirectory("files",null);
-        for (Method method:methodsCollection.getMethodArrayList()) {
+        File dir = FileUtilRt.createTempDirectory("files", null);
+        for (Method method : methodsCollection.getMethodArrayList()) {
             System.out.println(method.getParameterValues());
             System.out.println("To device: " + method.getToDeviceParameters());
             String fileName = method.getMethod().getName() + method.getMethod().hashCode();
@@ -47,7 +46,7 @@ public class TWTasksButtonEvent {
         dir.delete();
     }
 
-    private File creatFile(Method method, String importCodeBlock, String filename, File dir){
+    private File creatFile(Method method, String importCodeBlock, String filename, File dir) {
         File javaFile;
         try {
             javaFile = FileUtilRt.createTempFile(dir, filename, ".java", true);
@@ -64,25 +63,25 @@ public class TWTasksButtonEvent {
         StringBuilder parametersIn = new StringBuilder();
         StringBuilder methodWithParameters = new StringBuilder();
         StringBuilder parameterOut = new StringBuilder();
-        String methodWithClass = filename +"::"+ method.getMethod().getName();
+        String methodWithClass = filename + "::" + method.getMethod().getName();
         String variableInit = VariableInit.variableInitHelper(method);
 
-        for (PsiParameter p: method.getToDeviceParameters()) {
-            if (parametersIn.isEmpty()){
+        for (PsiParameter p : method.getToDeviceParameters()) {
+            if (parametersIn.isEmpty()) {
                 parametersIn.append(p.getName());
-            }else {
+            } else {
                 parametersIn.append(", ").append(p.getName());
             }
         }
 
-        for (PsiParameter p: method.getMethod().getParameterList().getParameters()) {
+        for (PsiParameter p : method.getMethod().getParameterList().getParameters()) {
             methodWithParameters.append(", ").append(p.getName());
         }
 
-        for (PsiParameter p: method.getToHostParameters()) {
-            if (parameterOut.isEmpty()){
+        for (PsiParameter p : method.getToHostParameters()) {
+            if (parameterOut.isEmpty()) {
                 parameterOut.append(p.getName());
-            }else {
+            } else {
                 parameterOut.append(", ").append(p.getName());
             }
         }
@@ -91,9 +90,9 @@ public class TWTasksButtonEvent {
                 "\n" +
                 variableInit +
                 "        TaskGraph taskGraph = new TaskGraph(\"s0\") \n" +
-                "                .transferToDevice(DataTransferMode.FIRST_EXECUTION, "+ parametersIn +") \n" +
-                "                .task(\"t0\", "+methodWithClass +methodWithParameters + ") \n" +
-                "                .transferToHost(DataTransferMode.EVERY_EXECUTION, "+ parameterOut +");\n" +
+                "                .transferToDevice(DataTransferMode.FIRST_EXECUTION, " + parametersIn + ") \n" +
+                "                .task(\"t0\", " + methodWithClass + methodWithParameters + ") \n" +
+                "                .transferToHost(DataTransferMode.EVERY_EXECUTION, " + parameterOut + ");\n" +
                 "\n" +
                 "        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" +
                 "        TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);\n" +
@@ -104,7 +103,7 @@ public class TWTasksButtonEvent {
             System.out.println(javaFile.getPath());
             bufferedWriter.write(importCode + importCodeBlock);
             bufferedWriter.write("\n");
-            bufferedWriter.write("public class "+javaFile.getName().replace(".java","")+"{");
+            bufferedWriter.write("public class " + javaFile.getName().replace(".java", "") + "{");
             bufferedWriter.write(method.getMethod().getText());
             bufferedWriter.write(mainCode);
             bufferedWriter.write("}");

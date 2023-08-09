@@ -10,13 +10,15 @@ public class ProblemMethods {
     private final CopyOnWriteArraySet<String> methodSet = new CopyOnWriteArraySet<>();
     private static final ProblemMethods instance = new ProblemMethods();
 
-    private ProblemMethods() {}
+    private ProblemMethods() {
+    }
+
     public static ProblemMethods getInstance() {
         return instance;
     }
 
-    public void addMethod(PsiMethod method){
-        if(methodSet.add(method.getText())){
+    public void addMethod(PsiMethod method) {
+        if (methodSet.add(method.getText())) {
             ProjectManager.getInstance().getOpenProjects()[0].getMessageBus().
                     syncPublisher(TornadoTaskRefreshListener.TOPIC).refresh();
         }
@@ -26,7 +28,7 @@ public class ProblemMethods {
         return methodSet;
     }
 
-    public void clear(){
+    public void clear() {
         methodSet.clear();
     }
 }

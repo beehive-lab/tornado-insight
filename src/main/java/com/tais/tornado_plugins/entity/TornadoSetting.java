@@ -8,8 +8,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @State(name = "tornadovm", storages = {@Storage(value = "tornado.xml")})
-public class TornadoSetting implements PersistentStateComponent<TornadoSetting>{
+public class TornadoSetting implements PersistentStateComponent<TornadoSetting> {
     public String setVarFile;
+
     public static TornadoSetting getInstance() {
         return ApplicationManager.getApplication().getService(TornadoSetting.class);
     }

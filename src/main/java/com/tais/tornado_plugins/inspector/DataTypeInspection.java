@@ -27,6 +27,7 @@ import java.util.Objects;
 
 public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
     static List<String> supportedType;
+
     static {
         InputStream resource = DataTypeInspection.class.getClassLoader().getResourceAsStream("conf.json");
         assert resource != null;
@@ -34,6 +35,7 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
         Conf types = new Gson().fromJson(reader, Conf.class);
         supportedType = Arrays.asList(types.datatype);
     }
+
     @NotNull
     @Override
     public PsiElementVisitor buildVisitor(@NotNull final ProblemsHolder holder, boolean isOnTheFly) {
@@ -42,26 +44,26 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
             public void visitAnnotation(PsiAnnotation annotation) {
 
                 if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
-                        annotation.getQualifiedName().endsWith("Reduce")){
-                    PsiMethod parent = PsiTreeUtil.getParentOfType(annotation,PsiMethod.class);
+                        annotation.getQualifiedName().endsWith("Reduce")) {
+                    PsiMethod parent = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
                     assert parent != null;
                     parent.accept(new JavaRecursiveElementVisitor() {
                         @Override
                         public void visitLocalVariable(PsiLocalVariable variable) {
-                            checkVariable(variable.getType(),variable);
+                            checkVariable(variable.getType(), variable);
                         }
 
                         @Override
                         public void visitField(PsiField field) {
-                            checkVariable(field.getType(),field);
+                            checkVariable(field.getType(), field);
                         }
 
                         @Override
                         public void visitParameter(PsiParameter parameter) {
-                            checkVariable(parameter.getType(),parameter);
+                            checkVariable(parameter.getType(), parameter);
                         }
 
-                        private void checkVariable(PsiType type, PsiVariable variable){
+                        private void checkVariable(PsiType type, PsiVariable variable) {
                             if (!type.equalsToText("int") && !type.equalsToText("boolean") && !type.equalsToText("double")
                                     && !type.equalsToText("long") && !type.equalsToText("char") && !type.equalsToText("float")
                                     && !type.equalsToText("byte") && !type.equalsToText("short")
@@ -69,7 +71,7 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
                                     && !type.getCanonicalText().startsWith("double[]") && !type.getCanonicalText().startsWith("long[]")
                                     && !type.getCanonicalText().startsWith("char[]") && !type.getCanonicalText().startsWith("float[]")
                                     && !type.getCanonicalText().startsWith("byte[]") && !type.getCanonicalText().startsWith("short[]")
-                                    && !type.equalsToText("Int3") && !(supportedType.contains(type.toString().replace("PsiType:","")))){
+                                    && !type.equalsToText("Int3") && !(supportedType.contains(type.toString().replace("PsiType:", "")))) {
                                 ProblemMethods.getInstance().addMethod(parent);
                                 holder.registerProblem(
                                         variable,
@@ -91,7 +93,7 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
     }
 }
 
-class Conf{
+class Conf {
     String[] datatype;
 }
 

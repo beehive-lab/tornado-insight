@@ -8,19 +8,19 @@ public class InputValidation {
         return pattern.matcher(str).matches();
     }
 
-    public static boolean isFloat(String str){
+    public static boolean isFloat(String str) {
         Pattern pattern = Pattern.compile("[-+]?[0-9]*\\.?[0-9]+");
         return pattern.matcher(str).matches();
     }
 
-    public static boolean isShort(String str){
+    public static boolean isShort(String str) {
         Pattern pattern = Pattern.compile("[-+]?[0-9]*\\.?[0-9]+");
         return pattern.matcher(str).matches() &&
                 Short.MIN_VALUE <= Integer.parseInt(str) &&
                 Integer.parseInt(str) <= Short.MAX_VALUE;
     }
 
-    public static boolean isByte(String str){
+    public static boolean isByte(String str) {
         Pattern pattern = Pattern.compile("[-+]?[0-9]*\\.?[0-9]+");
         return pattern.matcher(str).matches() &&
                 Byte.MIN_VALUE <= Integer.parseInt(str) &&
@@ -28,16 +28,16 @@ public class InputValidation {
 
     }
 
-    public static boolean isChar(String str){
+    public static boolean isChar(String str) {
         Pattern pattern = Pattern.compile("^.$");
         return pattern.matcher(str).matches();
     }
 
-    public static boolean isDouble(String str){
+    public static boolean isDouble(String str) {
         return isFloat(str);
     }
 
-    public static boolean isLong(String str){
+    public static boolean isLong(String str) {
         return isInteger(str);
     }
 
@@ -46,7 +46,7 @@ public class InputValidation {
     }
 
 
-    public static boolean isIntArray(String str){
+    public static boolean isIntArray(String str) {
         if (str.startsWith("{") && str.endsWith("}")) {
             String[] parts = str.substring(1, str.length() - 1).split(",");
             // Check each element
@@ -88,6 +88,7 @@ public class InputValidation {
             return false;
         }
     }
+
     public static boolean isFloatArray(String str) {
         if (str.startsWith("{") && str.endsWith("}")) {
             String[] parts = str.substring(1, str.length() - 1).split(",");
@@ -102,7 +103,7 @@ public class InputValidation {
         }
     }
 
-    public static boolean isDoubleArray(String str){
+    public static boolean isDoubleArray(String str) {
         return isFloatArray(str);
     }
 

@@ -32,8 +32,9 @@ import java.util.Set;
 public class TornadoTWTask {
     private static List<PsiMethod> taskList;
     private static String importCodeBlock;
-    private static Map<String,PsiMethod> taskMap;
-    public synchronized static void addTask(Project project, DefaultListModel model){
+    private static Map<String, PsiMethod> taskMap;
+
+    public synchronized static void addTask(Project project, DefaultListModel model) {
         //ToolWindow maybe created before the Psi index,
         // so when the Psi index is not finished creating, skip
         if (DumbService.isDumb(project) || model == null) return;
@@ -49,8 +50,8 @@ public class TornadoTWTask {
         importCodeBlock = getImportCode(file);
         taskList = findAnnotatedVariables(file);
         if (taskList == null) return;
-        for (PsiMethod task:taskList) {
-            if (validateTask(task)){
+        for (PsiMethod task : taskList) {
+            if (validateTask(task)) {
                 String displayName = psiMethodFormat(task);
                 taskMap.put(displayName, task);
                 model.addElement(displayName);
@@ -59,7 +60,7 @@ public class TornadoTWTask {
         TornadoToolsWindow.getList().repaint();
     }
 
-    public static void updateInspectorList(DefaultListModel model){
+    public static void updateInspectorList(DefaultListModel model) {
         List<LocalInspectionEP> inspections = LocalInspectionEP.LOCAL_INSPECTION.getExtensionList();
         for (LocalInspectionEP inspectionEP : inspections) {
             if (inspectionEP.implementationClass.startsWith("com.tais.tornado_plugins")) {
@@ -83,32 +84,33 @@ public class TornadoTWTask {
         return tornadoTask.stream().toList();
     }
 
-    public static String psiMethodFormat(PsiMethod method){
+    public static String psiMethodFormat(PsiMethod method) {
         String methodName = method.getName();
         StringBuilder methodParameters = new StringBuilder();
-        if (!method.hasParameters()) return methodName+"(): "+ Objects.requireNonNull(method.getReturnType()).getCanonicalText();
-        for (PsiParameter parameter: method.getParameterList().getParameters()) {
+        if (!method.hasParameters())
+            return methodName + "(): " + Objects.requireNonNull(method.getReturnType()).getCanonicalText();
+        for (PsiParameter parameter : method.getParameterList().getParameters()) {
             if (methodParameters.isEmpty()) {
                 methodParameters.append(Objects.requireNonNull(parameter.getTypeElement()).getText());
-            }else {
+            } else {
                 methodParameters.append(", ").append(Objects.requireNonNull(parameter.getTypeElement()).getText());
             }
         }
         return methodName + "(" + methodParameters + "): " + Objects.requireNonNull(method.getReturnType()).getCanonicalText();
     }
 
-    public static ArrayList<PsiMethod> getMethods(List<Object> methodsList){
+    public static ArrayList<PsiMethod> getMethods(List<Object> methodsList) {
         if (methodsList == null || methodsList.isEmpty()) return null;
-        ArrayList<PsiMethod> psiMethodsList =  new ArrayList<>();
-        for (Object method: methodsList){
-            if (taskMap.containsKey(method.toString())){
+        ArrayList<PsiMethod> psiMethodsList = new ArrayList<>();
+        for (Object method : methodsList) {
+            if (taskMap.containsKey(method.toString())) {
                 psiMethodsList.add(taskMap.get(method.toString()));
             }
         }
         return psiMethodsList;
     }
 
-    private static String getImportCode(PsiFile file){
+    private static String getImportCode(PsiFile file) {
         StringBuilder importCodeBlock = new StringBuilder();
         if (!(file instanceof PsiJavaFile javaFile)) {
             return importCodeBlock.toString();
@@ -124,7 +126,7 @@ public class TornadoTWTask {
         return importCodeBlock.toString();
     }
 
-    private static boolean validateTask(PsiMethod method){
+    private static boolean validateTask(PsiMethod method) {
         PsiElement[] errorElements = PsiTreeUtil.collectElements(method,
                 element -> element instanceof PsiErrorElement);
         if (errorElements.length != 0) return false;

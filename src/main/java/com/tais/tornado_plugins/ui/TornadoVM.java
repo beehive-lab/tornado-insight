@@ -64,7 +64,7 @@ public class TornadoVM {
         return inspectorList;
     }
 
-    public DefaultListModel getModel(){
+    public DefaultListModel getModel() {
         return (DefaultListModel) tasksList.getModel();
     }
 

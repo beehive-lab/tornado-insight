@@ -26,8 +26,8 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
             public void visitAnnotation(PsiAnnotation annotation) {
                 super.visitAnnotation(annotation);
                 if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
-                        annotation.getQualifiedName().endsWith("Reduce")){
-                    PsiMethod parent = PsiTreeUtil.getParentOfType(annotation,PsiMethod.class);
+                        annotation.getQualifiedName().endsWith("Reduce")) {
+                    PsiMethod parent = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
                     assert parent != null;
                     parent.accept(new JavaRecursiveElementVisitor() {
                         @Override
@@ -35,7 +35,7 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                             super.visitCallExpression(callExpression);
                             PsiMethod calledMethod = callExpression.resolveMethod();
                             Set<PsiMethod> visited = new HashSet<>();
-                            if (isRecursive(calledMethod, visited)){
+                            if (isRecursive(calledMethod, visited)) {
                                 if (calledMethod == null) return;
                                 ProblemMethods.getInstance().addMethod(calledMethod);
                                 holder.registerProblem(
@@ -47,9 +47,12 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                         }
                     });
                 }
-            };
+            }
+
+            ;
         };
     }
+
     private boolean isRecursive(PsiMethod method, Set<PsiMethod> visited) {
         if (!visited.add(method)) {
             return true;

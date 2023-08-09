@@ -37,12 +37,12 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
         labelArrayList = new ArrayList<>();
         textFieldsList = new HashMap<>();
         copiesSettingList = new HashMap<>();
-        for (PsiMethod method:methodsList) {
+        for (PsiMethod method : methodsList) {
             String methodName = TornadoTWTask.psiMethodFormat(method);
             labelArrayList.add(new JBLabel(methodName));
-            for (PsiParameter parameter: method.getParameterList().getParameters()) {
-                textFieldsList.put(methodName+parameter.getText(), new JBTextField());
-                if (parameter.getType().getArrayDimensions()>0){
+            for (PsiParameter parameter : method.getParameterList().getParameters()) {
+                textFieldsList.put(methodName + parameter.getText(), new JBTextField());
+                if (parameter.getType().getArrayDimensions() > 0) {
                     copiesSettingList.put(parameter, new JBPanel<>());
                 }
             }
@@ -57,15 +57,15 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
         VerticalFlowLayout layout1 = new VerticalFlowLayout(VerticalFlowLayout.CENTER);
         layout1.setHPadding(20);
         dialogPanel.setLayout(layout);
-        for (PsiMethod method:methodsList){
+        for (PsiMethod method : methodsList) {
             String methodName = TornadoTWTask.psiMethodFormat(method);
             dialogPanel.add(new JBLabel(methodName + ":"));
             JPanel panel = new JPanel();
             panel.setLayout(layout1);
-            for (PsiParameter parameter: method.getParameterList().getParameters()) {
-                panel.add(new JBLabel(Objects.requireNonNull(parameter.getText())+":"));
-                panel.add(textFieldsList.get(methodName+parameter.getText()));
-                if (parameter.getType().getArrayDimensions() > 0){
+            for (PsiParameter parameter : method.getParameterList().getParameters()) {
+                panel.add(new JBLabel(Objects.requireNonNull(parameter.getText()) + ":"));
+                panel.add(textFieldsList.get(methodName + parameter.getText()));
+                if (parameter.getType().getArrayDimensions() > 0) {
                     copiesSettingList.get(parameter).add(new JBCheckBox("To GPU"));
                     copiesSettingList.get(parameter).add(new JBCheckBox("To CPU"));
                     panel.add(copiesSettingList.get(parameter));
@@ -75,35 +75,36 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
         }
         return dialogPanel;
     }
+
     @Override
     protected void doOKAction() {
         MethodsCollection methodsCollection = new MethodsCollection();
-        for (PsiMethod method: methodsList){
+        for (PsiMethod method : methodsList) {
             ArrayList<String> parameterValue = new ArrayList<>();
             ArrayList<PsiParameter> defaultList = new ArrayList<>();
             ArrayList<PsiParameter> toDeviceList = new ArrayList<>();
             ArrayList<PsiParameter> toHostList = new ArrayList<>();
             String methodName = TornadoTWTask.psiMethodFormat(method);
-            for (PsiParameter parameter: method.getParameterList().getParameters()) {
-                String value = textFieldsList.get(methodName+parameter.getText()).getText();
+            for (PsiParameter parameter : method.getParameterList().getParameters()) {
+                String value = textFieldsList.get(methodName + parameter.getText()).getText();
                 parameterValue.add(value);
-                if (parameter.getType().getArrayDimensions()>0){
-                    for (Component c:copiesSettingList.get(parameter).getComponents()) {
+                if (parameter.getType().getArrayDimensions() > 0) {
+                    for (Component c : copiesSettingList.get(parameter).getComponents()) {
                         JBCheckBox checkBox = (JBCheckBox) c;
-                        if (checkBox.isSelected()){
+                        if (checkBox.isSelected()) {
                             if (checkBox.getText().equals("To GPU")) {
                                 toDeviceList.add(parameter);
-                            }else {
+                            } else {
                                 toHostList.add(parameter);
                             }
                         }
                     }
-                }else {
+                } else {
                     defaultList.add(parameter);
                 }
             }
 
-            methodsCollection.addMethod(new Method(method, parameterValue,defaultList,toDeviceList,toHostList));
+            methodsCollection.addMethod(new Method(method, parameterValue, defaultList, toDeviceList, toHostList));
             try {
                 new TWTasksButtonEvent().fileCreationHandler(methodsCollection, TornadoTWTask.getImportCodeBlock());
             } catch (IOException e) {
@@ -112,81 +113,82 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
         }
         super.doOKAction();
     }
+
     //TODO:Multi-Dimension Array？Needs TornadoVM data type validation.
     @Override
     protected @Nullable ValidationInfo doValidate() {
-        for (PsiMethod method:methodsList) {
+        for (PsiMethod method : methodsList) {
             String methodName = TornadoTWTask.psiMethodFormat(method);
-            for (PsiParameter parameter: method.getParameterList().getParameters()) {
+            for (PsiParameter parameter : method.getParameterList().getParameters()) {
                 String elementType = Objects.requireNonNull(parameter.getTypeElement()).getText();
-                JComponent component = textFieldsList.get(methodName+parameter.getText());
-                String input = textFieldsList.get(methodName+parameter.getText()).getText();
+                JComponent component = textFieldsList.get(methodName + parameter.getText());
+                String input = textFieldsList.get(methodName + parameter.getText()).getText();
                 if (Objects.equals(input, ""))
-                    return new ValidationInfo(MessageBundle.message("ui.dialog.validate.empty"),component);
-                switch (elementType){
+                    return new ValidationInfo(MessageBundle.message("ui.dialog.validate.empty"), component);
+                switch (elementType) {
                     case "int" -> {
                         if (!InputValidation.isInteger(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.int"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.int"), component);
                     }
                     case "char" -> {
                         if (!InputValidation.isChar(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.char"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.char"), component);
                     }
                     case "short" -> {
                         if (!InputValidation.isShort(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.short"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.short"), component);
                     }
                     case "long" -> {
                         if (!InputValidation.isLong(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.long"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.long"), component);
                     }
                     case "double" -> {
                         if (!InputValidation.isDouble(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.double"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.double"), component);
                     }
                     case "byte" -> {
                         if (!InputValidation.isByte(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.byte"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.byte"), component);
                     }
                     case "float" -> {
                         if (!InputValidation.isFloat(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.float"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.float"), component);
                     }
                     case "boolean" -> {
                         if (!InputValidation.isBoolean(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.boolean"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.boolean"), component);
                     }
                     case "int[]" -> {
                         if (!InputValidation.isIntArray(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.intArray"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.intArray"), component);
                     }
                     case "char[]" -> {
                         if (!InputValidation.isCharArray(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.charArray"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.charArray"), component);
                     }
                     case "short[]" -> {
                         if (!InputValidation.isShortArray(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.shortArray"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.shortArray"), component);
                     }
                     case "long[]" -> {
                         if (!InputValidation.isLongArray(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.longArray"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.longArray"), component);
                     }
                     case "double[]" -> {
                         if (!InputValidation.isDoubleArray(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.doubleArray"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.doubleArray"), component);
                     }
                     case "byte[]" -> {
                         if (!InputValidation.isByteArray(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.byteArray"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.byteArray"), component);
                     }
                     case "float[]" -> {
                         if (!InputValidation.isFloatArray(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.floatArray"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.floatArray"), component);
                     }
                     case "boolean[]" -> {
                         if (!InputValidation.isBooleanArray(input))
-                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.booleanArray"),component);
+                            return new ValidationInfo(MessageBundle.message("ui.dialog.validate.booleanArray"), component);
                     }
                 }
             }

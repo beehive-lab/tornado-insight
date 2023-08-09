@@ -121,10 +121,12 @@ public class VerticalFlowLayout implements LayoutManager, Serializable {
     }
 
     @Override
-    public void addLayoutComponent(String name, Component comp) {}
+    public void addLayoutComponent(String name, Component comp) {
+    }
 
     @Override
-    public void removeLayoutComponent(Component comp) {}
+    public void removeLayoutComponent(Component comp) {
+    }
 
     /**
      * 最合适的尺寸, 一列放下全部组件
