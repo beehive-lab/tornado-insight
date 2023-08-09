@@ -129,8 +129,7 @@ public class ExecutionEngine {
 
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.setExePath("javac");
-        commandLine.addParameter("--release");
-        commandLine.addParameter("11");
+        commandLine.addParameter("-g");
         commandLine.addParameter("-classpath");
         commandLine.addParameter(classpath);
         commandLine.addParameter("-d");
@@ -209,7 +208,6 @@ public class ExecutionEngine {
                     }
                 });
                 Notifications.Bus.notify(notification);
-                System.out.println(output.getStderr());
                 return;
             }
         } catch (ExecutionException ignored) {
@@ -246,15 +244,9 @@ public class ExecutionEngine {
             ProcessOutput output = handler.runProcess();
             //Cannot use the exit code to determine if TornadoVM is running with an error or not.
             System.out.println(output);
-            if (!output.getStderr().isEmpty()) {
-                printResults(jarPath, true, output);
-                ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
-                        print("Your method has exceptions\n", ConsoleViewContentType.ERROR_OUTPUT);
-            } else {
-                printResults(jarPath, false, output);
-                ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
-                        print("Your method has no exceptions\n", ConsoleViewContentType.NORMAL_OUTPUT);
-            }
+            // Under normal circumstances Tornado output will also have error output For example:
+            // " WARNING: Using incubator modules: jdk.incubator.foreign, jdk.incubator.vector "
+            printResults(jarPath, output.toString().contains("Exception"), output);
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
