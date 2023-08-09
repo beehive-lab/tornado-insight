@@ -129,6 +129,8 @@ public class ExecutionEngine {
 
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.setExePath("javac");
+        commandLine.addParameter("--release");
+        commandLine.addParameter("11");
         commandLine.addParameter("-classpath");
         commandLine.addParameter(classpath);
         commandLine.addParameter("-d");
@@ -261,16 +263,18 @@ public class ExecutionEngine {
     //Statistics of test results for each method
     private void printResults(String jarPath, boolean hasException, ProcessOutput output) {
         String javaPath = jarPath.substring(0, jarPath.lastIndexOf(".jar")) + ".java";
-        String methodName = TornadoTWTask.psiMethodFormat(fileMethodMap.get(javaPath).getMethod());
-        if (hasException) {
-            String outputAnalysis = OutputAnalysis.analysis(output);
-            ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
-                    print(methodName + ": " + outputAnalysis,
-                            ConsoleViewContentType.ERROR_OUTPUT);
-        } else {
-            ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
-                    print(methodName + ": " + "Your method has no exceptions\n",
-                            ConsoleViewContentType.LOG_INFO_OUTPUT);
-        }
+        ApplicationManager.getApplication().runReadAction(() -> {
+            String methodName = TornadoTWTask.psiMethodFormat(fileMethodMap.get(javaPath).getMethod());
+            if (hasException) {
+                String outputAnalysis = OutputAnalysis.analysis(output);
+                ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                        print(methodName + ": " + outputAnalysis,
+                                ConsoleViewContentType.ERROR_OUTPUT);
+            } else {
+                ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                        print(methodName + ": " + "Your method has no exceptions\n",
+                                ConsoleViewContentType.LOG_INFO_OUTPUT);
+            }
+        });
     }
 }

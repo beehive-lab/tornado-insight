@@ -75,14 +75,6 @@
                          level="ERROR"
                          enabledByDefault="true"
                          implementationClass="com.tais.tornado_plugins.inspector.AssertInspection"/>
-        <localInspection language="JAVA"
-                         displayName="Mock execution"
-                         groupPath="Java"
-                         groupName="Java issues"
-                         shortName="MockInspection"
-                         level="ERROR"
-                         enabledByDefault="true"
-                         implementationClass="com.tais.tornado_plugins.mockExecution.Trigger"/>
         <toolWindow factoryClass="com.tais.tornado_plugins.ui.TornadoToolsWindow" id="TornadoVM" anchor="right"/>
         <toolWindow factoryClass="com.tais.tornado_plugins.ui.ConsoleOutputToolWindow" id="TornadoVM Console" anchor="bottom"/>
         <applicationConfigurable instance="com.tais.tornado_plugins.ui.TornadoSettingConfiguration"/>

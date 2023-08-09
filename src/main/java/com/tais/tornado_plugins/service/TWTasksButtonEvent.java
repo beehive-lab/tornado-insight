@@ -11,6 +11,7 @@ import com.tais.tornado_plugins.ui.EmptySelectionWarningDialog;
 import com.tais.tornado_plugins.ui.TaskParametersDialogWrapper;
 import com.tais.tornado_plugins.ui.TornadoToolsWindow;
 import com.tais.tornado_plugins.util.TornadoTWTask;
+import org.apache.commons.lang.RandomStringUtils;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -37,7 +38,7 @@ public class TWTasksButtonEvent {
         for (Method method : methodsCollection.getMethodArrayList()) {
             System.out.println(method.getParameterValues());
             System.out.println("To device: " + method.getToDeviceParameters());
-            String fileName = method.getMethod().getName() + method.getMethod().hashCode();
+            String fileName = method.getMethod().getName() + RandomStringUtils.randomAlphanumeric(5);;
             File file = creatFile(method, importCodeBlock, fileName, dir);
             methodFile.put(file.getAbsolutePath(), method);
         }
