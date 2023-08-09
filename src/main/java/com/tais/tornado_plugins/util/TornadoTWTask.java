@@ -17,6 +17,9 @@ import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiErrorElement;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiImportList;
+import com.intellij.psi.PsiImportStatement;
+import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.impl.PsiManagerImpl;
@@ -38,33 +41,32 @@ import java.util.Set;
 
 public class TornadoTWTask {
     private static List<PsiMethod> taskList;
+    private static String importCodeBlock;
     private static Map<String,PsiMethod> taskMap;
-    public static void addTask(Project project, DefaultListModel model){
-        //TODO:Also need validate the Tornado Task
+    public synchronized static void addTask(Project project, DefaultListModel model){
         //ToolWindow maybe created before the Psi index,
         // so when the Psi index is not finished creating, skip
-        synchronized (TornadoTWTask.class){
-            if (DumbService.isDumb(project) || model == null) return;
-            model.clear();
-            taskList = new ArrayList<>();
-            taskMap = new HashMap<>();
+        if (DumbService.isDumb(project) || model == null) return;
+        model.clear();
+        taskList = new ArrayList<>();
+        taskMap = new HashMap<>();
 
-            PsiManagerImpl manager = new PsiManagerImpl(project);
-            if (FileEditorManager.getInstance(project).getSelectedFiles().length == 0) return;
+        PsiManagerImpl manager = new PsiManagerImpl(project);
+        if (FileEditorManager.getInstance(project).getSelectedFiles().length == 0) return;
 
-            PsiFile file = manager.findFile(Objects.requireNonNull(FileEditorManager.getInstance(project).getSelectedFiles()[0]));
-            assert file != null;
-            taskList = findAnnotatedVariables(file);
-            if (taskList == null) return;
-            for (PsiMethod task:taskList) {
-                if (validateTask(task)){
-                    String displayName = psiMethodFormat(task);
-                    taskMap.put(displayName, task);
-                    model.addElement(displayName);
-                }
+        PsiFile file = manager.findFile(Objects.requireNonNull(FileEditorManager.getInstance(project).getSelectedFiles()[0]));
+        assert file != null;
+        importCodeBlock = getImportCode(file);
+        taskList = findAnnotatedVariables(file);
+        if (taskList == null) return;
+        for (PsiMethod task:taskList) {
+            if (validateTask(task)){
+                String displayName = psiMethodFormat(task);
+                taskMap.put(displayName, task);
+                model.addElement(displayName);
             }
-            TornadoToolsWindow.getList().repaint();
         }
+        TornadoToolsWindow.getList().repaint();
     }
 
     public static void updateInspectorList(DefaultListModel model){
@@ -101,7 +103,6 @@ public class TornadoTWTask {
             }else {
                 methodParameters.append(", ").append(Objects.requireNonNull(parameter.getTypeElement()).getText());
             }
-
         }
         return methodName + "(" + methodParameters + "): " + Objects.requireNonNull(method.getReturnType()).getCanonicalText();
     }
@@ -117,10 +118,30 @@ public class TornadoTWTask {
         return psiMethodsList;
     }
 
+    private static String getImportCode(PsiFile file){
+        StringBuilder importCodeBlock = new StringBuilder();
+        if (!(file instanceof PsiJavaFile javaFile)) {
+            return importCodeBlock.toString();
+        }
+        PsiImportList importList = javaFile.getImportList();
+
+        if (importList != null) {
+            PsiImportStatement[] importStatements = importList.getImportStatements();
+            for (PsiImportStatement importStatement : importStatements) {
+                importCodeBlock.append(importStatement.getText()).append("\n");
+            }
+        }
+        return importCodeBlock.toString();
+    }
+
     private static boolean validateTask(PsiMethod method){
         PsiElement[] errorElements = PsiTreeUtil.collectElements(method,
                 element -> element instanceof PsiErrorElement);
         if (errorElements.length != 0) return false;
         return !ProblemMethods.getInstance().getMethodSet().contains(method.getText());
+    }
+
+    public static String getImportCodeBlock() {
+        return importCodeBlock;
     }
 }

@@ -75,7 +75,6 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
         }
         return dialogPanel;
     }
-    //TODO: Empty operation needs be handles
     @Override
     protected void doOKAction() {
         MethodsCollection methodsCollection = new MethodsCollection();
@@ -106,12 +105,11 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
 
             methodsCollection.addMethod(new Method(method, parameterValue,defaultList,toDeviceList,toHostList));
             try {
-                new TWTasksButtonEvent().fileCreationHandler(methodsCollection);
+                new TWTasksButtonEvent().fileCreationHandler(methodsCollection, TornadoTWTask.getImportCodeBlock());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
-        //TODO: May need to create a thread to avoid EDT thread blocking
         super.doOKAction();
     }
     //TODO:Multi-Dimension Array？Needs TornadoVM data type validation.

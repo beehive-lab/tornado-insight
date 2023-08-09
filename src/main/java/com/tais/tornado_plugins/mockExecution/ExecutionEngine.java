@@ -131,27 +131,35 @@ public class ExecutionEngine {
 //            if (javacPath == null) {
 //                throw new IllegalStateException("Javac path not found!");
 //            }
+        ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                print("Compiling test files...\n",
+                        ConsoleViewContentType.NORMAL_OUTPUT);
 
-            GeneralCommandLine commandLine = new GeneralCommandLine();
-            commandLine.setExePath("javac");
-            commandLine.addParameter("-classpath");
-            commandLine.addParameter(classpath);
-            commandLine.addParameter("-d");
-            commandLine.addParameter(outputDir);
-            commandLine.addParameters(javaFiles);  // Adds each Java file to the command line
+        GeneralCommandLine commandLine = new GeneralCommandLine();
+        commandLine.setExePath("javac");
+        commandLine.addParameter("-classpath");
+        commandLine.addParameter(classpath);
+        commandLine.addParameter("-d");
+        commandLine.addParameter(outputDir);
+        commandLine.addParameters(javaFiles);  // Adds each Java file to the command line
 
-            // Execute the command
-            try {
-                System.out.println(ExecUtil.execAndGetOutput(commandLine));
-            } catch (ExecutionException e) {
-                throw new RuntimeException(e);
-            }
+        // Execute the command
+        try {
+            System.out.println(ExecUtil.execAndGetOutput(commandLine));
+        } catch (ExecutionException e) {
+            ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                    print("Compilation failure, may be JAVA_HOME is not correctly identified or " +
+                                    "there are temporarily unsupported data types\n",
+                            ConsoleViewContentType.ERROR_OUTPUT);
+        }
     }
 
     private void packFolder(String classFolderPath, String outputFolderPath) throws IOException {
+        ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                print("Packing test files...\n",
+                        ConsoleViewContentType.NORMAL_OUTPUT);
         File classFolder = new File(classFolderPath);
         File[] classFiles = classFolder.listFiles((dir, name) -> name.endsWith(".class"));
-
         if (classFiles == null) {
             System.out.println("No .class files found in the specified input folder.");
             return;
@@ -175,10 +183,19 @@ public class ExecutionEngine {
                 Files.copy(classPath, jos);
                 jos.closeEntry();
             }
+            catch (IOException e) {
+                ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                        print("Failed to package test files\n",
+                                ConsoleViewContentType.ERROR_OUTPUT);
+            }
         }
     }
-
+    //TODO: Error management for multiple methods
+    //TODO: Bug submission interface
     private void executeJars(String jarFolderPath){
+        ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                print("Tests are being executed...\n",
+                        ConsoleViewContentType.NORMAL_OUTPUT);
         GeneralCommandLine commandLine = new GeneralCommandLine();
         //Detecting if the user has correctly installed TornadoVM
         String sourceFile = TornadoSetting.getInstance().setVarFile;
@@ -204,7 +221,8 @@ public class ExecutionEngine {
             }
         } catch (ExecutionException ignored) {
             ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
-                    print("Tornado Broken\n", ConsoleViewContentType.ERROR_OUTPUT);
+                    print("TornadoVM environment variable file is not set correctly.\n",
+                            ConsoleViewContentType.ERROR_OUTPUT);
             // Performing UI related operations on a non-EDT is not allowed.
             // To ensure that the code executes on EDT, need use Application.invokeLater().
             return;

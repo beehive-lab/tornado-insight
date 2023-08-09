@@ -10,6 +10,7 @@ import com.tais.tornado_plugins.entity.Method;
 import com.tais.tornado_plugins.entity.MethodsCollection;
 import com.tais.tornado_plugins.mockExecution.ExecutionEngine;
 import com.tais.tornado_plugins.mockExecution.VariableInit;
+import com.tais.tornado_plugins.ui.EmptySelectionWarningDialog;
 import com.tais.tornado_plugins.ui.TaskParametersDialogWrapper;
 import com.tais.tornado_plugins.ui.TornadoToolsWindow;
 import com.tais.tornado_plugins.ui.TornadoVM;
@@ -29,19 +30,23 @@ import java.util.Objects;
 public class TWTasksButtonEvent {
     public void pressButton(){
         List selectedValuesList = TornadoToolsWindow.getToolsWindow().getTasksList().getSelectedValuesList();
-        if (selectedValuesList.isEmpty()) System.out.println("None Selected");
-        ArrayList<PsiMethod> methodList = TornadoTWTask.getMethods(selectedValuesList);
-        new TaskParametersDialogWrapper(methodList).showAndGet();
+        if (selectedValuesList.isEmpty()) {
+            new EmptySelectionWarningDialog().show();
+        }
+        else {
+            ArrayList<PsiMethod> methodList = TornadoTWTask.getMethods(selectedValuesList);
+            new TaskParametersDialogWrapper(methodList).showAndGet();
+        }
     }
 
-    public void fileCreationHandler(MethodsCollection methodsCollection) throws IOException {
+    public void fileCreationHandler(MethodsCollection methodsCollection, String importCodeBlock) throws IOException {
         HashMap<String, Method> methodFile = new HashMap<>();
         File dir = FileUtilRt.createTempDirectory("files",null);
         for (Method method:methodsCollection.getMethodArrayList()) {
             System.out.println(method.getParameterValues());
             System.out.println("To device: " + method.getToDeviceParameters());
             String fileName = method.getMethod().getName() + method.getMethod().hashCode();
-            File file = creatFile(method, fileName,dir);
+            File file = creatFile(method, importCodeBlock, fileName, dir);
             methodFile.put(file.getAbsolutePath(), method);
         }
         ExecutionEngine executionEngine = new ExecutionEngine(dir.getAbsolutePath(), methodFile);
@@ -49,20 +54,20 @@ public class TWTasksButtonEvent {
         dir.delete();
     }
 
-    private File creatFile(Method method, String filename, File dir){
+    private File creatFile(Method method, String importCodeBlock, String filename, File dir){
         File javaFile;
         try {
             javaFile = FileUtilRt.createTempFile(dir, filename, ".java", true);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        //TODO:May need more import code
+
         String importCode = "import uk.ac.manchester.tornado.api.ImmutableTaskGraph;\n" +
                 "import uk.ac.manchester.tornado.api.TaskGraph;\n" +
                 "import uk.ac.manchester.tornado.api.TornadoExecutionPlan;\n" +
                 "import uk.ac.manchester.tornado.api.annotations.Parallel;\n" +
                 "import uk.ac.manchester.tornado.api.annotations.Reduce;\n" +
-                "import uk.ac.manchester.tornado.api.enums.DataTransferMode;";
+                "import uk.ac.manchester.tornado.api.enums.DataTransferMode;\n";
         StringBuilder parametersIn = new StringBuilder();
         StringBuilder methodWithParameters = new StringBuilder();
         StringBuilder parameterOut = new StringBuilder();
@@ -104,7 +109,7 @@ public class TWTasksButtonEvent {
 
         try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(javaFile))) {
             System.out.println(javaFile.getPath());
-            bufferedWriter.write(importCode);
+            bufferedWriter.write(importCode + importCodeBlock);
             bufferedWriter.write("\n");
             bufferedWriter.write("public class "+javaFile.getName().replace(".java","")+"{");
             bufferedWriter.write(method.getMethod().getText());

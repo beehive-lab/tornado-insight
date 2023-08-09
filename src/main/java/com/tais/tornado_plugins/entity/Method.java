@@ -8,7 +8,6 @@ import java.util.ArrayList;
 public class Method {
     private final PsiMethod method;
     private final ArrayList<String> parameterValues;
-    private ArrayList<PsiParameter> defaultParameters;
     private ArrayList<PsiParameter> toDeviceParameters;
     private ArrayList<PsiParameter> toHostParameters;
 
@@ -21,8 +20,6 @@ public class Method {
     public Method(PsiMethod method, ArrayList<String> parameterValues) {
         this.method = method;
         this.parameterValues = parameterValues;
-        //TODO:may not need defaultParameters, since it can be got by PsiMethod
-        this.defaultParameters = new ArrayList<>();
         this.toDeviceParameters = new ArrayList<>();
         this.toHostParameters = new ArrayList<>();
 
@@ -32,7 +29,6 @@ public class Method {
                   ArrayList<PsiParameter> toDeviceParameters, ArrayList<PsiParameter> toHostParameters) {
         this.method = method;
         this.parameterValues = parameterValues;
-        this.defaultParameters = defaultParameters;
         this.toDeviceParameters = toDeviceParameters;
         this.toHostParameters = toHostParameters;
     }
@@ -43,10 +39,6 @@ public class Method {
 
     public ArrayList<String> getParameterValues() {
         return parameterValues;
-    }
-
-    public ArrayList<PsiParameter> getDefaultParameters() {
-        return defaultParameters;
     }
 
     public ArrayList<PsiParameter> getToDeviceParameters() {
