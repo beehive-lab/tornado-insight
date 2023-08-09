@@ -191,7 +191,6 @@ public class ExecutionEngine {
             }
         }
     }
-    //TODO: Error management for multiple methods
     //TODO: Bug submission interface
     private void executeJars(String jarFolderPath){
         ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).

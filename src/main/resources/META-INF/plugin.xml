@@ -101,10 +101,6 @@
     </projectListeners>
 
     <actions>
-        <action id="com.tais.tornado_plugins.ShellTestAction" class="com.tais.tornado_plugins.ShellTestAction"
-                text="Run ls" description="run ls">
-            <add-to-group group-id="CodeMenu" anchor="first"/>
-        </action>
         <action id="com.tais.tornado_plugins.TestButton" class="com.tais.tornado_plugins.TestButton" text="test"
                 description="test">
             <add-to-group group-id="EditMenu" anchor="first"/>

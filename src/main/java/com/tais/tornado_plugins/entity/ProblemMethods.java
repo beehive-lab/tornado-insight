@@ -1,14 +1,9 @@
 package com.tais.tornado_plugins.entity;
 
-import com.intellij.codeInspection.LocalInspectionTool;
 import com.intellij.openapi.project.ProjectManager;
 import com.intellij.psi.PsiMethod;
-import com.tais.tornado_plugins.message.RefreshListener;
 import com.tais.tornado_plugins.message.TornadoTaskRefreshListener;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 public class ProblemMethods {
