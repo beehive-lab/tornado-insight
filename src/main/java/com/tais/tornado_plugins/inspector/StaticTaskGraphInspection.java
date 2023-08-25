@@ -16,6 +16,8 @@ import com.intellij.psi.util.PsiTreeUtil;
 import com.tais.tornado_plugins.entity.ProblemMethods;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
 public class StaticTaskGraphInspection extends AbstractBaseJavaLocalInspectionTool {
     @Override
     public @NotNull PsiElementVisitor buildVisitor(@NotNull ProblemsHolder holder, boolean isOnTheFly) {
@@ -31,7 +33,7 @@ public class StaticTaskGraphInspection extends AbstractBaseJavaLocalInspectionTo
 
                     if (containingClass != null && "TaskGraph".equals(type.getPresentableText())) {
                         if (field.hasModifierProperty(PsiModifier.STATIC)) {
-                            ProblemMethods.getInstance().addMethod(PsiTreeUtil.getParentOfType(expression, PsiMethod.class));
+                            ProblemMethods.getInstance().addMethod(Objects.requireNonNull(PsiTreeUtil.getParentOfType(expression, PsiMethod.class)));
                             holder.registerProblem(expression,
                                     "TornadoVM: TornadoVM currently does not support static TaskGraph and Tasks");
                         }

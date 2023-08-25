@@ -33,7 +33,9 @@ public class ExternalLibraryInspection extends AbstractBaseJavaLocalInspectionTo
                                 PsiMethod calledMethod = (PsiMethod) expression.getMethodExpression().resolve();
                                 if (calledMethod != null){
                                     String qualifiedName = Objects.requireNonNull(calledMethod.getContainingClass()).getQualifiedName();
-                                    if (qualifiedName != null && !qualifiedName.startsWith("java.") && !qualifiedName.startsWith("uk.ac.manchester.tornado")) {
+                                    if (qualifiedName != null && !qualifiedName.startsWith("java.") &&
+                                            !qualifiedName.startsWith("uk.ac.manchester.tornado")&&
+                                            !qualifiedName.startsWith("_Dummy_")) {
                                         ProblemMethods.getInstance().addMethod(method);
                                         holder.registerProblem(expression,
                                                 "TornadoInsight is currently unable to check for" +
