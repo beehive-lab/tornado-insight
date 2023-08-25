@@ -103,7 +103,6 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
                     defaultList.add(parameter);
                 }
             }
-
             methodsCollection.addMethod(new Method(method, parameterValue, defaultList, toDeviceList, toHostList));
             try {
                 new TWTasksButtonEvent().fileCreationHandler(methodsCollection, TornadoTWTask.getImportCodeBlock());
@@ -189,6 +188,9 @@ public class TaskParametersDialogWrapper extends DialogWrapper {
                     case "boolean[]" -> {
                         if (!InputValidation.isBooleanArray(input))
                             return new ValidationInfo(MessageBundle.message("ui.dialog.validate.booleanArray"), component);
+                    }
+                    default -> {
+                        return new ValidationInfo(MessageBundle.message("ui.dialog.validate.date"), component);
                     }
                 }
             }

@@ -6,12 +6,10 @@ import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.JavaElementVisitor;
 import com.intellij.psi.JavaRecursiveElementVisitor;
 import com.intellij.psi.PsiAnnotation;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
-import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiMethod;
-import com.intellij.psi.PsiReferenceExpression;
+import com.intellij.psi.PsiMethodCallExpression;
+import com.intellij.psi.PsiModifier;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.tais.tornado_plugins.entity.ProblemMethods;
 import org.jetbrains.annotations.NotNull;
@@ -29,31 +27,43 @@ public class SystemCallInspection extends AbstractBaseJavaLocalInspectionTool {
                     PsiMethod parent = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
                     assert parent != null;
                     parent.accept(new JavaRecursiveElementVisitor() {
-                        public void visitReferenceExpression(PsiReferenceExpression expression) {
-                            super.visitReferenceExpression(expression);
-                            PsiElement resolved = expression.resolve();
-                            if (resolved instanceof PsiField field) {
-                                PsiClass containingClass = field.getContainingClass();
-                                if (containingClass != null && "java.lang.System".equals(containingClass.getQualifiedName())) {
-                                    ProblemMethods.getInstance().addMethod(parent);
-                                    holder.registerProblem(expression,
-                                            "TornadoVM: TornadoVM does not support System class",
-                                            ProblemHighlightType.ERROR);
-                                }
+                        @Override
+                        public void visitMethodCallExpression(PsiMethodCallExpression expression) {
+                            super.visitMethodCallExpression(expression);
+                            PsiMethod method = expression.resolveMethod();
+                            if (method != null && method.hasModifierProperty(PsiModifier.NATIVE)) {
+                                // This method call is invoking a native method.
+                                // Handle or report as necessary.
+                                ProblemMethods.getInstance().addMethod(parent);
+                                holder.registerProblem(expression,
+                                        "TornadoVM: TornadoVM does not support native calls",
+                                        ProblemHighlightType.ERROR);
                             }
+                            if (method == null) return;
+                            String className = Objects.requireNonNull(method.getContainingClass()).getQualifiedName();
+                            if (className.startsWith("java.lang.System")||
+                                    className.startsWith("java.lang.Runtime")||
+                                    className.startsWith("java.lang.Process")||
+                                    className.startsWith("java.lang.ProcessBuilder")||
+                                    className.startsWith("java.lang.Thread")||
+                                    className.startsWith("java.io")||
+                                    className.startsWith("java.util.concurrent")||
+                                    className.startsWith("java.lang.reflect")||
+                                    className.startsWith("java.net")||
+                                    className.startsWith("java.nio")||
+                                    className.startsWith("java.security")||
+                                    className.startsWith("java.sql")) {
+                                ProblemMethods.getInstance().addMethod(parent);
+                                holder.registerProblem(expression,
+                                        "TornadoVM: TornadoVM does not support the method call internally to the JVM," +
+                                                "or externally to a native library or the OS",
+                                        ProblemHighlightType.ERROR);
+                            }
+
                         }
                     });
                 }
             }
-
-            ;
-//
-//            @Override
-//            public void visitFile(@NotNull PsiFile file) {
-//                super.visitFile(file);
-//                ProblemMethods.getInstance().addMethod(SystemCallInspection.this, methods);
-//                methods.clear();
-//            }
         };
     }
 }

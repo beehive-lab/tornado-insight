@@ -75,6 +75,16 @@
                          level="ERROR"
                          enabledByDefault="true"
                          implementationClass="com.tais.tornado_plugins.inspector.AssertInspection"/>
+        <localInspection implementationClass="com.tais.tornado_plugins.inspector.ExternalLibraryInspection"
+                         language="JAVA"
+                         displayName="External library check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="ExternalInspection"
+                         level="ERROR"
+                         enabledByDefault="true">
+
+        </localInspection>
         <toolWindow factoryClass="com.tais.tornado_plugins.ui.TornadoToolsWindow" id="TornadoVM" anchor="right"/>
         <toolWindow factoryClass="com.tais.tornado_plugins.ui.ConsoleOutputToolWindow" id="TornadoVM Console" anchor="bottom"/>
         <applicationConfigurable instance="com.tais.tornado_plugins.ui.TornadoSettingConfiguration"/>

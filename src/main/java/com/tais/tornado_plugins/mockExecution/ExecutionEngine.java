@@ -260,8 +260,16 @@ public class ExecutionEngine {
             if (hasException) {
                 String outputAnalysis = OutputAnalysis.analysis(output);
                 ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
-                        print(methodName + ": " + outputAnalysis,
+                        print(methodName + ": " + outputAnalysis+"\n",
                                 ConsoleViewContentType.ERROR_OUTPUT);
+                ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                        print("Please visit the TornadoVM docs for more info: " +
+                                        "https://tornadovm.readthedocs.io/en/latest/unsupported.html"+"\n"
+                                ,ConsoleViewContentType.LOG_INFO_OUTPUT);
+                ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
+                        print("Got a bug? Report it to TornadoVM team: " +
+                                        "https://github.com/beehive-lab/TornadoVM/issues"+"\n",
+                                ConsoleViewContentType.LOG_INFO_OUTPUT);
             } else {
                 ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
                         print(methodName + ": " + "Your method has no exceptions\n",

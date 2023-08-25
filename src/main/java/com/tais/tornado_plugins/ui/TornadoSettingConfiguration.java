@@ -3,7 +3,6 @@ package com.tais.tornado_plugins.ui;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.options.ConfigurationException;
-import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.openapi.util.NlsContexts;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -27,7 +26,7 @@ public class TornadoSettingConfiguration implements Configurable {
             fileChooser.setText(TornadoSetting.getInstance().setVarFile);
         }
         fileChooser.addBrowseFolderListener(title, "Choose the .sh file",
-                ProjectManager.getInstance().getOpenProjects()[0],
+               null,
                 new FileChooserDescriptor(true, false, false, false, false, false) {
                     @Override
                     public boolean isFileSelectable(VirtualFile file) {

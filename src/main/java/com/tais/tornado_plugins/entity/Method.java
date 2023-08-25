@@ -11,17 +11,11 @@ public class Method {
     private ArrayList<PsiParameter> toDeviceParameters;
     private ArrayList<PsiParameter> toHostParameters;
 
-    public static final int DEFAULT = 0;
-    public static final int TransferToDevice = 1;
-    public static final int TransferToHost = 2;
-
-
     public Method(PsiMethod method, ArrayList<String> parameterValues) {
         this.method = method;
         this.parameterValues = parameterValues;
         this.toDeviceParameters = new ArrayList<>();
         this.toHostParameters = new ArrayList<>();
-
     }
 
     public Method(PsiMethod method, ArrayList<String> parameterValues, ArrayList<PsiParameter> defaultParameters,
