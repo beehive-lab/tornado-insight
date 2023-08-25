@@ -38,7 +38,7 @@ public class ExternalLibraryInspection extends AbstractBaseJavaLocalInspectionTo
                                             !qualifiedName.startsWith("_Dummy_")) {
                                         ProblemMethods.getInstance().addMethod(method);
                                         holder.registerProblem(expression,
-                                                "TornadoInsight is currently unable to check for" +
+                                                "TornadoInsight is currently unable to check for " +
                                                         "non-JDK method calls",
                                                 ProblemHighlightType.WARNING);
                                     }
