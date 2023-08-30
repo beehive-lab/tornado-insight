@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.jar.Attributes;
@@ -94,7 +95,7 @@ public class ExecutionEngine {
         // To ensure that the code executes on EDT, need use Application.invokeLater().
         Application application = ApplicationManager.getApplication();
         ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
-                print("Testing is starting...\n", ConsoleViewContentType.NORMAL_OUTPUT);
+                print("["+  Instant.now() + "] Testing is starting...\n", ConsoleViewContentType.NORMAL_OUTPUT);
         application.executeOnPooledThread(() -> {
             ArrayList<String> files = new ArrayList<>(fileMethodMap.keySet());
             ApplicationManager.getApplication().invokeLater(() -> {
@@ -260,7 +261,7 @@ public class ExecutionEngine {
             if (hasException) {
                 String outputAnalysis = OutputAnalysis.analysis(output);
                 ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
-                        print(methodName + ": " + outputAnalysis+"\n",
+                        print("["+  Instant.now() + "] " + methodName + ": " + outputAnalysis+"\n",
                                 ConsoleViewContentType.ERROR_OUTPUT);
                 ConsoleOutputToolWindow.getConsoleView(ProjectManager.getInstance().getOpenProjects()[0]).
                         print("Please visit the TornadoVM docs for more info: " +

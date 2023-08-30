@@ -54,6 +54,5 @@ public class StaticTaskGraphInspection extends AbstractBaseJavaLocalInspectionTo
                 }
             }
         };
-
     }
 }

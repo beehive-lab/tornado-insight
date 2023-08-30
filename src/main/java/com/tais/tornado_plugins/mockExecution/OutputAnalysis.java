@@ -15,7 +15,8 @@ public class OutputAnalysis {
         String outputText = output.toString();
 
         if (outputText.contains(" dynamically sized array declarations are not supported")){
-            return  "This method has dynamic memory allocation, which is not supported by TornadoVM.";
+            return  "This method has dynamic memory allocation caused by dynamically sized array declarations , " +
+                    "which is not supported by TornadoVM.";
         }
         else if (outputText.contains("Unable to build sketch for method")){
             return getMethodName(outputText);

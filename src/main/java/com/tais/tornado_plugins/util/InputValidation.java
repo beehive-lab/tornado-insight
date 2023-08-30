@@ -7,9 +7,8 @@ public class InputValidation {
         Pattern pattern = Pattern.compile("^-?\\d*$");
         return pattern.matcher(str).matches();
     }
-
     public static boolean isFloat(String str) {
-        Pattern pattern = Pattern.compile("[-+]?[0-9]*\\.?[0-9]+");
+        Pattern pattern = Pattern.compile("[-+]?[0-9]*\\.?[0-9]+[fF]?");
         return pattern.matcher(str).matches();
     }
 
