@@ -2,7 +2,18 @@ package com.tais.tornado_plugins.util;
 
 import java.util.regex.Pattern;
 
+/**
+ * Provides utility methods to validate various primitive types and their array counterparts
+ * from their string representations.
+ */
 public class InputValidation {
+
+    /**
+     * Validates if the given string can be parsed as an integer.
+     *
+     * @param str The input string.
+     * @return True if the string represents an integer, otherwise false.
+     */
     public static boolean isInteger(String str) {
         Pattern pattern = Pattern.compile("^-?\\d*$");
         return pattern.matcher(str).matches();
@@ -44,7 +55,13 @@ public class InputValidation {
         return str.equalsIgnoreCase("true") || str.equalsIgnoreCase("false");
     }
 
-
+    /**
+     * Validates if the given string represents an array of integers.
+     * An example of valid string is "{1, 2, 3}".
+     *
+     * @param str The input string.
+     * @return True if the string represents an array of integers, otherwise false.
+     */
     public static boolean isIntArray(String str) {
         if (str.startsWith("{") && str.endsWith("}")) {
             String[] parts = str.substring(1, str.length() - 1).split(",");

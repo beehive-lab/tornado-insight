@@ -13,16 +13,16 @@ import javax.swing.*;
 
 public class TornadoToolsWindow implements ToolWindowFactory {
     private static JList list;
-    private static DefaultListModel listModel;
-    private static DefaultListModel inspectorListModel;
+    private static DefaultListModel<String> listModel;
+    private static DefaultListModel<String> inspectorListModel;
     private static TornadoVM toolsWindow;
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
         toolsWindow = new TornadoVM(toolWindow);
         list = toolsWindow.getTasksList();
-        listModel = (DefaultListModel) list.getModel();
-        inspectorListModel = (DefaultListModel) toolsWindow.getInspectorList().getModel();
+        listModel = (DefaultListModel<String>) list.getModel();
+        inspectorListModel = (DefaultListModel<String>) toolsWindow.getInspectorList().getModel();
         Content content = ContentFactory.getInstance().
                 createContent(toolsWindow.getMainPanel(), "", false);
         toolWindow.getContentManager().addContent(content);
@@ -31,7 +31,7 @@ public class TornadoToolsWindow implements ToolWindowFactory {
         TornadoTWTask.updateInspectorList(inspectorListModel);
     }
 
-    public static DefaultListModel getListModel() {
+    public static DefaultListModel<String> getListModel() {
         return listModel;
     }
 
@@ -39,13 +39,8 @@ public class TornadoToolsWindow implements ToolWindowFactory {
         return list;
     }
 
-    public static DefaultListModel getInspectorListModel() {
-        return inspectorListModel;
-    }
-
     public static TornadoVM getToolsWindow() {
         return toolsWindow;
     }
-
 
 }

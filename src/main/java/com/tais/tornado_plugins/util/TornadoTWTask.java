@@ -29,12 +29,27 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * A utility class for managing and working with ToolWindows about the TornadoVM Tasks.
+ * <p>
+ * This class provides functionality to detect, format, and validate TornadoVM Tasks/methods
+ * within the tool window.
+ * </p>
+ */
 public class TornadoTWTask {
+
+    // Lists and Maps for storing tasks and their details
     private static List<PsiMethod> taskList;
     private static String importCodeBlock;
     private static Map<String, PsiMethod> taskMap;
 
-    public synchronized static void addTask(Project project, DefaultListModel model) {
+    /**
+     * Adds TornadoVM Tasks to the given UI data model.
+     *
+     * @param project the IntelliJ project
+     * @param model the list model to which tasks should be added
+     */
+    public synchronized static void addTask(Project project, DefaultListModel<String> model) {
         //ToolWindow maybe created before the Psi index,
         // so when the Psi index is not finished creating, skip
         if (DumbService.isDumb(project) || model == null) return;
@@ -60,17 +75,27 @@ public class TornadoTWTask {
         TornadoToolsWindow.getList().repaint();
     }
 
+    /**
+     * Updates the inspection list with custom inspections related to the TornadoVM.
+     *
+     * @param model the list model for UI to which inspections should be added
+     */
     public static void updateInspectorList(DefaultListModel model) {
         List<LocalInspectionEP> inspections = LocalInspectionEP.LOCAL_INSPECTION.getExtensionList();
         for (LocalInspectionEP inspectionEP : inspections) {
             if (inspectionEP.implementationClass.startsWith("com.tais.tornado_plugins")) {
                 LocalInspectionToolWrapper tool = new LocalInspectionToolWrapper(inspectionEP);
                 model.addElement(tool.getDisplayName());
-                //System.out.println("Custom Inspection: " + tool.getDisplayName());
             }
         }
     }
 
+    /**
+     * Finds methods in the given PsiFile that are annotated with TornadoVM related annotations.
+     *
+     * @param psiFile the file to search in
+     * @return a list of methods that have Tornado VM related annotations, or null if none found
+     */
     public static List<PsiMethod> findAnnotatedVariables(PsiFile psiFile) {
         Set<PsiMethod> tornadoTask = new HashSet<>();
         Collection<PsiAnnotation> annotationList = PsiTreeUtil.findChildrenOfType(psiFile, PsiAnnotation.class);
@@ -84,6 +109,12 @@ public class TornadoTWTask {
         return tornadoTask.stream().toList();
     }
 
+    /**
+     * Formats the PsiMethod details into a readable string format.
+     *
+     * @param method the PsiMethod to format
+     * @return a formatted string representation of the method
+     */
     public static String psiMethodFormat(PsiMethod method) {
         String methodName = method.getName();
         StringBuilder methodParameters = new StringBuilder();
@@ -99,6 +130,12 @@ public class TornadoTWTask {
         return methodName + "(" + methodParameters + "): " + Objects.requireNonNull(method.getReturnType()).getCanonicalText();
     }
 
+    /**
+     * Retrieves a list of PsiMethod objects based on a list of method names.
+     *
+     * @param methodsList the list of method names
+     * @return a list of corresponding PsiMethod objects, or null if none found
+     */
     public static ArrayList<PsiMethod> getMethods(List<Object> methodsList) {
         if (methodsList == null || methodsList.isEmpty()) return null;
         ArrayList<PsiMethod> psiMethodsList = new ArrayList<>();
@@ -110,6 +147,7 @@ public class TornadoTWTask {
         return psiMethodsList;
     }
 
+    // Internal utility method to retrieve import code from the given PsiFile
     private static String getImportCode(PsiFile file) {
         StringBuilder importCodeBlock = new StringBuilder();
         if (!(file instanceof PsiJavaFile javaFile)) {
@@ -126,6 +164,7 @@ public class TornadoTWTask {
         return importCodeBlock.toString();
     }
 
+    // Internal utility method to validate a given PsiMethod to ensure it's a valid TornadoVM task
     private static boolean validateTask(PsiMethod method) {
         PsiElement[] errorElements = PsiTreeUtil.collectElements(method,
                 element -> element instanceof PsiErrorElement);
@@ -133,6 +172,11 @@ public class TornadoTWTask {
         return !ProblemMethods.getInstance().getMethodSet().contains(method.getText());
     }
 
+    /**
+     * Returns the stored import code block.
+     *
+     * @return a string representing the import code block
+     */
     public static String getImportCodeBlock() {
         return importCodeBlock;
     }
