@@ -99,11 +99,4 @@
         <listener class="com.tais.tornado_plugins.listener.TornadoSettingListener"
                   topic="com.intellij.openapi.project.ProjectManagerListener"/>
     </projectListeners>
-
-    <actions>
-        <action id="com.tais.tornado_plugins.TestButton" class="com.tais.tornado_plugins.TestButton" text="test"
-                description="test">
-            <add-to-group group-id="EditMenu" anchor="first"/>
-        </action>
-    </actions>
 </idea-plugin>

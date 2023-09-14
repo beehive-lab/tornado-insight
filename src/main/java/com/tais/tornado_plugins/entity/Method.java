@@ -6,7 +6,7 @@ import com.intellij.psi.PsiParameter;
 import java.util.ArrayList;
 
 /**
- * Represents a method entity with additional attributes for TornadoVM processing.
+ * Represents a method entity with additional attributes for dynamic inspection processing.
  * This entity captures the method details, the parameter values,
  * and the classification of parameters for device/host transfer.
  */
