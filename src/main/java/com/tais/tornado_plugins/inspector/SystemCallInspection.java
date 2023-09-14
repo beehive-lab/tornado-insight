@@ -12,11 +12,30 @@ import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.PsiModifier;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.tais.tornado_plugins.entity.ProblemMethods;
+import com.tais.tornado_plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
+/**
+ * A custom inspection tool to check for invocations of potentially problematic system and external methods
+ * within methods annotated with either "Parallel" or "Reduce".
+ * <p>
+ * This inspection tool searches for:
+ * - Calls to native methods
+ * - Calls to methods from various Java system and utility classes that may lead to unexpected behavior
+ *   or resource usage in parallel or reduced contexts.
+ * </p>
+ */
 public class SystemCallInspection extends AbstractBaseJavaLocalInspectionTool {
+
+    /**
+     * Builds the visitor used for the inspection.
+     *
+     * @param holder The container which receives the problems found during the inspection.
+     * @param isOnTheFly Whether this inspection is being run on-the-fly, as the user types, or as a batch process.
+     * @return The visitor instance for analyzing code constructs.
+     */
     public @NotNull PsiElementVisitor buildVisitor(@NotNull final ProblemsHolder holder, boolean isOnTheFly) {
         return new JavaElementVisitor() {
             @Override
@@ -36,11 +55,14 @@ public class SystemCallInspection extends AbstractBaseJavaLocalInspectionTool {
                                 // Handle or report as necessary.
                                 ProblemMethods.getInstance().addMethod(parent);
                                 holder.registerProblem(expression,
-                                        "TornadoVM: TornadoVM does not support native calls",
+                                        MessageBundle.message("inspection.nativeCall"),
                                         ProblemHighlightType.ERROR);
                             }
                             if (method == null) return;
                             String className = Objects.requireNonNull(method.getContainingClass()).getQualifiedName();
+
+                            // Checking for method calls from potentially problematic system and utility classes.
+                            assert className != null;
                             if (className.startsWith("java.lang.System")||
                                     className.startsWith("java.lang.Runtime")||
                                     className.startsWith("java.lang.Process")||
@@ -55,8 +77,7 @@ public class SystemCallInspection extends AbstractBaseJavaLocalInspectionTool {
                                     className.startsWith("java.sql")) {
                                 ProblemMethods.getInstance().addMethod(parent);
                                 holder.registerProblem(expression,
-                                        "TornadoVM: TornadoVM does not support the method call internally to the JVM," +
-                                                "or externally to a native library or the OS",
+                                        MessageBundle.message("inspection.external"),
                                         ProblemHighlightType.ERROR);
                             }
 

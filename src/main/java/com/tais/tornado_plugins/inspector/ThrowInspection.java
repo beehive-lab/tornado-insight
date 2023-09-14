@@ -18,7 +18,25 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashSet;
 import java.util.Objects;
 
+/**
+ * A custom inspection tool to check for thrown exceptions within methods annotated with
+ * "Parallel" or "Reduce" as TornadoVM does not support for traps/exceptions.
+ * <p>
+ * This inspection tool ensures that:
+ * - No exceptions are thrown within the method body.
+ * - The method body does not contain any try/catch blocks.
+ * - No exceptions are declared to be thrown in the method's signature.
+ * </p>
+ */
 public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
+
+    /**
+     * Builds the visitor used for the inspection.
+     *
+     * @param holder The container which receives the problems found during the inspection.
+     * @param isOnTheFly Whether this inspection is being run on-the-fly, as the user types, or as a batch process.
+     * @return The visitor instance for analyzing code constructs.
+     */
     public @NotNull PsiElementVisitor buildVisitor(@NotNull final ProblemsHolder holder, boolean isOnTheFly) {
         HashSet<PsiThrowStatement> reportedStatement = new HashSet<>();
         HashSet<PsiMethod> reportedMethod = new HashSet<>();
@@ -56,7 +74,7 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
                                     ProblemHighlightType.ERROR);
                         }
                     });
-                    //Check if an exception is thrown in the function declaration
+                    // Checking the method signature for thrown exceptions
                     if (!reportedMethod.contains(parent)) {
                         for (PsiClassType exception : parent.getThrowsList().getReferencedTypes()) {
                             holder.registerProblem(parent.getThrowsList(), "TornadoVM: Incompatible thrown types " +
@@ -68,15 +86,6 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
                     }
                 }
             }
-
-            ;
-//
-//            @Override
-//            public void visitFile(@NotNull PsiFile file) {
-//                super.visitFile(file);
-//                ProblemMethods.getInstance().addMethod(ThrowInspection.this, methods);
-//                methods.clear();
-//            }
         };
     }
 }
