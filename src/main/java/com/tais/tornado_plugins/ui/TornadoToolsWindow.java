@@ -22,13 +22,13 @@ public class TornadoToolsWindow implements ToolWindowFactory {
         toolsWindow = new TornadoVM(toolWindow);
         list = toolsWindow.getTasksList();
         listModel = (DefaultListModel<String>) list.getModel();
-        inspectorListModel = (DefaultListModel<String>) toolsWindow.getInspectorList().getModel();
+        //inspectorListModel = (DefaultListModel<String>) toolsWindow.getInspectorList().getModel();
+        ToolWindowOpen.RefreshListener.init(project.getMessageBus());
+        TornadoTWTask.addTask(project, listModel);
+        //TornadoTWTask.updateInspectorList(inspectorListModel);
         Content content = ContentFactory.getInstance().
                 createContent(toolsWindow.getMainPanel(), "", false);
         toolWindow.getContentManager().addContent(content);
-        ToolWindowOpen.RefreshListener.init(project.getMessageBus());
-        TornadoTWTask.addTask(project, listModel);
-        TornadoTWTask.updateInspectorList(inspectorListModel);
     }
 
     public static DefaultListModel<String> getListModel() {

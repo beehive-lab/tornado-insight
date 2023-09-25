@@ -13,6 +13,7 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.impl.PsiManagerImpl;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.intellij.ui.components.JBLabel;
 import com.tais.tornado_plugins.entity.ProblemMethods;
 import com.tais.tornado_plugins.ui.TornadoToolsWindow;
 
@@ -84,6 +85,11 @@ public class TornadoTWTask {
                 model.addElement(tool.getDisplayName());
             }
         }
+    }
+
+    public static void renderInspectorList(JList list){
+        list.add(new JBLabel("Data type inspector"));
+        list.add(new JBLabel("This is the demo description of the datatype insoector"));
     }
 
     /**
