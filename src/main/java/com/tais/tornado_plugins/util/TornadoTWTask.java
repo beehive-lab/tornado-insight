@@ -9,9 +9,6 @@ import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiErrorElement;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiImportList;
-import com.intellij.psi.PsiImportStatement;
-import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.impl.PsiManagerImpl;
@@ -62,7 +59,6 @@ public class TornadoTWTask {
 
         PsiFile file = manager.findFile(Objects.requireNonNull(FileEditorManager.getInstance(project).getSelectedFiles()[0]));
         assert file != null;
-        importCodeBlock = getImportCode(file);
         taskList = findAnnotatedVariables(file);
         if (taskList == null) return;
         for (PsiMethod task : taskList) {
@@ -130,54 +126,11 @@ public class TornadoTWTask {
         return methodName + "(" + methodParameters + "): " + Objects.requireNonNull(method.getReturnType()).getCanonicalText();
     }
 
-    /**
-     * Retrieves a list of PsiMethod objects based on a list of method names.
-     *
-     * @param methodsList the list of method names
-     * @return a list of corresponding PsiMethod objects, or null if none found
-     */
-    public static ArrayList<PsiMethod> getMethods(List<Object> methodsList) {
-        if (methodsList == null || methodsList.isEmpty()) return null;
-        ArrayList<PsiMethod> psiMethodsList = new ArrayList<>();
-        for (Object method : methodsList) {
-            if (taskMap.containsKey(method.toString())) {
-                psiMethodsList.add(taskMap.get(method.toString()));
-            }
-        }
-        return psiMethodsList;
-    }
-
-    // Internal utility method to retrieve import code from the given PsiFile
-    private static String getImportCode(PsiFile file) {
-        StringBuilder importCodeBlock = new StringBuilder();
-        if (!(file instanceof PsiJavaFile javaFile)) {
-            return importCodeBlock.toString();
-        }
-        PsiImportList importList = javaFile.getImportList();
-
-        if (importList != null) {
-            PsiImportStatement[] importStatements = importList.getImportStatements();
-            for (PsiImportStatement importStatement : importStatements) {
-                importCodeBlock.append(importStatement.getText()).append("\n");
-            }
-        }
-        return importCodeBlock.toString();
-    }
-
     // Internal utility method to validate a given PsiMethod to ensure it's a valid TornadoVM task
     private static boolean validateTask(PsiMethod method) {
         PsiElement[] errorElements = PsiTreeUtil.collectElements(method,
                 element -> element instanceof PsiErrorElement);
         if (errorElements.length != 0) return false;
         return !ProblemMethods.getInstance().getMethodSet().contains(method.getText());
-    }
-
-    /**
-     * Returns the stored import code block.
-     *
-     * @return a string representing the import code block
-     */
-    public static String getImportCodeBlock() {
-        return importCodeBlock;
     }
 }

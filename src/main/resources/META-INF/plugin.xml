@@ -86,9 +86,6 @@
 
         </localInspection>
         <toolWindow factoryClass="com.tais.tornado_plugins.ui.TornadoToolsWindow" id="TornadoVM" anchor="right"/>
-        <toolWindow factoryClass="com.tais.tornado_plugins.ui.ConsoleOutputToolWindow" id="TornadoVM Console" anchor="bottom"/>
-        <applicationConfigurable instance="com.tais.tornado_plugins.ui.TornadoSettingConfiguration"/>
-        <applicationService serviceImplementation="com.tais.tornado_plugins.entity.TornadoSetting"/>
         <psi.treeChangeListener implementation="com.tais.tornado_plugins.listener.PsiChangeListener"/>
     </extensions>
     <projectListeners>
@@ -96,7 +93,5 @@
                   topic="com.intellij.openapi.wm.ex.ToolWindowManagerListener"/>
         <listener class="com.tais.tornado_plugins.listener.EditorSwitch"
                   topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
-        <listener class="com.tais.tornado_plugins.listener.TornadoSettingListener"
-                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
     </projectListeners>
 </idea-plugin>
