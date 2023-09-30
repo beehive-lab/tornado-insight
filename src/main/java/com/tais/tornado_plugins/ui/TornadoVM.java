@@ -82,7 +82,7 @@ public class TornadoVM {
             inspectionPane.add(p);
         }
 
-        InspectorScollPane = new JBScrollPane(inspectionPane);
+        InspectorScollPane = new JBScrollPane(InpectorInfoKt.inspectorPane());
     }
 
     private static JPanel createCollapsibleCard(String title, String content) {
