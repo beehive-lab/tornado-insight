@@ -1,0 +1,8 @@
+<html>
+<body>
+TornadoVM currently does not support static <code>TaskGraph</code>> and Tasks.
+The reason for not supporting this is that a deadlock might occur
+between the user thread running class initialization and the Tornado
+compiler thread performing JIT compilation of the Task method.
+</body>
+</html>

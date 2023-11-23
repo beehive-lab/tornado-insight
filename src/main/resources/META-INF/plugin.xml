@@ -1,0 +1,125 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
+    <id>com.tais.TornadoInsight</id>
+
+    <!-- Public plugin name should be written in Title Case.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
+    <name>TornadoInsight</name>
+
+    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+    <vendor email="zuotais@foxmail.com" url="https://www.tornadovm.org/contact-us">TornadoVM_Tais</vendor>
+
+    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+         Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
+    <description><![CDATA[
+    TornadoInsight is an open source IntelliJ plugins,
+    for developers to enhance the developer experience when working with TornadoVM.
+     TornadoInsight is designed exclusively for TornadoVM development.
+      It goes beyond the conventional by providing a built-in on-the-fly static checker,
+      empowering developers to identify unsupported Java features in TornadoVM and
+      understand the reasons behind these limitations. Additionally,
+       TornadoInsight introduces a dynamic testing framework,
+       enabling developers to test individual TornadoVM tasks effortlessly.
+       It automatically wraps TornadoVM tasks, invoking the native TornadoVM
+       runtime on the developer's machine for seamless debugging and testing.
+  ]]></description>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.java</depends>
+
+    <!-- Extension points defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+
+        <localInspection language="JAVA"
+                         displayName="Data type check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="DataTypeInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.inspector.DataTypeInspection"/>
+        <localInspection language="JAVA"
+                         displayName="Recursion check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="RecursionInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.inspector.RecursionInspection"/>
+        <localInspection language="JAVA"
+                         displayName="Method Throw check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="ThrowInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.inspector.ThrowInspection"/>
+        <localInspection language="JAVA"
+                         displayName="System call check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="SystemCallInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.inspector.SystemCallInspection"/>
+        <localInspection language="JAVA"
+                         displayName="Static Taskgraph check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="StaticTaskGraphInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.inspector.StaticTaskGraphInspection"/>
+        <localInspection language="JAVA"
+                         displayName="Assert statement check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="AssertInspection"
+                         level="ERROR"
+                         enabledByDefault="true"
+                         implementationClass="com.tais.tornado_plugins.inspector.AssertInspection"/>
+        <localInspection implementationClass="com.tais.tornado_plugins.inspector.ExternalLibraryInspection"
+                         language="JAVA"
+                         displayName="External library check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="ExternalInspection"
+                         level="ERROR"
+                         enabledByDefault="true">
+
+        </localInspection>
+        <toolWindow factoryClass="com.tais.tornado_plugins.ui.toolwindow.TornadoSideWindow" id="TornadoVM" anchor="right" icon="TornadoIcons.TornadoIcon" />
+        <applicationConfigurable instance="com.tais.tornado_plugins.ui.settings.TornadoSettingConfiguration"
+                                 displayName="TornadoVM"/>
+        <applicationService serviceImplementation="com.tais.tornado_plugins.ui.settings.TornadoSettingState"/>
+        <psi.treeChangeListener implementation="com.tais.tornado_plugins.listener.PsiChangeListener"/>
+        <toolWindow factoryClass="com.tais.tornado_plugins.ui.console.ConsoleWindowFactory" id="TornadoInsight Console" anchor="bottom"/>
+        <errorHandler implementation="com.tais.tornado_plugins.error.ErrorSubmitter"/>
+    </extensions>
+    <actions>
+        <group id="tornado.bar">
+            <action id="tornado.refresh" class="com.tais.tornado_plugins.service.RefreshAction" text="Refresh" description="Refresh"
+                    icon="AllIcons.Actions.Refresh"/>
+            <action id="tornado.runInspection" class="com.tais.tornado_plugins.service.RunInspectionAction"
+                    text="Run Dynamic Inspection" description="Run dynamic inspection" icon="AllIcons.Actions.Execute"/>
+            <separator/>
+            <action id="tornado.settings" class="com.tais.tornado_plugins.service.SettingsAction"
+                    text="Settings" description="Settings" icon="AllIcons.General.GearPlain"/>
+            <action id="tornado.doc" class="com.tais.tornado_plugins.service.OpenTornadoDocsAction"
+                    text="TornadoVM Documentation" description="TornadoVM documentation" icon="AllIcons.Toolwindows.Documentation"/>
+        </group>
+    </actions>
+    <projectListeners>
+        <listener class="com.tais.tornado_plugins.listener.ToolWindowOpen"
+                  topic="com.intellij.openapi.wm.ex.ToolWindowManagerListener"/>
+        <listener class="com.tais.tornado_plugins.listener.EditorSwitch"
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+        <listener class="com.tais.tornado_plugins.listener.TornadoSettingListener"
+                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
+    </projectListeners>
+</idea-plugin>

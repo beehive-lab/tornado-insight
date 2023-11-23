@@ -1,0 +1,20 @@
+<html>
+<body>
+TornadoVM does not support Traps/Exceptions.
+<p>
+  On GPUs there is little support for exceptions. For example, on a <br />
+  division by 0 scenario, the CPU sets a flag in one of the special <br />
+  registers. Then the Operating System can query those special<br />
+  registers and pass that value to the application runtime (in this <br />
+  case, the Java runtime). Then the Java runtime handles the exception.
+</p>
+<p>
+  However, there is no such mechanism on GPUs <a href="https://docs.nvidia.com/cuda/floating-point/index.html#differences-from-x86">(link)</a><br />
+  which means that TornadoVM must insert extra control-flow to <br />
+  guarantee that those exceptions never happen. Currently, since <br />
+  TornadoVM compiles at runtime, many of those checks can be<br />
+  assured at runtime.
+</p>
+
+</body>
+</html>
