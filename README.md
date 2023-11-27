@@ -65,9 +65,7 @@ The dynamic inspection feature of TornadoInsight is configured after the install
 - Navigate to "Preferences" or "Settings" depending on your operating system.
 - Select "TornadoInsight" from the menu.
 
-Requires TornadoVM installation root directory and path to Java 21 
-and above. The “parameter size” represents the length of the assignment
-that TornadoInsight creates for the collection type when performing the
-dynamic test.
+Developers should configure the TornadoVM root directory (i.e. the path to the TornadoVM cloned repository) and the path to `JAVA_HOME` which should be >= JDK 21. 
+Additionally, developers should indicate a tentative "array size" that can be used by TornadoInsight to  set the size of the input and output arrays of a TornadoVM task.
 
 
