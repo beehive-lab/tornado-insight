@@ -61,7 +61,7 @@ TornadoInsight invokes Java and TornadoVM on the developer's local machine as it
 - JDK >= 21
 
 ### 3.Configuring TornadoInsight
-In order to enable TornadoInsight's dynamic inspection feature, it needs to be configured after installation.
+The dynamic inspection feature of TornadoInsight is configured after the installation of the plugin, as follows:
 - Navigate to "Preferences" or "Settings" depending on your operating system.
 - Select "TornadoVM" from the menu.
 
