@@ -63,7 +63,7 @@ TornadoInsight invokes Java and TornadoVM on the developer's local machine as it
 ### 3.Configuring TornadoInsight
 The dynamic inspection feature of TornadoInsight is configured after the installation of the plugin, as follows:
 - Navigate to "Preferences" or "Settings" depending on your operating system.
-- Select "TornadoVM" from the menu.
+- Select "TornadoInsight" from the menu.
 
 Requires TornadoVM installation root directory and path to Java 21 
 and above. The “parameter size” represents the length of the assignment
