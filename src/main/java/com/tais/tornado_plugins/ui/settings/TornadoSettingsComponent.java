@@ -129,7 +129,7 @@ public class TornadoSettingsComponent {
             }
             //Validate is Java 21. The validation process needs update;
             commandLine = new GeneralCommandLine();
-            commandLine.setExePath(JavaPath + "/java");
+            commandLine.setExePath(JavaPath + "/bin/java");
             commandLine.addParameter("-version");
             try {
                 ProcessOutput processOutput = ExecUtil.execAndGetOutput(commandLine);
