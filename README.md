@@ -1,6 +1,6 @@
 # TornadoInsight: Unleashing the Power of TornadoVM in IntelliJ IDEA
 
-**TornadoInsight** is an open source IntelliJ plugins, 
+**TornadoInsight** is an open source IntelliJ plugin 
 for developers to enhance the developer experience 
 when working with TornadoVM. TornadoInsight is designed 
 exclusively for TornadoVM development. It goes beyond 
