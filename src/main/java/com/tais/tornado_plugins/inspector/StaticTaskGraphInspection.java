@@ -28,9 +28,8 @@ public class StaticTaskGraphInspection extends AbstractBaseJavaLocalInspectionTo
                 if (resolve instanceof PsiField field) {
                     PsiClass containingClass = field.getContainingClass();
                     PsiType type = field.getType();
-
                     // Ensure that the field is of type "TaskGraph" and is static
-                    if (containingClass != null && "TaskGraph".equals(type.getPresentableText())) {
+                    if (containingClass != null && "uk.ac.manchester.tornado.api.TaskGraph".equals(type.getCanonicalText())) {
                         // If so, register a problem since static TaskGraph is not desired.
                         if (field.hasModifierProperty(PsiModifier.STATIC)) {
                             holder.registerProblem(expression,
@@ -49,7 +48,9 @@ public class StaticTaskGraphInspection extends AbstractBaseJavaLocalInspectionTo
                 if (resolve instanceof PsiMethod method) {
                     PsiClass containingClass = method.getContainingClass();
                     // Ensure that the method belongs to "TaskGraph" and has the name "task" and is static
-                    if (containingClass != null && "TaskGraph".equals(containingClass.getName()) && "task".equals(method.getName())) {
+                    if (containingClass != null
+                            && "uk.ac.manchester.tornado.api.TaskGraph".equals(containingClass.getQualifiedName())
+                            && "task".equals(method.getName())) {
                         // If so, register a problem since static task method in TaskGraph is not desired.
                         if (method.hasModifierProperty(PsiModifier.STATIC)) {
                             holder.registerProblem(expression,
