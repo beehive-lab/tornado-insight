@@ -26,7 +26,7 @@ public class TornadoSettingsComponent {
 
     private final TextFieldWithBrowseButton myJava21Path = new TextFieldWithBrowseButton();
 
-    private final JBTextField myParameterSize = new JBTextField(4);
+    private final JBTextField myMaxArraySize = new JBTextField(4);
 
 
     public TornadoSettingsComponent() {
@@ -50,7 +50,7 @@ public class TornadoSettingsComponent {
 
         JPanel panel = UI.PanelFactory.panel(innerGrid).withComment(INNER_COMMENT).createPanel();
         panel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.runtime")));
-        JPanel Java21 = UI.PanelFactory.panel(myParameterSize)
+        JPanel Java21 = UI.PanelFactory.panel(myMaxArraySize)
                 .withLabel(MessageBundle.message("ui.setting.label.size"))
                 .withComment(MessageBundle.message("ui.settings.comment.size")).createPanel();
         Java21.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
@@ -83,21 +83,21 @@ public class TornadoSettingsComponent {
         myJava21Path.setText(path);
     }
 
-    public int getParameterSize() {
-        if (myParameterSize.getText().isEmpty() || Objects.equals(myParameterSize.getText(), "0")) {
+    public int getMaxArraySize() {
+        if (myMaxArraySize.getText().isEmpty() || Objects.equals(myMaxArraySize.getText(), "0")) {
             return 32;
         }
-        return Integer.parseInt(myParameterSize.getText());
+        return Integer.parseInt(myMaxArraySize.getText());
     }
 
-    public void setParameterSize(int size) {
-        myParameterSize.setText(String.valueOf(size));
+    public void setMaxArraySize(int size) {
+        myMaxArraySize.setText(String.valueOf(size));
     }
 
     public String isValidPath() {
         String path = myTornadoEnv.getText() + "/setvars.sh";
         String JavaPath = myJava21Path.getText();
-        String parameterSize = myParameterSize.getText();
+        String parameterSize = myMaxArraySize.getText();
         AtomicReference<String> stringAtomicReference = new AtomicReference<>();
         stringAtomicReference.set("");
         if (StringUtil.isEmpty(path))

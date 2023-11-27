@@ -38,7 +38,7 @@ public class TornadoSettingConfiguration implements Configurable {
         TornadoSettingState settings = TornadoSettingState.getInstance();
         boolean modified = !mySettingsComponent.getJava21Path().equals(settings.Java21);
         modified |= !mySettingsComponent.getTornadoEnvPath().equals(settings.TornadoRoot);
-        modified |= mySettingsComponent.getParameterSize() != settings.parameterSize;
+        modified |= mySettingsComponent.getMaxArraySize() != settings.parameterSize;
         return modified;
     }
 
@@ -53,7 +53,7 @@ public class TornadoSettingConfiguration implements Configurable {
         settings.isValid = true;
         settings.TornadoRoot = mySettingsComponent.getTornadoEnvPath();
         settings.Java21 = mySettingsComponent.getJava21Path();
-        settings.parameterSize = mySettingsComponent.getParameterSize();
+        settings.parameterSize = mySettingsComponent.getMaxArraySize();
     }
 
     //The method is invoked immediately after createComponent().
@@ -62,7 +62,7 @@ public class TornadoSettingConfiguration implements Configurable {
         TornadoSettingState settings = TornadoSettingState.getInstance();
         mySettingsComponent.setTornadoEnvPath(settings.TornadoRoot);
         mySettingsComponent.setJava21Path(settings.Java21);
-        mySettingsComponent.setParameterSize(settings.parameterSize);
+        mySettingsComponent.setMaxArraySize(settings.parameterSize);
     }
 
     @Override
