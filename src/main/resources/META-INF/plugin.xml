@@ -95,7 +95,7 @@
         </localInspection>
         <toolWindow factoryClass="com.tais.tornado_plugins.ui.toolwindow.TornadoSideWindow" id="TornadoVM" anchor="right" icon="TornadoIcons.TornadoIcon" />
         <applicationConfigurable instance="com.tais.tornado_plugins.ui.settings.TornadoSettingConfiguration"
-                                 displayName="TornadoVM"/>
+                                 displayName="TornadoInsight"/>
         <applicationService serviceImplementation="com.tais.tornado_plugins.ui.settings.TornadoSettingState"/>
         <psi.treeChangeListener implementation="com.tais.tornado_plugins.listener.PsiChangeListener"/>
         <toolWindow factoryClass="com.tais.tornado_plugins.ui.console.ConsoleWindowFactory" id="TornadoInsight Console" anchor="bottom"/>

@@ -24,7 +24,7 @@ public class TornadoSettingConfiguration implements Configurable {
     @Nls(capitalization =  Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
-        return "TornadoVM";
+        return "TornadoInsight";
     }
 
     @Override
