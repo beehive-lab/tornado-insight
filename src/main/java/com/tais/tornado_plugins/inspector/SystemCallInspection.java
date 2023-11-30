@@ -6,6 +6,7 @@ import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.tais.tornado_plugins.entity.ProblemMethods;
+import com.tais.tornado_plugins.entity.RestrictedClasses;
 import com.tais.tornado_plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
@@ -57,18 +58,7 @@ public class SystemCallInspection extends AbstractBaseJavaLocalInspectionTool {
 
                             // Checking for method calls from potentially problematic system and utility classes.
                             assert className != null;
-                            if (className.startsWith("java.lang.System")||
-                                    className.startsWith("java.lang.Runtime")||
-                                    className.startsWith("java.lang.Process")||
-                                    className.startsWith("java.lang.ProcessBuilder")||
-                                    className.startsWith("java.lang.Thread")||
-                                    className.startsWith("java.io")||
-                                    className.startsWith("java.util.concurrent")||
-                                    className.startsWith("java.lang.reflect")||
-                                    className.startsWith("java.net")||
-                                    className.startsWith("java.nio")||
-                                    className.startsWith("java.security")||
-                                    className.startsWith("java.sql")) {
+                            if (RestrictedClasses.isRestrictedClass(className)) {
                                 ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), parent);
                                 holder.registerProblem(expression,
                                         MessageBundle.message("inspection.external"),
