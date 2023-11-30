@@ -33,7 +33,7 @@ public class TornadoSideWindow implements ToolWindowFactory, Disposable {
         InspectorInfoPanel inspectorInfoPanel = new InspectorInfoPanel(toolWindow);
         Content content = ContentFactory.getInstance().createContent(toolWindowContent, "TornadoVM Tasks", false);
         toolWindow.getContentManager().addContent(content);
-        content = ContentFactory.getInstance().createContent(inspectorInfoPanel, "Inspectors Info", false);
+        content = ContentFactory.getInstance().createContent(inspectorInfoPanel, "Inspector Guide", false);
         toolWindow.getContentManager().addContent(content);
     }
 
