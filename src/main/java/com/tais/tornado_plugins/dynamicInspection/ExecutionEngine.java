@@ -77,7 +77,7 @@ public class ExecutionEngine {
         MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
                 MessageBundle.message("dynamic.info.compile"));
         GeneralCommandLine commandLine = new GeneralCommandLine();
-        commandLine.setExePath(TornadoSettingState.getInstance().Java21 + "/bin/javac");
+        commandLine.setExePath(TornadoSettingState.getInstance().getJavaHome() + "/bin/javac");
         commandLine.addParameter("--release");
         commandLine.addParameter("21");
         commandLine.addParameter("--enable-preview");

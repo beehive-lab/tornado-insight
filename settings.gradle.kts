@@ -5,4 +5,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = "Tornado_Plugins"
+rootProject.name = "TornadoInsight"

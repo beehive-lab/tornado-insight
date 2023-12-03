@@ -3,9 +3,14 @@ package com.tais.tornado_plugins.ui.settings;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.process.CapturingProcessHandler;
 import com.intellij.execution.process.ProcessOutput;
-import com.intellij.execution.util.ExecUtil;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.progress.ProgressManager;
+import com.intellij.openapi.project.ProjectManager;
+import com.intellij.openapi.projectRoots.JavaSdk;
+import com.intellij.openapi.projectRoots.Sdk;
+import com.intellij.openapi.roots.ui.configuration.JdkComboBox;
+import com.intellij.openapi.roots.ui.configuration.ProjectStructureConfigurable;
+import com.intellij.openapi.roots.ui.configuration.projectRoot.ProjectSdksModel;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.ui.IdeBorderFactory;
@@ -17,6 +22,8 @@ import com.tais.tornado_plugins.util.MessageBundle;
 import javax.swing.*;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TornadoSettingsComponent {
 
@@ -24,41 +31,40 @@ public class TornadoSettingsComponent {
 
     private final TextFieldWithBrowseButton myTornadoEnv = new TextFieldWithBrowseButton();
 
-    private final TextFieldWithBrowseButton myJava21Path = new TextFieldWithBrowseButton();
+    private ProjectSdksModel jdkModel;
+
+    private JdkComboBox myJdk;
 
     private final JBTextField myMaxArraySize = new JBTextField(4);
 
-
     public TornadoSettingsComponent() {
+        jdkModel = ProjectStructureConfigurable.getInstance(ProjectManager.getInstance().getDefaultProject()).getProjectJdksModel();
+        myJdk = new JdkComboBox(null,
+                jdkModel,
+                sdkTypeId -> JavaSdk.getInstance() == sdkTypeId,
+                null, null, null);
+
         myTornadoEnv.addBrowseFolderListener("TornadoVM Root Folder", "Choose the .sh file",
                 null,
                 new FileChooserDescriptor(false, true, false, false, false, false) {
                 });
 
-        myJava21Path.addBrowseFolderListener("Java21 Home", "Choose the Java_Home for Java 21",
-                null,
-                new FileChooserDescriptor(false, true, false, false, false, false) {
-                });
-
-
         String INNER_COMMENT = MessageBundle.message("ui.settings.comment.env");
 
         JPanel innerGrid = UI.PanelFactory.grid().splitColumns()
                 .add(UI.PanelFactory.panel(myTornadoEnv).withLabel(MessageBundle.message("ui.settings.label.tornado")))
-                .add(UI.PanelFactory.panel(myJava21Path).withLabel(MessageBundle.message("ui.settings.label.java")))
+                .add(UI.PanelFactory.panel(myJdk).withLabel(MessageBundle.message("ui.settings.label.java")))
                 .createPanel();
 
         JPanel panel = UI.PanelFactory.panel(innerGrid).withComment(INNER_COMMENT).createPanel();
         panel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.runtime")));
-        JPanel Java21 = UI.PanelFactory.panel(myMaxArraySize)
+        JPanel maxArraySize = UI.PanelFactory.panel(myMaxArraySize)
                 .withLabel(MessageBundle.message("ui.setting.label.size"))
                 .withComment(MessageBundle.message("ui.settings.comment.size")).createPanel();
-        Java21.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
-
-
+        maxArraySize.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
         myMainPanel = FormBuilder.createFormBuilder()
                 .addComponent(panel)
-                .addComponent(Java21)
+                .addComponent(maxArraySize)
                 .addComponentFillVertically(new JPanel(), 0)
                 .getPanel();
     }
@@ -75,12 +81,12 @@ public class TornadoSettingsComponent {
         myTornadoEnv.setText(path);
     }
 
-    public String getJava21Path() {
-        return myJava21Path.getText();
+    public Sdk getJdk(){
+        return myJdk.getSelectedJdk();
     }
 
-    public void setJava21Path(String path) {
-        myJava21Path.setText(path);
+    public void setMyJdk(Sdk sdk){
+        myJdk.setSelectedJdk(sdk);
     }
 
     public int getMaxArraySize() {
@@ -96,14 +102,27 @@ public class TornadoSettingsComponent {
 
     public String isValidPath() {
         String path = myTornadoEnv.getText() + "/setvars.sh";
-        String JavaPath = myJava21Path.getText();
         String parameterSize = myMaxArraySize.getText();
         AtomicReference<String> stringAtomicReference = new AtomicReference<>();
         stringAtomicReference.set("");
         if (StringUtil.isEmpty(path))
             return MessageBundle.message("ui.settings.validation.emptyTornadovm");
-        if (StringUtil.isEmpty(JavaPath))
+        if (myJdk.getSelectedJdk() == null) {
             return MessageBundle.message("ui.settings.validation.emptyJava");
+        }
+        String versionString = myJdk.getSelectedJdk().getVersionString();
+        String regEx = "(?:version\\s+)?(\\d+\\.\\d+\\.\\d+)";
+        Pattern compile = Pattern.compile(regEx);
+        Matcher matcher = compile.matcher(versionString);
+        if (matcher.find()){
+            String version = matcher.group(1);
+            String[] split = version.split("\\.");
+            int majorVersion = Integer.parseInt(split[0]);
+            if (majorVersion < 21){
+                return MessageBundle.message("ui.settings.validation.javaVersion");
+            }
+        }
+
         if (StringUtil.isEmpty(parameterSize)){
             return MessageBundle.message("ui.settings.validation.emptySize");
         }
@@ -126,20 +145,6 @@ public class TornadoSettingsComponent {
                 }
             } catch (Exception e) {
                 stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
-            }
-            //Validate is Java 21. The validation process needs update;
-            commandLine = new GeneralCommandLine();
-            commandLine.setExePath(JavaPath + "/bin/java");
-            commandLine.addParameter("-version");
-            try {
-                ProcessOutput processOutput = ExecUtil.execAndGetOutput(commandLine);
-                if (!processOutput.toString().contains("java version \"21\"")
-                        && !processOutput.toString().contains("GraalVM 21")) {
-                    stringAtomicReference.set(MessageBundle.message("ui.settings.validation.javaVersion"));
-                }
-                TornadoSettingState.getInstance().isValid = true;
-            } catch (Exception e) {
-                stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidJava"));
             }
         }, MessageBundle.message("ui.settings.validation.progress"), true, null);
         return stringAtomicReference.get();
