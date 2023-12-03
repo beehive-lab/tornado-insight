@@ -8,7 +8,7 @@ plugins {
 }
 
 // Define the group and version of the plugin.
-group = "com.tais"
+group = "uk.ac.manchester.beehive.tornado.plugins"
 version = "1.0"
 
 // Define the repositories where dependencies can be fetched.
