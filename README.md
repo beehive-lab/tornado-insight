@@ -46,21 +46,52 @@ it will output an exception. In addition, test run times are displayed in
 the lower right corner to allow developers to evaluate performance.
 
 ## How to use TornadoInsight?
-### 1. Installation
+This section covers the initial steps that are required in order to correctly setup the plugin project inside the IntelliJ IDE.
 
-Getting started with TornadoInsight is a straightforward process:
+### Folder layout
 
-- Open IntelliJ IDEA.
-- Navigate to "Preferences" or "Settings" depending on your operating system.
-- Select "Plugins" from the menu.
-- Search for "TornadoInsight" and click "Install."
+The output of this folder is as follows:
 
-### 2. Pre-requisites
+```
+ idea
+   |-src
+     |-main
+       |-java (plugin sources)
+       |-resources (plugin resources - the plugin.xml file lives here)
+   |-build (where build files are stored)
+       |-distributions (where the plugin zip file is generated)   
+   |-build.gradle (the gradle build file)
+   |-gradle.properties (contains properties required to build this project)
+```
+
+### Building the plugin
+
+
+This plugin can be built with `gradle`. To build the plugin, simply run the following command from the `idea` folder:
+
+`sh gradlew clean build`
+This will download gradle and the required IntelliJ dependencies,
+will build the plugin and will place the results in
+the `build/distributions` folder.
+Once the build is configured correctly, the plugin can even be tested in a sandbox environment, as follows:
+
+`sh gradlew runIde`
+
+### Installing the plugin
+
+To install the plugin in your IDE, first you need to build a plugin module file (a `.zip` file), as described in the previous section.
+
+Once the plugin zip has been obtained, it can be installed in the IDE; go in `Help -> Find Action...`, and type `Install plugin from disk`, and then select the corresponding action from the drop down list. A new file dialog will pop up: point the IDE to the zip file you have created in the step above. The IDE will require a restart - once restart is completed the installation process is completed, and the plugin is ready to be used to run and debug jtreg tests.
+
+## Using TornadoInsight
+
+
+### Pre-requisites
 TornadoInsight invokes Java and TornadoVM on the developer's local machine as it works, and you need to make sure that you have them installed correctly before using the plugin.
 - TornadoVM >= 0.17
 - JDK >= 21
 
-### 3.Configuring TornadoInsight
+### Configuring TornadoInsight
 The dynamic inspection feature of TornadoInsight is configured after the installation of the plugin, as follows:
 - Navigate to "Preferences" or "Settings" depending on your operating system.
 - Select "TornadoInsight" from the menu.
@@ -68,4 +99,10 @@ The dynamic inspection feature of TornadoInsight is configured after the install
 Developers should configure the TornadoVM root directory (i.e. the path to the TornadoVM cloned repository) and the path to `JAVA_HOME` which should be >= JDK 21. 
 Additionally, developers should indicate a tentative "array size" that can be used by TornadoInsight to  set the size of the input and output arrays of a TornadoVM task.
 
-
+## Limitations
+TornadoInsight, in its current state, lacks support for dynamic 
+inspection of references. This limitation arises due to the nature 
+of the dynamically generated Java code during the dynamic inspection
+process. The Java code is derived from a copy of the Tornado task method,
+and in this copying process, automatic handling of non-JDK method 
+invocations and global variable replacements is not performed.
