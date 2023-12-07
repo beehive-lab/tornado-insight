@@ -15,6 +15,7 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiMethod;
+import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
@@ -144,7 +145,11 @@ public class ExecutionEngine {
         String sourceFile = TornadoSettingState.getInstance().setVarsPath();
         commandLine.setExePath("/bin/sh");
         commandLine.addParameter("-c");
-        commandLine.addParameter("source " + sourceFile + ";tornado --device");
+        commandLine.addParameter("export JAVA_HOME=" + EnvironmentVariable.getJavaHome()
+                + ";export PATH=" + EnvironmentVariable.getPath()
+                + ";export CMAKE_ROOT=" + EnvironmentVariable.getCmakeRoot()
+                + ";export TORNADO_SDK=" + EnvironmentVariable.getTornadoSdk()
+                + ";tornado --device");
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
             ProcessOutput output = handler.runProcess();
@@ -184,11 +189,8 @@ public class ExecutionEngine {
     }
 
     private void runTornadoOnJar(String jarPath) {
-        String sourceFile = TornadoSettingState.getInstance().setVarsPath();
-        GeneralCommandLine commandLine = new GeneralCommandLine();
-        commandLine.setExePath("/bin/sh");
-        commandLine.addParameter("-c");
-        commandLine.addParameter("source " + sourceFile + ";tornado --debug --printKernel -jar " + jarPath);
+        GeneralCommandLine commandLine = getGeneralCommandLine(jarPath);
+        //commandLine.addParameter("source " + sourceFile + ";tornado --debug --printKernel -jar " + jarPath);
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
             ProcessOutput output = handler.runProcess();
@@ -199,6 +201,19 @@ public class ExecutionEngine {
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
+    }
+
+    @NotNull
+    private static GeneralCommandLine getGeneralCommandLine(String jarPath) {
+        GeneralCommandLine commandLine = new GeneralCommandLine();
+        commandLine.setExePath("/bin/sh");
+        commandLine.addParameter("-c");
+        commandLine.addParameter("export JAVA_HOME=" + EnvironmentVariable.getJavaHome()
+                + ";export PATH=" + EnvironmentVariable.getPath()
+                + ";export CMAKE_ROOT=" + EnvironmentVariable.getCmakeRoot()
+                + ";export TORNADO_SDK=" + EnvironmentVariable.getTornadoSdk()
+                + ";tornado --debug --printKernel -jar " + jarPath);
+        return commandLine;
     }
 
     //Test results for each method

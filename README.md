@@ -2,7 +2,7 @@
 
 **TornadoInsight** is an open source IntelliJ plugin 
 that aims to enhance the experience of developers
-when working with TornadoVM. TornadoInsight is designed 
+when working with [TornadoVM](https://github.com/beehive-lab/TornadoVM). TornadoInsight is designed 
 exclusively for TornadoVM development. It provides 
 a built-in on-the-fly static checker, empowering developers 
 to identify unsupported Java features in TornadoVM
@@ -88,7 +88,7 @@ Once the plugin zip has been obtained, it can be installed in the IDE; go in `He
 
 ### Pre-requisites
 TornadoInsight invokes Java and TornadoVM on the developer's local machine as it works, and you need to make sure that you have them installed correctly before using the plugin.
-- TornadoVM >= 0.17
+- [TornadoVM](https://github.com/beehive-lab/TornadoVM) >= 1.0
 - JDK >= 21
 
 ### Configuring TornadoInsight
@@ -96,7 +96,7 @@ The dynamic inspection feature of TornadoInsight is configured after the install
 - Navigate to "Preferences" or "Settings" depending on your operating system.
 - Select "TornadoInsight" from the menu.
 
-Developers should configure the TornadoVM root directory (i.e. the path to the TornadoVM cloned repository) and the path to `JAVA_HOME` which should be >= JDK 21. 
+Developers should configure the TornadoVM root directory (i.e. the path to the TornadoVM cloned repository) and select a JDK which should be >= JDK 21. 
 Additionally, developers should indicate a tentative "array size" that can be used by TornadoInsight to  set the size of the input and output arrays of a TornadoVM task.
 
 ## Limitations
@@ -106,3 +106,5 @@ of the dynamically generated Java code during the dynamic inspection
 process. The Java code is derived from a copy of the Tornado task method,
 and in this copying process, automatic handling of non-JDK method 
 invocations and global variable replacements is not performed.
+
+## License

@@ -8,8 +8,11 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManagerListener;
+import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
 
 public class TornadoSettingListener implements ProjectManagerListener {
 
@@ -23,6 +26,11 @@ public class TornadoSettingListener implements ProjectManagerListener {
             Notifications.Bus.notify(notification, project);
         }else {
             TornadoSettingState.getInstance().isValid = true;
+            try {
+                EnvironmentVariable.parseFile(TornadoSettingState.getInstance().TornadoRoot + "/setvars.sh");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 

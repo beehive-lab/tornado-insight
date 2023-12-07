@@ -17,10 +17,13 @@ import com.intellij.ui.IdeBorderFactory;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.FormBuilder;
 import com.intellij.util.ui.UI;
+import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 import javax.swing.*;
+import java.io.IOException;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -132,14 +135,25 @@ public class TornadoSettingsComponent {
         } catch (NumberFormatException e) {
             return MessageBundle.message("ui.settings.validation.invalidSize");
         }
+        try {
+            EnvironmentVariable.parseFile(path);
+        } catch (IOException e) {
+            stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
+        }
         ProgressManager.getInstance().runProcessWithProgressSynchronously(() -> {
             GeneralCommandLine commandLine = new GeneralCommandLine();
             commandLine.setExePath("/bin/sh");
             commandLine.addParameter("-c");
-            commandLine.addParameter("source " + path + ";tornado --device");
+            commandLine.addParameter("export JAVA_HOME=" + EnvironmentVariable.getJavaHome()
+                    + ";export PATH=" + EnvironmentVariable.getPath()
+                    + ";export CMAKE_ROOT=" + EnvironmentVariable.getCmakeRoot()
+                    + ";export TORNADO_SDK=" + EnvironmentVariable.getTornadoSdk()
+                    + ";tornado --device");
             try {
                 CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
+                System.out.println(commandLine.getCommandLineString());
                 ProcessOutput output = handler.runProcess();
+                System.out.println(output);
                 if (output.getExitCode() != 0) {
                     stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
                 }
