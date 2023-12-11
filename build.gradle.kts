@@ -21,7 +21,7 @@
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.8.21"
-    id("org.jetbrains.intellij") version "1.15.0"
+    id("org.jetbrains.intellij") version "1.16.1"
 }
 
 // Define the group and version of the plugin.
