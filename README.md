@@ -40,7 +40,7 @@ the input/output variables according to the parameter types. Then, TornadoInsigh
 TornadoVM runtime on the developer's machine to run the generated Java class.
 This functionality streamlines the debugging process, making it convenient 
 for developers to identify and resolve issues in their TornadoVM applications.
-If TornadoVM Task is compatible with TornadoVM, the test outputs the OpenCL
+If a TornadoVM task is compatible with TornadoVM, the test will output the generated OpenCL
 kernel code for it, so that developers can debug it. If it is not compatible, 
 it will output an exception. In addition, test run times are displayed in 
 the lower right corner to allow developers to evaluate performance.
