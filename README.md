@@ -33,7 +33,7 @@ or initialize the method parameters. You only need to select the method in
 the tool window of TornadoInsight to test it. 
 
 With its dynamic testing framework, developers can seamlessly conduct tests on
-specific tasks within their codebase. TornadoInsight will dynamically generate a
+specific tasks within their codebase. TornadoInsight dynamically generates a
 test file and guide the automatic generation of the Main method and the 
 Taskgraph required by TornadoVM, And automatically create and initialize 
 variables according to parameter types. Then TornadoInsight invokes the 
