@@ -34,9 +34,9 @@ the tool window of TornadoInsight to test it.
 
 With its dynamic testing framework, developers can seamlessly conduct tests on
 specific tasks within their codebase. TornadoInsight dynamically generates a
-test file and guide the automatic generation of the Main method and the 
-Taskgraph required by TornadoVM, And automatically create and initialize 
-variables according to parameter types. Then TornadoInsight invokes the 
+test file and automatically generates the Main method and the 
+TaskGraph required by TornadoVM. In turn, it automatically creates and initializes 
+the input/output variables according to the parameter types. Then, TornadoInsight invokes the 
 TornadoVM runtime on the developer's machine to run the generated Java file.
 This functionality streamlines the debugging process, making it convenient 
 for developers to identify and resolve issues in their TornadoVM applications.
