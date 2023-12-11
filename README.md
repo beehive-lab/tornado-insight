@@ -42,8 +42,8 @@ This functionality streamlines the debugging process, making it convenient
 for developers to identify and resolve issues in their TornadoVM applications.
 If a TornadoVM task is compatible with TornadoVM, the test will output the generated OpenCL
 kernel code for it, so that developers can test it. If it is not compatible, 
-it will output an exception. In addition, test run times are displayed in 
-the lower right corner to allow developers to evaluate performance.
+it will output an exception. In addition, the elapsed time for running the checks
+is displayed in the bottom right corner.
 
 ## How to use TornadoInsight?
 This section covers the initial steps that are required in order to correctly setup the plugin project inside the IntelliJ IDE.
