@@ -23,8 +23,8 @@ and adherence to the TornadoVM guidelines. Currently, the static checker
 performs checks for datatypes, Traps/Exceptions, recursion, native
 method calls, assert statements. 
 
-TornadoInsight provides a tool window to view the built-in 
-static inspector for detailed information.
+TornadoInsight provides a tool window to view detailed information emerging from 
+the static inspection of TornadoInsight.
 
 ### 2. Dynamic Testing Framework
 TornadoInsight simplifies the testing process for individual TornadoVM tasks. 
