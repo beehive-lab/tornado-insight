@@ -1,0 +1,40 @@
+<!--
+  ~ Copyright (c) 2023, APT Group, Department of Computer Science,
+  ~  The University of Manchester.
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~  http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  -->
+
+<html>
+<body>
+<p>
+  TornadoVM currently supports Java primitive types, primitive arrays <br>
+  as well as some object types such as VectorFloat, VectorFloat4 and <br>
+  all variations with types as well as matrices types.
+</p>
+
+<p>
+  The full list of data structures supported is in this
+  <a href="https://github.com/beehive-lab/TornadoVM/tree/master/
+  tornado-api/src/main/java/uk/ac/manchester/tornado/api/collections/types">link</a>
+</p>
+
+<p>
+  Those are the objects that TornadoVM knows their memory layout. TornadoVM generates <br>
+  specialized OpenCL, PTX and SPIR-V code for those data structures. For example, VectorFloat4 <br>
+  is compiled in OpenCL to utilize the OpenCL vector data types (e.g., float4, int4, etc.). <br>
+  This might speed up user code if the target device contains explicit vector units,<br>
+  such as AVX on Intel CPUs or vector registers on AMD GPUs.
+</p>
+</body>
+</html>
