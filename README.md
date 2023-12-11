@@ -37,7 +37,7 @@ specific tasks within their codebase. TornadoInsight dynamically generates a
 test file and automatically generates the Main method and the 
 TaskGraph required by TornadoVM. In turn, it automatically creates and initializes 
 the input/output variables according to the parameter types. Then, TornadoInsight invokes the 
-TornadoVM runtime on the developer's machine to run the generated Java file.
+TornadoVM runtime on the developer's machine to run the generated Java class.
 This functionality streamlines the debugging process, making it convenient 
 for developers to identify and resolve issues in their TornadoVM applications.
 If TornadoVM Task is compatible with TornadoVM, the test outputs the OpenCL
