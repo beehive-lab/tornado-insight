@@ -20,7 +20,7 @@ Java features that are not supported by TornadoVM. Through
 instant notifications, developers gain immediate insights into 
 potential compatibility issues, allowing for proactive adjustments 
 and adherence to the TornadoVM guidelines. Currently, the static checker 
-already has checks for datatype, Traps/Exceptions, recursion, native
+performs checks for datatypes, Traps/Exceptions, recursion, native
 method calls, assert statements. 
 
 TornadoInsight provides a tool window to view the built-in 
