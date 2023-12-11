@@ -19,7 +19,7 @@ This tool scans TornadoVM code in real time, pinpointing any
 Java features that are not supported by TornadoVM. Through 
 instant notifications, developers gain immediate insights into 
 potential compatibility issues, allowing for proactive adjustments 
-and adherence to TornadoVM guidelines. Currently, the static checker 
+and adherence to the TornadoVM guidelines. Currently, the static checker 
 already has checks for datatype, Traps/Exceptions, recursion, native
 method calls, assert statements. 
 
