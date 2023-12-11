@@ -28,7 +28,7 @@ the static inspection of TornadoInsight.
 
 ### 2. Dynamic Testing Framework
 TornadoInsight simplifies the testing process for individual TornadoVM tasks. 
-After creating a TornadoVM Task, there is no need to write the main method
+After creating a TornadoVM task, there is no need to write the main method
 or initialize the method parameters. You only need to select the method in 
 the tool window of TornadoInsight to test it. 
 
