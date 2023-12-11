@@ -87,7 +87,7 @@ Once the plugin zip has been obtained, it can be installed in the IDE; go in `He
 
 
 ### Pre-requisites
-TornadoInsight invokes Java and TornadoVM on the developer's local machine as it works, and you need to make sure that you have them installed correctly before using the plugin.
+TornadoInsight invokes at runtime Java and TornadoVM on the developers' local machine, and therefore, developers need to make sure that they have installed those prior to using the plugin.
 - [TornadoVM](https://github.com/beehive-lab/TornadoVM) >= 1.0
 - JDK >= 21
 
