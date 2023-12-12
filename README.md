@@ -108,6 +108,19 @@ and in this copying process, automatic handling of non-JDK method
 invocations and global variable replacements is not performed.
 
 #### 2.No support for TornadoVM Kernel API
-[Kernel API](Loop Parallel API) is another way to express compute-kernels in TornadoVM.
+The [TornadoVM Kernel API](https://tornadovm.readthedocs.io/en/latest/programming.html#kernel-api) is another way to express compute-kernels in TornadoVM.
 TornadoInsight does not support the Kernel API because it currently uses the
-[Loop parallel API]( @reduce ): `@Parallel` and  `@Reduce` to locate TornadoVM Tasks.
+[Loop Parallel API](https://tornadovm.readthedocs.io/en/latest/programming.html#loop-parallel-api): `@Parallel` and  `@Reduce` to locate TornadoVM Tasks.
+
+
+## Acknowledgments
+
+This work is partially supported by the following EU & UKRI grants (most recent first):
+- EU Horizon Europe & UKRI [INCODE 101093069](https://incode-project.eu/).
+- EU Horizon Europe & UKRI [AERO 101092850](https://aero-project.eu/).
+- EU Horizon Europe & UKRI [ENCRYPT 101070670](https://encrypt-project.eu).
+- EU Horizon Europe & UKRI [TANGO 101070052](https://tango-project.eu).
+- EU Horizon 2020 [ELEGANT 957286](https://www.elegant-h2020.eu/).
+
+## License
+[![License: Apache 2](https://img.shields.io/badge/License-Apache%202.0-red.svg)](https://github.com/beehive-lab/tornadovm-intellij-plugin/blob/main/LICENSE)
