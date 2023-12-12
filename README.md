@@ -2,19 +2,18 @@
 
 **TornadoInsight** is an open source IntelliJ plugin 
 that aims to enhance the experience of developers
-when working with [TornadoVM](https://github.com/beehive-lab/TornadoVM). TornadoInsight is designed 
-exclusively for TornadoVM development. It provides 
-a built-in on-the-fly static checker, empowering developers 
+when working with [TornadoVM](https://github.com/beehive-lab/TornadoVM).
+It provides  a built-in on-the-fly static checker, empowering developers 
 to identify unsupported Java features in TornadoVM
  and understand the reasons behind these limitations. 
- Additionally, TornadoInsight introduces a dynamic testing framework 
+ Additionally, it introduces a dynamic testing framework 
  that enables developers to easily test individual TornadoVM tasks. 
  It automatically wraps TornadoVM tasks, invoking the native 
- TornadoVM runtime on the developers' machine for seamless debugging and testing. 
+ TornadoVM runtime on the developers' machines for seamless debugging and testing. 
 
 ## Key Features:
 ### 1. On-the-Fly Static Checker
-TornadoInsight comes equipped with an on-the-fly static checker. 
+TornadoInsight is equipped with an on-the-fly static checker. 
 This tool scans TornadoVM code in real time, pinpointing any 
 Java features that are not supported by TornadoVM. Through 
 instant notifications, developers gain immediate insights into 
