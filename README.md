@@ -1,4 +1,5 @@
 # TornadoInsight: Unleashing the Power of TornadoVM in IntelliJ IDEA
+<img align="left" width="250" height="250" src="etc/figures/TornadoInsight.jpg">
 
 **TornadoInsight** is an open source IntelliJ plugin 
 that aims to enhance the experience of developers
