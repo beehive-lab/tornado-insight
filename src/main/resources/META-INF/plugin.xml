@@ -25,22 +25,16 @@
     <name>TornadoInsight</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor email="zuotais@foxmail.com" url="https://www.tornadovm.org/contact-us">TornadoVM_Tais</vendor>
+    <vendor email="info@tornadovm.org" url="https://www.tornadovm.org/contact-us">Beehive Lab</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    TornadoInsight is an open source IntelliJ plugins,
-    for developers to enhance the developer experience when working with TornadoVM.
-     TornadoInsight is designed exclusively for TornadoVM development.
-      It goes beyond the conventional by providing a built-in on-the-fly static checker,
-      empowering developers to identify unsupported Java features in TornadoVM and
-      understand the reasons behind these limitations. Additionally,
-       TornadoInsight introduces a dynamic testing framework,
-       enabling developers to test individual TornadoVM tasks effortlessly.
-       It automatically wraps TornadoVM tasks, invoking the native TornadoVM
-       runtime on the developer's machine for seamless debugging and testing.
+      TornadoInsight is an open source IntelliJ plugin that aims to enhance the experience of developers when working with TornadoVM. 
+      It provides  a built-in on-the-fly static checker, empowering developers to identify unsupported Java features in TornadoVM and understand the reasons behind these limitations. 
+      Additionally, it introduces a dynamic testing framework that enables developers to easily test individual TornadoVM tasks. 
+      It automatically wraps TornadoVM tasks, invoking the native TornadoVM runtime on the developers' machines for seamless debugging and testing. 
   ]]></description>
 
     <!-- Product and plugin compatibility requirements.
