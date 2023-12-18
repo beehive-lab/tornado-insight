@@ -40,8 +40,8 @@ import java.nio.charset.StandardCharsets;
 
 public class ErrorSubmitter extends ErrorReportSubmitter {
 
-    private String url = "https://github.com/TaisZ/TornadoInsight/issues/new?";
-    private final String pluginId = "com.tais.Tornado_Plugins";
+    private String url = "https://github.com/beehive-lab/tornado-insight/issues/new?";
+    private final String pluginId = "uk.ac.manchester.beehive.TornadoInsight";
     private final String label = "exception";
     private final int stackTraceLen = 6500;
     @Override
