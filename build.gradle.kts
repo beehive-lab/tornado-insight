@@ -26,7 +26,7 @@ plugins {
 
 // Define the group and version of the plugin.
 group = "uk.ac.manchester.beehive.tornado.plugins"
-version = "1.0"
+version = "1.1"
 
 // Define the repositories where dependencies can be fetched.
 repositories {
