@@ -43,7 +43,7 @@
 <h2>Getting started</h2>
 
 TornadoInsight is available for versions 2022.3 and higher of compatible JetBrains IDEs.
-It invokes at runtime Java and TornadoVM on the developers' local machine, and therefore,
+It invokes Java and TornadoVM at runtime on the computer where the plugin is installed, and therefore,
 developers need to make sure that they have installed those prior to using the plugin:
 <ul>
     <li><a href="https://github.com/beehive-lab/TornadoVM">TornadoVM</a> >= 1.0</li>
