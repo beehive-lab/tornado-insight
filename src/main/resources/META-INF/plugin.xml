@@ -30,12 +30,39 @@
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
-    <description><![CDATA[
-      TornadoInsight is an open source IntelliJ plugin that aims to enhance the experience of developers when working with TornadoVM. 
-      It provides  a built-in on-the-fly static checker, empowering developers to identify unsupported Java features in TornadoVM and understand the reasons behind these limitations. 
-      Additionally, it introduces a dynamic testing framework that enables developers to easily test individual TornadoVM tasks. 
-      It automatically wraps TornadoVM tasks, invoking the native TornadoVM runtime on the developers' machines for seamless debugging and testing. 
-  ]]></description>
+    <description><![CDATA[TornadoInsight is an open source IntelliJ plugin that aims to enhance the experience of developers when working with
+<a href="https://github.com/beehive-lab/TornadoVM">TornadoVM</a>.
+<ul>
+    <li>TornadoInsight provides a built-in on-the-fly static checker, empowering developers to identify unsupported
+        Java features in TornadoVM and understand the reasons behind these limitations.</li>
+    <li>TornadoInsight introduces a dynamic testing framework that enables developers to easily test individual TornadoVM tasks.
+        It automatically wraps TornadoVM tasks, invoking the native TornadoVM runtime on the developers' machines for seamless
+        debugging and testing.</li>
+</ul>
+<br/>
+<h2>Getting started</h2>
+
+TornadoInsight is available for versions 2022.3 and higher of compatible JetBrains IDEs.
+It invokes at runtime Java and TornadoVM on the developers' local machine, and therefore,
+developers need to make sure that they have installed those prior to using the plugin:
+<ul>
+    <li><a href="https://github.com/beehive-lab/TornadoVM">TornadoVM</a> >= 1.0</li>
+    <li>JDK >= 21</li>
+</ul>
+
+The dynamic inspection feature of TornadoInsight is configured after the installation of the plugin, as follows:
+<ul>
+    <li>Navigate to "Preferences" or "Settings" depending on your operating system.</li>
+    <li>Select "TornadoInsight" from the menu.</li>
+    <li>Developers should configure the TornadoVM root directory (i.e. the path to the TornadoVM cloned repository)
+        and select a JDK which should be >= JDK 21. Additionally, developers should indicate a tentative "array size"
+        that can be used by TornadoInsight to set the size of the input and output arrays of a TornadoVM task.</li>
+</ul>
+
+For more information, please follow our <a href="https://github.com/beehive-lab/tornado-insight">documentation</a>.
+<br/>
+Enjoy and share your feedback!
+]]></description>
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
