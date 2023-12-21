@@ -137,6 +137,7 @@ Enjoy and share your feedback!
         <psi.treeChangeListener implementation="uk.ac.manchester.beehive.tornado.plugins.listener.PsiChangeListener"/>
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory" id="TornadoInsight Console" anchor="bottom"/>
         <errorHandler implementation="uk.ac.manchester.beehive.tornado.plugins.error.ErrorSubmitter"/>
+        <postStartupActivity implementation="uk.ac.manchester.beehive.tornado.plugins.listener.TornadoSettingListener"/>
     </extensions>
     <actions>
         <group id="tornado.bar">
@@ -156,7 +157,5 @@ Enjoy and share your feedback!
                   topic="com.intellij.openapi.wm.ex.ToolWindowManagerListener"/>
         <listener class="uk.ac.manchester.beehive.tornado.plugins.listener.EditorSwitch"
                   topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
-        <listener class="uk.ac.manchester.beehive.tornado.plugins.listener.TornadoSettingListener"
-                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
     </projectListeners>
 </idea-plugin>

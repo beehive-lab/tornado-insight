@@ -62,8 +62,8 @@ fun inspectorPane(): DialogPanel {
                     "control-flow to guarantee that those exceptions never happen. Currently, since TornadoVM compiles " +
                     "at runtime, many of those checks can be assured at runtime.")
         }
-
-        separator()
-                .rowComment("Find more on <a href=\"https://tornadovm.readthedocs.io/en/latest\">TornadoVM documentation</a> ")
+        row {
+            comment("Find more on <a href=\"https://tornadovm.readthedocs.io/en/latest\">TornadoVM documentation</a>")
+        }
     }
 }

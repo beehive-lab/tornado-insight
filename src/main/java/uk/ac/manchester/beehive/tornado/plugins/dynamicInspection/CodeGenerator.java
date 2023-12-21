@@ -23,7 +23,7 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
 import uk.ac.manchester.beehive.tornado.plugins.util.MethodUtil;
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 
 import java.io.BufferedWriter;
 import java.io.File;
