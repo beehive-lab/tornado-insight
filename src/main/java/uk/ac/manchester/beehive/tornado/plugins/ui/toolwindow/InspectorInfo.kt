@@ -63,7 +63,7 @@ fun inspectorPane(): DialogPanel {
                     "at runtime, many of those checks can be assured at runtime.")
         }
         row {
-            comment("Find more on <a href=\"https://tornadovm.readthedocs.io/en/latest\">TornadoVM documentation</a>")
+            comment("Find more on the <a href=\"https://tornadovm.readthedocs.io/en/latest\">TornadoVM documentation</a>")
         }
     }
 }
