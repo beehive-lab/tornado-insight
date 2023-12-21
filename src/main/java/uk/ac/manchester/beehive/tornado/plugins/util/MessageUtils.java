@@ -33,7 +33,7 @@ import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.awt.RelativePoint;
 import uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory;
-import org.apache.commons.lang.time.DateFormatUtils;
+import org.apache.commons.lang3.time.DateFormatUtils;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;

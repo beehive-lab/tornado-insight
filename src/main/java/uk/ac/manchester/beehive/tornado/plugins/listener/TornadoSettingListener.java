@@ -24,17 +24,16 @@ import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.project.ProjectManagerListener;
+import com.intellij.openapi.startup.StartupActivity;
 import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
-public class TornadoSettingListener implements ProjectManagerListener {
-
+public class TornadoSettingListener implements StartupActivity {
     @Override
-    public void projectOpened(@NotNull Project project) {
+    public void runActivity(@NotNull Project project) {
         if (TornadoSettingState.getInstance().TornadoRoot == null) {
             TornadoSettingState.getInstance().isValid = false;
             Notification notification = new Notification("Print", "TornadoVM",
@@ -51,7 +50,7 @@ public class TornadoSettingListener implements ProjectManagerListener {
         }
     }
 
-     static class OpenTornadoSettingAction extends NotificationAction {
+    static class OpenTornadoSettingAction extends NotificationAction {
 
         public OpenTornadoSettingAction() {
             super("Configure TornadoVM");
