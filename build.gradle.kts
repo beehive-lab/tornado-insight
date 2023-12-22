@@ -26,7 +26,7 @@ plugins {
 
 // Define the group and version of the plugin.
 group = "uk.ac.manchester.beehive.tornado.plugins"
-version = "1.2.0"
+version = "1.2.1"
 
 // Define the repositories where dependencies can be fetched.
 repositories {
@@ -59,7 +59,6 @@ tasks {
     // Configure the plugin's compatibility range with IntelliJ IDEA builds.
     patchPluginXml {
         sinceBuild.set("222")
-        untilBuild.set("232.*")
     }
     // Configure the plugin signing task.
     signPlugin {
