@@ -59,7 +59,7 @@ tasks {
     // Configure the plugin's compatibility range with IntelliJ IDEA builds.
     patchPluginXml {
         sinceBuild.set("222")
-        untilBuild.set("233.*")
+        untilBuild.set("241.*")
     }
     // Configure the plugin signing task.
     signPlugin {
