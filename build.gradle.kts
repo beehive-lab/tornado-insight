@@ -37,7 +37,7 @@ repositories {
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
     // Set the version of IntelliJ IDEA that the plugin targets.
-    version.set("2022.2.5")
+    version.set("2024.1.4")
     // Define the type of the IntelliJ Platform (IC = IntelliJ IDEA Community).
     type.set("IC") // Target IDE Platform
     // Specify any additional plugins this plugin depends on.
