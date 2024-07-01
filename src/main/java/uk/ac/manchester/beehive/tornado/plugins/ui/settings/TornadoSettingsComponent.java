@@ -33,14 +33,14 @@ import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.ui.IdeBorderFactory;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.FormBuilder;
-import com.intellij.util.ui.UI;
+import com.intellij.ui.components.JBLabel;
 import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 import javax.swing.*;
+
 import java.io.IOException;
 import java.util.Objects;
-import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -71,20 +71,22 @@ public class TornadoSettingsComponent {
 
         String INNER_COMMENT = MessageBundle.message("ui.settings.comment.env");
 
-        JPanel innerGrid = UI.PanelFactory.grid().splitColumns()
-                .add(UI.PanelFactory.panel(myTornadoEnv).withLabel(MessageBundle.message("ui.settings.label.tornado")))
-                .add(UI.PanelFactory.panel(myJdk).withLabel(MessageBundle.message("ui.settings.label.java")))
-                .createPanel();
+        JPanel innerGrid = FormBuilder.createFormBuilder()
+                .addLabeledComponent(new JBLabel("TornadoVM Root:"), myTornadoEnv)
+                .addLabeledComponent(new JBLabel("Java SDK:"), myJdk)
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + INNER_COMMENT + "</div></html>"))
+                .addVerticalGap(10)
+                .getPanel();
 
-        JPanel panel = UI.PanelFactory.panel(innerGrid).withComment(INNER_COMMENT).createPanel();
-        panel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.runtime")));
-        JPanel maxArraySize = UI.PanelFactory.panel(myMaxArraySize)
-                .withLabel(MessageBundle.message("ui.setting.label.size"))
-                .withComment(MessageBundle.message("ui.settings.comment.size")).createPanel();
-        maxArraySize.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
+        JPanel maxArraySizePanel = FormBuilder.createFormBuilder()
+                .addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + MessageBundle.message("ui.settings.comment.size") + "</div></html>"))
+                .getPanel();
+
+        maxArraySizePanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
         myMainPanel = FormBuilder.createFormBuilder()
-                .addComponent(panel)
-                .addComponent(maxArraySize)
+                .addComponent(innerGrid)
+                .addComponent(maxArraySizePanel)
                 .addComponentFillVertically(new JPanel(), 0)
                 .getPanel();
     }
