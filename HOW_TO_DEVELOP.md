@@ -21,9 +21,9 @@ git clone <forked-repository-url>
 ### 3. Setup IntelliJ
 
 - Open IntelliJ IDEA.
-- Click on **File** -> **Open** and click on the _TornadoInsight_ directory.
+- Click on **File** -> **Open** and click on the _TornadoInsight_ directory of the forked repository.
 - Go to **File** -> **Project Structure** and ensure SDK is set to JDK 21.
-- Go to **File** -> **Settings** -> **Build, Execution, Development** -> **Build Tools** -> **Gradle** and ensure Gradle JVM is set to 21
+- Go to **File** -> **Settings** -> **Build, Execution, Development** -> **Build Tools** -> **Gradle** and ensure Gradle JVM is set to 21.
 
 ## Extending the Plugin
 
@@ -31,9 +31,9 @@ git clone <forked-repository-url>
 - Modify the plugin to add new features or fix bugs.
 
 ### 2. Test Your Changes in a Sandbox Environment
-- Open the Gradle tool window.
-- Navigate to **TornadoInsight** -> **Tasks** -> **intellij**
-- Click on **runIDE** to start a new instance of IntelliJ with TornadoInsight loaded.
+- Open the Gradle tool window from the right sidebar.
+- Navigate to **TornadoInsight** -> **Tasks** -> **intellij**.
+- Click on **runIDE** to start a new instance of IntelliJ with the modified version of TornadoInsight.
 - Test the plugin and make sure it works as expected.
 
 ## Pushing Changes and Open a Pull Request
@@ -45,6 +45,6 @@ git clone <forked-repository-url>
 
 ### Open a Pull Request
 - Go to your forked repository on GitHub.
-- Click on **Contribute** -> **Open pull request**
-- Add the title and description for your pull request
-- Click on **Create pull request**
+- Click on **Contribute** -> **Open pull request**.
+- Add the title and description for your pull request.
+- Click on **Create pull request**.
