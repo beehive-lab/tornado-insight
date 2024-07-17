@@ -62,6 +62,7 @@ public class VariableInit {
                     "Double2", "Double3", "Double4", "Double8",
                     "Float2", "Float3", "Float4", "Float8"-> tupleInit(type);
             case "IntArray" -> "= new IntArray(" + size + ");" + name + ".init(" + generateValueByType("Int") + ");";
+            case "ShortArray" -> "= new ShortArray(" + size + ");" + name + ".init((short)" + generateValueByType("Short") + ");";
             case "DoubleArray" ->
                     "= new DoubleArray(" + size + ");" + name + ".init(" + generateValueByType("Double") + ");";
             case "FloatArray" ->
@@ -108,7 +109,7 @@ public class VariableInit {
         return "=new " + type + "(" + parameterSize + "," + parameterSize + ");" +
                 "for (int i = 0; i <" + parameterSize + "; i++) { " +
                 "for (int j = 0; j < " + parameterSize + "; j++) {" +
-                name + ".set(i, j, " + generateValueByType(type.split("Matrix2D")[1]) + ")" +
+                name + ".set(i, j, " + generateValueByType(type.split("Matrix2D")[1]) + ");" +
                 "}" +
                 "}";
     }
@@ -131,7 +132,7 @@ public class VariableInit {
     private static String generateValueByType(String type){
         Random r = new Random();
         return switch (type) {
-            case "Int","int" -> "" + r.nextInt(1000);
+            case "Int", "int", "Short", "short" -> "" + r.nextInt(1000);
             case "Float","float" -> r.nextFloat(1000) + "f";
             case "Double","double" -> "" + r.nextDouble(1000);
             case "Byte","byte" -> "(byte)" + r.nextInt(127);
