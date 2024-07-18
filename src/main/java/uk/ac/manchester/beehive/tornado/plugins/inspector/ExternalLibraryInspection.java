@@ -69,8 +69,9 @@ public class ExternalLibraryInspection extends AbstractBaseJavaLocalInspectionTo
                                 if (calledMethod != null){
                                     String qualifiedName = Objects.requireNonNull(calledMethod.getContainingClass()).getQualifiedName();
                                     if (qualifiedName != null && !qualifiedName.startsWith("java.") &&
-                                            !qualifiedName.startsWith("uk.ac.manchester.tornado.api")&&
-                                            !qualifiedName.startsWith("_Dummy_")) {
+                                            !qualifiedName.startsWith("uk.ac.manchester.tornado")&&
+                                            !qualifiedName.startsWith("_Dummy_"))
+                                    {
                                         ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), method);
                                         holder.registerProblem(expression,
                                                 MessageBundle.message("inspection.externalLibrary"),
