@@ -31,22 +31,24 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import com.intellij.psi.PsiFile;
 
 public class CodeGenerator {
 
-    public static void fileCreationHandler(Project project, ArrayList<PsiMethod> methods, String importCodeBlock) throws IOException {
+    public static void fileCreationHandler(Project project, ArrayList<PsiMethod> methods, ArrayList<PsiMethod> others, String importCodeBlock, PsiFile psiFile) throws IOException {
         HashMap<String, PsiMethod> methodFile = new HashMap<>();
         File dir = FileUtilRt.createTempDirectory("files", null);
         for (PsiMethod method : methods) {
             String fileName = method.getName() + RandomStringUtils.randomAlphanumeric(5);
             File file = creatFile(project, method, importCodeBlock, fileName, dir);
+            File file = creatFile(project, method, others, importCodeBlock, fileName, dir, psiFile);
             methodFile.put(file.getAbsolutePath(), method);
         }
         ExecutionEngine executionEngine = new ExecutionEngine(project, dir.getAbsolutePath(), methodFile);
         executionEngine.run();
     }
 
-    private static File creatFile(Project project, PsiMethod method, String importCodeBlock, String filename, File dir) {
+    private static File creatFile(Project project, PsiMethod method, ArrayList<PsiMethod> others, String importCodeBlock, String filename, File dir, PsiFile psiFile) {
         File javaFile;
         try {
             javaFile = FileUtilRt.createTempFile(dir, filename, ".java", true);
@@ -84,7 +86,16 @@ public class CodeGenerator {
             bufferedWriter.write(importCode + importCodeBlock);
             bufferedWriter.write("\n");
             bufferedWriter.write("public class " + javaFile.getName().replace(".java", "") + "{");
-            bufferedWriter.write(MethodUtil.makePublicStatic(method));
+            bufferedWriter.write("\n");
+            bufferedWriter.write(method.getText());
+            for (PsiMethod other: others) {
+                String methodText = other.getText();
+                if (!other.getText().contains("TaskGraph")) {
+                    bufferedWriter.write(methodText);
+                    bufferedWriter.write("\n");
+                }
+            }
+
             bufferedWriter.write(mainCode);
             bufferedWriter.write("}");
         } catch (IOException e) {

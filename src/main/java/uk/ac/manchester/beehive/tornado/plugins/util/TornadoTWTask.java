@@ -40,6 +40,7 @@ public class TornadoTWTask {
     private static List<PsiMethod> taskList;
     private static String importCodeBlock;
     private static Map<String, PsiMethod> taskMap;
+    private static PsiFile psiFile;
 
     /**
      * Adds TornadoVM Tasks to the given UI data model.
@@ -53,6 +54,7 @@ public class TornadoTWTask {
         taskList = new ArrayList<>();
         taskMap = new HashMap<>();
         PsiFile file = PsiManager.getInstance(project).findFile(virtualFile);
+        psiFile = file;
         assert file != null;
         importCodeBlock = getImportCode(file);
         taskList = findAnnotatedVariables(file);
@@ -66,6 +68,13 @@ public class TornadoTWTask {
         }
     }
 
+    public static ArrayList<PsiMethod> getOtherMethods(ArrayList<PsiMethod> otherMethods) {
+        Collection<PsiMethod> allMethods = PsiTreeUtil.findChildrenOfType(psiFile, PsiMethod.class);
+        ArrayList<PsiMethod> allMethodsList = new ArrayList<>(allMethods);
+        allMethodsList.removeAll(otherMethods);
+        allMethodsList.removeIf(method -> "main".equals(method.getName()));
+        return allMethodsList;
+    }
     /**
      * Finds methods in the given PsiFile that are annotated with TornadoVM related annotations.
      *
@@ -156,5 +165,9 @@ public class TornadoTWTask {
      */
     public static String getImportCodeBlock() {
         return importCodeBlock;
+    }
+
+    public static PsiFile getFile() {
+        return psiFile;
     }
 }

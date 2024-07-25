@@ -18,6 +18,7 @@
 package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
 
 import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
 
@@ -25,9 +26,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class DynamicInspection {
-    public static void process(Project project, ArrayList<PsiMethod> methodArrayList){
+    public static void process(Project project, ArrayList<PsiMethod> methodArrayList, ArrayList<PsiMethod> others, PsiFile psiFile){
         try {
-            CodeGenerator.fileCreationHandler(project,methodArrayList, TornadoTWTask.getImportCodeBlock());
+            CodeGenerator.fileCreationHandler(project, methodArrayList, others, TornadoTWTask.getImportCodeBlock(), psiFile);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
