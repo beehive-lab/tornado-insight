@@ -68,11 +68,73 @@ public class TornadoTWTask {
         }
     }
 
-    public static ArrayList<PsiMethod> getOtherMethods(ArrayList<PsiMethod> otherMethods) {
+    public static Map<String, Object> getFields() {
+        Map<String, Object> methodsAndFields = new HashMap<>();
+
+        Collection<PsiField> allFields = PsiTreeUtil.findChildrenOfType(psiFile, PsiField.class);
+        ArrayList<PsiField> allFieldsList = new ArrayList<>(allFields);
+
+        for (PsiField field : allFieldsList) {
+            PsiExpression initializer = field.getInitializer();
+            Object value = null;
+            if (initializer != null) {
+                value = initializer.getText();
+            }
+            methodsAndFields.put(getTypeAndModifiers(field)+field.getName(), value);
+        }
+        return methodsAndFields;
+    }
+
+    private static String getTypeAndModifiers(PsiField field) {
+        StringBuilder modifiers = new StringBuilder();
+        for (String modifier : PsiModifier.MODIFIERS) {
+            if (field.hasModifierProperty(modifier)) {
+                modifiers.append(modifier);
+                modifiers.append(" ");
+            }
+        }
+        modifiers.append(field.getType().getPresentableText());
+        modifiers.append(" ");
+        return modifiers.toString();
+    }
+
+    public static ArrayList<PsiMethod> getCalledMethods(ArrayList<PsiMethod> methods) {
+        Set<PsiMethod> methodCalls = new HashSet<>();
+        collectCalledMethods(methods, methodCalls);
+        return new ArrayList<>(methodCalls);
+    }
+
+    private static void collectCalledMethods(ArrayList<PsiMethod> methods, Set<PsiMethod> methodCalls) {
+        ArrayList<PsiMethodCallExpression> allMethodCalls = new ArrayList<>();
+
+        for (PsiMethod psiMethod : methods) {
+            Collection<PsiMethodCallExpression> methodCallExpressions = PsiTreeUtil.findChildrenOfType(psiMethod, PsiMethodCallExpression.class);
+            allMethodCalls.addAll(methodCallExpressions);
+        }
+
+        for (PsiMethodCallExpression call : allMethodCalls) {
+            PsiMethod method = call.resolveMethod();
+            if (method != null && !methodCalls.contains(method)) {
+                PsiClass containingClass = method.getContainingClass();
+                if (containingClass != null && getOtherMethods(methods).contains(method)) {
+                    methodCalls.add(method);
+                    ArrayList<PsiMethod> newMethods = new ArrayList<>();
+                    newMethods.add(method);
+                    collectCalledMethods(newMethods, methodCalls);
+                }
+            }
+        }
+    }
+
+
+    public static ArrayList<PsiMethod> getOtherMethods(ArrayList<PsiMethod> methods) {
         Collection<PsiMethod> allMethods = PsiTreeUtil.findChildrenOfType(psiFile, PsiMethod.class);
         ArrayList<PsiMethod> allMethodsList = new ArrayList<>(allMethods);
-        allMethodsList.removeAll(otherMethods);
-        allMethodsList.removeIf(method -> "main".equals(method.getName()));
+        allMethodsList.removeAll(methods);
+
+        allMethodsList.removeIf(method -> "main".equals(method.getName()) ||
+                method.isConstructor() || method.getText().contains("TaskGraph")
+                || method.getText().contains("@Override"));
         return allMethodsList;
     }
     /**
@@ -167,7 +229,4 @@ public class TornadoTWTask {
         return importCodeBlock;
     }
 
-    public static PsiFile getFile() {
-        return psiFile;
-    }
 }

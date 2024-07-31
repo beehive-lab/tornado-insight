@@ -41,7 +41,7 @@ public class RunInspectionAction extends AnAction {
             new EmptySelectionWarningDialog().show();
         }else {
             ArrayList<PsiMethod> methods = TornadoTWTask.getMethods(data);
-            DynamicInspection.process(e.getProject(), methods, TornadoTWTask.getOtherMethods(methods), TornadoTWTask.getFile());
+            DynamicInspection.process(e.getProject(), methods, TornadoTWTask.getCalledMethods(methods), TornadoTWTask.getFields());
         }
     }
 

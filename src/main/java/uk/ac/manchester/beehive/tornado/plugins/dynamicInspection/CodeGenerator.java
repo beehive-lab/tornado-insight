@@ -22,7 +22,6 @@ import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
-import uk.ac.manchester.beehive.tornado.plugins.util.MethodUtil;
 import org.apache.commons.lang3.RandomStringUtils;
 
 import java.io.BufferedWriter;
@@ -31,11 +30,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import com.intellij.psi.PsiFile;
-
+import java.util.Map;
 public class CodeGenerator {
 
-    public static void fileCreationHandler(Project project, ArrayList<PsiMethod> methods, ArrayList<PsiMethod> others, String importCodeBlock, PsiFile psiFile) throws IOException {
+    public static void fileCreationHandler(Project project, ArrayList<PsiMethod> methods, ArrayList<PsiMethod> others, Map<String, Object> fields, String importCodeBlock) throws IOException {
         HashMap<String, PsiMethod> methodFile = new HashMap<>();
         File dir = FileUtilRt.createTempDirectory("files", null);
         for (PsiMethod method : methods) {
@@ -48,7 +46,7 @@ public class CodeGenerator {
         executionEngine.run();
     }
 
-    private static File creatFile(Project project, PsiMethod method, ArrayList<PsiMethod> others, String importCodeBlock, String filename, File dir, PsiFile psiFile) {
+    private static File creatFile(Project project, PsiMethod method, ArrayList<PsiMethod> others, Map<String, Object> fields, String importCodeBlock, String filename, File dir) {
         File javaFile;
         try {
             javaFile = FileUtilRt.createTempFile(dir, filename, ".java", true);
@@ -87,13 +85,18 @@ public class CodeGenerator {
             bufferedWriter.write("\n");
             bufferedWriter.write("public class " + javaFile.getName().replace(".java", "") + "{");
             bufferedWriter.write("\n");
+            for (Map.Entry<String, Object> field: fields.entrySet()) {
+                bufferedWriter.write(field.getKey());
+                if (field.getValue() != null) {
+                    bufferedWriter.write(" = "+ field.getValue());
+                }
+                bufferedWriter.write("; \n");
+            }
             bufferedWriter.write(method.getText());
             for (PsiMethod other: others) {
                 String methodText = other.getText();
-                if (!other.getText().contains("TaskGraph")) {
-                    bufferedWriter.write(methodText);
-                    bufferedWriter.write("\n");
-                }
+                bufferedWriter.write(methodText);
+                bufferedWriter.write("\n");
             }
 
             bufferedWriter.write(mainCode);
