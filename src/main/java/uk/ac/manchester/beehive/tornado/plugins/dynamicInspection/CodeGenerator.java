@@ -38,8 +38,7 @@ public class CodeGenerator {
         File dir = FileUtilRt.createTempDirectory("files", null);
         for (PsiMethod method : methods) {
             String fileName = method.getName() + RandomStringUtils.randomAlphanumeric(5);
-            File file = creatFile(project, method, importCodeBlock, fileName, dir);
-            File file = creatFile(project, method, others, importCodeBlock, fileName, dir, psiFile);
+            File file = creatFile(project, method, others, fields, importCodeBlock, fileName, dir);
             methodFile.put(file.getAbsolutePath(), method);
         }
         ExecutionEngine executionEngine = new ExecutionEngine(project, dir.getAbsolutePath(), methodFile);
