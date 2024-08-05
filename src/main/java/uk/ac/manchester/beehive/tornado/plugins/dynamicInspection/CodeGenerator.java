@@ -22,8 +22,8 @@ import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
-import uk.ac.manchester.beehive.tornado.plugins.util.MethodUtil;
 import org.apache.commons.lang3.RandomStringUtils;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -31,22 +31,27 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-
+import java.util.List;
+import java.util.Map;
 public class CodeGenerator {
 
-    public static void fileCreationHandler(Project project, ArrayList<PsiMethod> methods, String importCodeBlock) throws IOException {
+    public static void fileCreationHandler(Project project, List<String> data) throws IOException {
         HashMap<String, PsiMethod> methodFile = new HashMap<>();
+        ArrayList<PsiMethod> methods = TornadoTWTask.getMethods(data);
+        ArrayList<PsiMethod> others = TornadoTWTask.getCalledMethods(methods);
+        Map<String, Object> fields = TornadoTWTask.getFields();
+        String importCodeBlock = TornadoTWTask.getImportCodeBlock();
         File dir = FileUtilRt.createTempDirectory("files", null);
         for (PsiMethod method : methods) {
             String fileName = method.getName() + RandomStringUtils.randomAlphanumeric(5);
-            File file = creatFile(project, method, importCodeBlock, fileName, dir);
+            File file = createFile(project, method, others, fields, importCodeBlock, fileName, dir);
             methodFile.put(file.getAbsolutePath(), method);
         }
         ExecutionEngine executionEngine = new ExecutionEngine(project, dir.getAbsolutePath(), methodFile);
         executionEngine.run();
     }
 
-    private static File creatFile(Project project, PsiMethod method, String importCodeBlock, String filename, File dir) {
+    private static File createFile(Project project, PsiMethod method, ArrayList<PsiMethod> others, Map<String, Object> fields, String importCodeBlock, String filename, File dir) {
         File javaFile;
         try {
             javaFile = FileUtilRt.createTempFile(dir, filename, ".java", true);
@@ -84,7 +89,21 @@ public class CodeGenerator {
             bufferedWriter.write(importCode + importCodeBlock);
             bufferedWriter.write("\n");
             bufferedWriter.write("public class " + javaFile.getName().replace(".java", "") + "{");
-            bufferedWriter.write(MethodUtil.makePublicStatic(method));
+            bufferedWriter.write("\n");
+            for (Map.Entry<String, Object> field: fields.entrySet()) {
+                bufferedWriter.write(field.getKey());
+                if (field.getValue() != null) {
+                    bufferedWriter.write(" = "+ field.getValue());
+                }
+                bufferedWriter.write("; \n");
+            }
+            bufferedWriter.write(method.getText());
+            for (PsiMethod other: others) {
+                String methodText = other.getText();
+                bufferedWriter.write(methodText);
+                bufferedWriter.write("\n");
+            }
+
             bufferedWriter.write(mainCode);
             bufferedWriter.write("}");
         } catch (IOException e) {
