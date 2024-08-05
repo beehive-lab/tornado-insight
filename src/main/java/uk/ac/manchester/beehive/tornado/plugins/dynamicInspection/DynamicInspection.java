@@ -18,17 +18,14 @@
 package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
 
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiMethod;
-import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Map;
+import java.util.List;
 
 public class DynamicInspection {
-    public static void process(Project project, ArrayList<PsiMethod> methodArrayList, ArrayList<PsiMethod> others, Map<String, Object> fields){
+    public static void process(Project project, List<String> data){
         try {
-            CodeGenerator.fileCreationHandler(project, methodArrayList, others, fields, TornadoTWTask.getImportCodeBlock());
+            CodeGenerator.fileCreationHandler(project, data);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

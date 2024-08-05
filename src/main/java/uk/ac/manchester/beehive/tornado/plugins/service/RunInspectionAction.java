@@ -21,15 +21,12 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiMethod;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.DynamicInspection;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.EmptySelectionWarningDialog;
 import uk.ac.manchester.beehive.tornado.plugins.util.DataKeys;
-import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class RunInspectionAction extends AnAction {
@@ -40,8 +37,7 @@ public class RunInspectionAction extends AnAction {
         if (data.isEmpty()) {
             new EmptySelectionWarningDialog().show();
         }else {
-            ArrayList<PsiMethod> methods = TornadoTWTask.getMethods(data);
-            DynamicInspection.process(e.getProject(), methods, TornadoTWTask.getCalledMethods(methods), TornadoTWTask.getFields());
+            DynamicInspection.process(e.getProject(), data);
         }
     }
 
