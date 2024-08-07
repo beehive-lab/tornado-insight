@@ -56,6 +56,7 @@ public class VariableInit {
             case "int" -> "=" + generateValueByType("Int") + ";";
             case "float" -> "=" + generateValueByType("Float") + ";";
             case "double" -> "=" + generateValueByType("Double") + ";";
+            case "HalfFloat" -> "= new HalfFloat(" + generateValueByType("HalfFloat") + ");";
             case "int[]", "float[]", "double[]", "byte[]" -> arrayInit(type);
             case "Int2", "Int3", "Int4", "Int8",
                     "Byte2", "Byte3", "Byte4", "Byte8",
@@ -133,7 +134,7 @@ public class VariableInit {
         Random r = new Random();
         return switch (type) {
             case "Int", "int", "Short", "short" -> "" + r.nextInt(1000);
-            case "Float","float" -> r.nextFloat(1000) + "f";
+            case "Float","float", "HalfFloat" -> r.nextFloat(1000) + "f";
             case "Double","double" -> "" + r.nextDouble(1000);
             case "Byte","byte" -> "(byte)" + r.nextInt(127);
             default -> "";
