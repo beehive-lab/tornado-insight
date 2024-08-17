@@ -78,7 +78,7 @@ public class VariableInit {
             case "VectorInt", "VectorInt2", "VectorInt3", "VectorInt4", "VectorInt8", "VectorInt16" -> vectorIntInit(name, type, "Int");
             case "VectorFloat", "VectorFloat2", "VectorFloat3", "VectorFloat4", "VectorFloat8", "VectorFloat16" -> vectorIntInit(name, type, "Float");
             case "VectorDouble", "VectorDouble2", "VectorDouble3", "VectorDouble4", "VectorDouble8", "VectorDouble16" -> vectorIntInit(name, type, "Double");
-            case "VectorHalf", "VectorHalf2", "VectorHalf3", "VectorHalf4", "VectorHalf8", "VectorHalf16" -> vectorIntInit(name, type, "HalfFloat");
+            case "VectorHalf", "VectorHalf2", "VectorHalf3", "VectorHalf4", "VectorHalf8", "VectorHalf16" -> vectorHalfIntInit(name, type);
             default -> "";
         };
     }
@@ -132,6 +132,11 @@ public class VariableInit {
     private static String vectorIntInit(String name, String type, String innerType){
         return " = new " + type + "(" + parameterSize + ");" + "\n" +
                 name + ".fill(" + generateValueByType(innerType) + ");";
+    }
+
+    private static String vectorHalfIntInit(String name, String type){
+        return " = new " + type + "(" + parameterSize + ");" + "\n" +
+                name + ".fill(new HalfFloat(" + generateValueByType("HalfFloat") + "));";
     }
 
     private static String generateValueByType(String type){
