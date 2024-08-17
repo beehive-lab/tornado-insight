@@ -47,6 +47,7 @@ public class VariableInit {
             returnString.append(parametersType.get(i)).append(" ").append(parametersName.get(i));
             String value = lookupBoxedTypes(parametersType.get(i), parametersName.get(i), parameterSize);
             returnString.append(value);
+            returnString.append("\n");
         }
         return returnString.toString();
     }
@@ -98,7 +99,7 @@ public class VariableInit {
         int size = type.charAt(type.length()-1) - '0';
         System.out.println(primitiveType);
         StringBuilder builder = new StringBuilder();
-        builder.append("=new ").append(type).append("(");
+        builder.append(" = new ").append(type).append("(");
         builder.append(generateValueByType(primitiveType));
         for (int i = 0; i < size - 1; i++){
             builder.append(",");
@@ -110,26 +111,26 @@ public class VariableInit {
     }
 
     private static String matrix2DInit(String type, String name){
-        return "=new " + type + "(" + parameterSize + "," + parameterSize + ");" +
+        return " = new " + type + "(" + parameterSize + "," + parameterSize + ");" +
                 "for (int i = 0; i <" + parameterSize + "; i++) { " +
-                "for (int j = 0; j < " + parameterSize + "; j++) {" +
+                "for (int j = 0; j < " + parameterSize + "; j++) {" + "\n" +
                 name + ".set(i, j, " + generateValueByType(type.split("Matrix2D")[1]) + ");" +
                 "}" +
                 "}";
     }
 
     private static String matrix3DInit(String type, String name, String primitive){
-        return "=new " + type + "(" + parameterSize + "," + parameterSize + "," + parameterSize + ");" +
+        return " = new " + type + "(" + parameterSize + "," + parameterSize + "," + parameterSize + ");" + "\n" +
                 name  + ".fill(" + generateValueByType(primitive) + ");";
     }
 
     private static String imageInit(String type, String name, String primitive){
-        return "=new " + type + "(" + parameterSize + "," + parameterSize + ");" +
+        return " = new " + type + "(" + parameterSize + "," + parameterSize + ");" + "\n" +
                 name + ".fill(" + generateValueByType(primitive) + ");";
     }
 
     private static String vectorIntInit(String name, String type, String innerType){
-        return "=new " + type + "(" + parameterSize + ");" +
+        return " = new " + type + "(" + parameterSize + ");" + "\n" +
                 name + ".fill(" + generateValueByType(innerType) + ");";
     }
 

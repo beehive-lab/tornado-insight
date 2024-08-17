@@ -86,5 +86,9 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
         return TornadoRoot + "/tornado-api/target/classes";
     }
 
+    public String getUnitTestPath(){
+        return TornadoRoot + "/tornado-unittests/target/classes";
+    }
+
     public String getJavaHome(){return JdkPath.getHomePath();}
 }
