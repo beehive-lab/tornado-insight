@@ -102,7 +102,8 @@ public class ExecutionEngine {
         commandLine.addParameter("-g");
         commandLine.addParameter("-classpath");
         commandLine.addParameter(TornadoSettingState.getInstance().getApiPath()+
-                File.pathSeparator + TornadoSettingState.getInstance().getMatricesPath()) ;
+                File.pathSeparator + TornadoSettingState.getInstance().getMatricesPath()+
+                File.pathSeparator + TornadoSettingState.getInstance().getUnitTestPath());
         commandLine.addParameter("-d");
         commandLine.addParameter(outputDir);
         commandLine.addParameters(javaFiles);  // Adds each Java file to the command line
