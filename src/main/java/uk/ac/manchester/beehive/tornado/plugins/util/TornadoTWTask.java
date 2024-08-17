@@ -205,7 +205,9 @@ public class TornadoTWTask {
         if (importList != null) {
             PsiImportStatement[] importStatements = importList.getImportStatements();
             for (PsiImportStatement importStatement : importStatements) {
-                importCodeBlock.append(importStatement.getText()).append("\n");
+                if (!importStatement.getText().equals("import org.junit.Test;")) {
+                    importCodeBlock.append(importStatement.getText()).append("\n");
+                }
             }
         }
         return importCodeBlock.toString();
