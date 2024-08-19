@@ -44,6 +44,7 @@ public class VariableInit {
         StringBuilder returnString = new StringBuilder();
         int size = parametersName.size();
         for (int i = 0; i < size; i++) {
+            returnString.append("\t\t");
             returnString.append(parametersType.get(i)).append(" ").append(parametersName.get(i));
             String value = lookupBoxedTypes(parametersType.get(i), parametersName.get(i), parameterSize);
             returnString.append(value);
@@ -71,6 +72,14 @@ public class VariableInit {
                     "= new DoubleArray(" + size + ");" + name + ".init(" + generateValueByType("Double") + ");";
             case "FloatArray" ->
                     "= new FloatArray(" + size + ");" + name + ".init(" + generateValueByType("Float") + ");";
+            case "HalfFloatArray" ->
+                    "= new HalfFloatArray(" + size + ");" + name + ".init(new HalfFloat(" + generateValueByType("HalfFloat") + "));";
+            case "CharArray" ->
+                    "= new CharArray(" + size + ");" + name + ".init(" + generateValueByType("Char") + ");";
+            case "ByteArray" ->
+                    "= new ByteArray(" + size + ");" + name + ".init(" + generateValueByType("Byte") + ");";
+            case "LongArray" ->
+                    "= new LongArray(" + size + ");" + name + ".init(" + generateValueByType("Long") + ");";
             case "Matrix2DFloat", "Matrix2DFloat4", "Matrix2DDouble", "Matrix2DInt" -> matrix2DInit(type, name);
             case "Matrix3DFloat", "Matrix3DFloat4", "Matrix" -> matrix3DInit(type, name, "Float");
             case "ImageByte3", "ImageByte4" -> imageInit(type,name, "Byte");
@@ -143,9 +152,11 @@ public class VariableInit {
         Random r = new Random();
         return switch (type) {
             case "Int", "int", "Short", "short" -> "" + r.nextInt(1000);
+            case "Long", "long" -> "" + r.nextLong(1000);
             case "Float","float", "HalfFloat" -> r.nextFloat(1000) + "f";
             case "Double","double" -> "" + r.nextDouble(1000);
             case "Byte","byte" -> "(byte)" + r.nextInt(127);
+            case "Char", "char" -> "'" + (char)(r.nextInt(26) + 'a') + "'";
             default -> "";
         };
     }
