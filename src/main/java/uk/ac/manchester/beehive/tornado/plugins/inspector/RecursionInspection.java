@@ -53,14 +53,32 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
             @Override
             public void visitAnnotation(PsiAnnotation annotation) {
                 super.visitAnnotation(annotation);
+
                 // Check if the annotation is of type 'Parallel' or 'Reduce'
                 if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
                         annotation.getQualifiedName().endsWith("Reduce")) {
                     PsiMethod parent = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
                     if (parent == null) return;
+                    checkRecursion(parent);
+                }
+            }
 
+            @Override
+            public void visitMethod(PsiMethod method) {
+                super.visitMethod(method);
+
+                for (PsiParameter parameter : method.getParameterList().getParameters()) {
+                    PsiType type = parameter.getType();
+                    if (type.getCanonicalText().equals("KernelContext")) {
+                        checkRecursion(method);
+                        break;
+                    }
+                }
+            }
+
+            private void checkRecursion(PsiMethod method) {
                     // Visit all elements inside the method to check for recursive calls
-                    parent.accept(new JavaRecursiveElementVisitor() {
+                    method.accept(new JavaRecursiveElementVisitor() {
                         @Override
                         public void visitCallExpression(PsiCallExpression callExpression) {
                             super.visitCallExpression(callExpression);
@@ -77,8 +95,6 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                         }
                     });
                 }
-            }
-
         };
     }
 
