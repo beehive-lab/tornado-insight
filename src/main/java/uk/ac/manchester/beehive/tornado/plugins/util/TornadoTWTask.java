@@ -57,7 +57,7 @@ public class TornadoTWTask {
         psiFile = file;
         assert file != null;
         importCodeBlock = getImportCode(file);
-        taskList = findAnnotatedVariables(file);
+        taskList = findSuitableMethods(file);
         if (taskList == null) return;
         for (PsiMethod task : taskList) {
             if (validateTask(task)) {
@@ -143,14 +143,24 @@ public class TornadoTWTask {
      * @param psiFile the file to search in
      * @return a list of methods that have Tornado VM related annotations, or null if none found
      */
-    public static List<PsiMethod> findAnnotatedVariables(PsiFile psiFile) {
+    public static List<PsiMethod> findSuitableMethods(PsiFile psiFile) {
         Set<PsiMethod> tornadoTask = new HashSet<>();
         Collection<PsiAnnotation> annotationList = PsiTreeUtil.findChildrenOfType(psiFile, PsiAnnotation.class);
-        if (annotationList.isEmpty()) return null;
         for (PsiAnnotation annotation : annotationList) {
             if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
                     annotation.getQualifiedName().endsWith("Reduce")) {
                 tornadoTask.add(PsiTreeUtil.getParentOfType(annotation, PsiMethod.class));
+            }
+        }
+        Collection<PsiMethod> methodList = PsiTreeUtil.findChildrenOfType(psiFile, PsiMethod.class);
+        for (PsiMethod method: methodList) {
+            if (!tornadoTask.contains(method)) {
+                PsiParameter[] parameterList = method.getParameterList().getParameters();
+                for (PsiParameter parameter: parameterList) {
+                    if (parameter.getType().getPresentableText().equals("KernelContext")) {
+                        tornadoTask.add(method);
+                    }
+                }
             }
         }
         return tornadoTask.stream().toList();
