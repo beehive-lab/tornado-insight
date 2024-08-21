@@ -74,14 +74,17 @@ public class CodeGenerator {
         for (PsiParameter p : method.getParameterList().getParameters()) {
             methodWithParameters.append(", ").append(p.getName());
         }
-        String mainCode = "public static void main(String[] args) {\n" +
+        String mainCode = "\n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {\n" +
                 "\n" +
                 variableInit +
-                "        TaskGraph taskGraph = new TaskGraph(\"s0\") \n" +
-                "                .task(\"t0\", " + methodWithClass + methodWithParameters + "); \n" +
-                "        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" +
-                "        TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);\n" +
-                "        executor.withWarmUp();\n" +
+                "TaskGraph taskGraph = new TaskGraph(\"s0\") \n" +
+                ".transferToDevice(DataTransferMode.EVERY_EXECUTION" + methodWithParameters + ")\n" +
+                ".task(\"t0\", " + methodWithClass + methodWithParameters + ") \n" +
+                ".transferToHost(DataTransferMode.EVERY_EXECUTION" + methodWithParameters + ");\n" +
+                "ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" +
+                "try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {\n" +
+                "executionPlan.withWarmUp().execute();\n" +
+                "        }\n"+
                 "    }";
         MessageUtils.getInstance(project).showInfoMsg("Info",variableInit);
         try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(javaFile))) {
