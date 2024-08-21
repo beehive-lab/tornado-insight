@@ -75,6 +75,7 @@ public class VariableInit {
             case "VectorInt", "VectorInt4", "VectorInt3", "VectorInt8", "VectorInt2" -> vectorIntInit(name, type, "Int");
             case "VectorFloat", "VectorFloat4", "VectorFloat3", "VectorFloat8", "VectorFloat2" -> vectorIntInit(name, type, "Float");
             case "VectorDouble", "VectorDouble4", "VectorDouble3", "VectorDouble8", "VectorDouble2" -> vectorIntInit(name, type, "Double");
+            case "KernelContext" -> " = new KernelContext();";
             default -> "";
         };
     }
