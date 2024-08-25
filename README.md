@@ -100,7 +100,7 @@ Developers should configure the TornadoVM root directory (i.e. the path to the T
 Additionally, developers should indicate a tentative "array size" that can be used by TornadoInsight to  set the size of the input and output arrays of a TornadoVM task.
 
 ## Limitations
-#### 1. No support for non-JDK method invocations
+#### No support for non-JDK method invocations
 TornadoInsight, in its current state, lacks support for dynamic
 inspection of references. This limitation arises due to the nature
 of the dynamically generated Java code during the dynamic inspection
@@ -108,10 +108,6 @@ process. The Java code is derived from a copy of the Tornado task method,
 and in this copying process, automatic handling of non-JDK method
 invocations and global variable replacements is not performed.
 
-#### 2.No support for TornadoVM Kernel API
-The [TornadoVM Kernel API](https://tornadovm.readthedocs.io/en/latest/programming.html#kernel-api) is another way to express compute-kernels in TornadoVM.
-TornadoInsight does not support the Kernel API because it currently uses the
-[Loop Parallel API](https://tornadovm.readthedocs.io/en/latest/programming.html#loop-parallel-api): `@Parallel` and  `@Reduce` to locate TornadoVM Tasks.
 
 
 ## Acknowledgments
