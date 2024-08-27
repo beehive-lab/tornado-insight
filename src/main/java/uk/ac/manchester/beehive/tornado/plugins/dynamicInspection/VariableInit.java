@@ -153,7 +153,7 @@ public class VariableInit {
         return switch (type) {
             case "Int", "int", "Short", "short" -> "" + r.nextInt(1000);
             case "Long", "long" -> "" + r.nextLong(1000);
-            case "Float","float", "HalfFloat" -> r.nextFloat(1000) + "f";
+            case "Float", "float", "HalfFloat" -> r.nextFloat(1000) + "f";
             case "Double","double" -> "" + r.nextDouble(1000);
             case "Byte","byte" -> "(byte)" + r.nextInt(127);
             case "Char", "char" -> "'" + (char)(r.nextInt(26) + 'a') + "'";
