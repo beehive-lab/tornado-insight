@@ -84,10 +84,10 @@ public class VariableInit {
             case "Matrix3DFloat", "Matrix3DFloat4", "Matrix" -> matrix3DInit(type, name, "Float");
             case "ImageByte3", "ImageByte4" -> imageInit(type,name, "Byte");
             case "ImageFloat", "ImageFloat3", "ImageFloat4", "ImageFloat8" -> imageInit(type, name, "Float");
-            case "VectorInt", "VectorInt2", "VectorInt3", "VectorInt4", "VectorInt8", "VectorInt16" -> vectorIntInit(name, type, "Int");
-            case "VectorFloat", "VectorFloat2", "VectorFloat3", "VectorFloat4", "VectorFloat8", "VectorFloat16" -> vectorIntInit(name, type, "Float");
-            case "VectorDouble", "VectorDouble2", "VectorDouble3", "VectorDouble4", "VectorDouble8", "VectorDouble16" -> vectorIntInit(name, type, "Double");
-            case "VectorHalf", "VectorHalf2", "VectorHalf3", "VectorHalf4", "VectorHalf8", "VectorHalf16" -> vectorHalfIntInit(name, type);
+            case "VectorInt", "VectorInt2", "VectorInt3", "VectorInt4", "VectorInt8", "VectorInt16" -> vectorInit(name, type, "Int");
+            case "VectorFloat", "VectorFloat2", "VectorFloat3", "VectorFloat4", "VectorFloat8", "VectorFloat16" -> vectorInit(name, type, "Float");
+            case "VectorDouble", "VectorDouble2", "VectorDouble3", "VectorDouble4", "VectorDouble8", "VectorDouble16" -> vectorInit(name, type, "Double");
+            case "VectorHalf", "VectorHalf2", "VectorHalf3", "VectorHalf4", "VectorHalf8", "VectorHalf16" -> vectorHalfInit(name, type);
             default -> "";
         };
     }
@@ -138,12 +138,12 @@ public class VariableInit {
                 name + ".fill(" + generateValueByType(primitive) + ");";
     }
 
-    private static String vectorIntInit(String name, String type, String innerType){
+    private static String vectorInit(String name, String type, String innerType){
         return " = new " + type + "(" + parameterSize + ");" + "\n" +
                 name + ".fill(" + generateValueByType(innerType) + ");";
     }
 
-    private static String vectorHalfIntInit(String name, String type){
+    private static String vectorHalfInit(String name, String type){
         return " = new " + type + "(" + parameterSize + ");" + "\n" +
                 name + ".fill(new HalfFloat(" + generateValueByType("HalfFloat") + "));";
     }
