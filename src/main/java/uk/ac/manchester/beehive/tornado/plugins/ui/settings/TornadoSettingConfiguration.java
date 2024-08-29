@@ -57,6 +57,7 @@ public class TornadoSettingConfiguration implements Configurable {
         boolean modified = !mySettingsComponent.getJdk().equals(settings.JdkPath);
         modified |= !mySettingsComponent.getTornadoEnvPath().equals(settings.TornadoRoot);
         modified |= mySettingsComponent.getMaxArraySize() != settings.parameterSize;
+        modified |= mySettingsComponent.isSaveFileEnabled() != settings.saveFileEnabled;
         return modified;
     }
 
@@ -72,6 +73,7 @@ public class TornadoSettingConfiguration implements Configurable {
         settings.TornadoRoot = mySettingsComponent.getTornadoEnvPath();
         settings.JdkPath = mySettingsComponent.getJdk();
         settings.parameterSize = mySettingsComponent.getMaxArraySize();
+        settings.saveFileEnabled = mySettingsComponent.isSaveFileEnabled();
     }
 
     //The method is invoked immediately after createComponent().
@@ -81,6 +83,7 @@ public class TornadoSettingConfiguration implements Configurable {
         mySettingsComponent.setTornadoEnvPath(settings.TornadoRoot);
         mySettingsComponent.setMyJdk(settings.JdkPath);
         mySettingsComponent.setMaxArraySize(settings.parameterSize);
+        mySettingsComponent.setSaveFileEnabled(settings.saveFileEnabled);
     }
 
     @Override

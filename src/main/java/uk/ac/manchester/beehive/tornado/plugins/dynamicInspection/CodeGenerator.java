@@ -21,6 +21,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
+import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
@@ -29,6 +30,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,10 +43,14 @@ public class CodeGenerator {
         ArrayList<PsiMethod> others = TornadoTWTask.getCalledMethods(methods);
         Map<String, Object> fields = TornadoTWTask.getFields();
         String importCodeBlock = TornadoTWTask.getImportCodeBlock();
+        boolean saveFileEnabled = TornadoSettingState.getInstance().saveFileEnabled;
         File dir = FileUtilRt.createTempDirectory("files", null);
         for (PsiMethod method : methods) {
             String fileName = method.getName() + RandomStringUtils.randomAlphanumeric(5);
             File file = createFile(project, method, others, fields, importCodeBlock, fileName, dir);
+            if (saveFileEnabled) {
+                saveFileToDisk(file, getGeneratedCodesDirectory());
+            }
             methodFile.put(file.getAbsolutePath(), method);
         }
         ExecutionEngine executionEngine = new ExecutionEngine(project, dir.getAbsolutePath(), methodFile);
@@ -110,5 +116,24 @@ public class CodeGenerator {
             throw new RuntimeException(e);
         }
         return javaFile;
+    }
+
+    private static void saveFileToDisk(File sourceFile, File targetDir) {
+        File targetFile = new File(targetDir, sourceFile.getName());
+        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(targetFile))) {
+            bufferedWriter.write(new String(java.nio.file.Files.readAllBytes(sourceFile.toPath())));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static File getGeneratedCodesDirectory() {
+        String pluginRootPath = System.getProperty("user.dir");
+        File generatedCodesDir = Paths.get(pluginRootPath, "GeneratedCode").toFile();
+
+        if (!generatedCodesDir.exists()) {
+            generatedCodesDir.mkdirs();
+        }
+        return generatedCodesDir;
     }
 }

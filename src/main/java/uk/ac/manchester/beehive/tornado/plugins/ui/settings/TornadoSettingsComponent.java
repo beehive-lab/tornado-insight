@@ -51,6 +51,8 @@ public class TornadoSettingsComponent {
 
     private final TextFieldWithBrowseButton myTornadoEnv = new TextFieldWithBrowseButton();
 
+    private final JCheckBox saveFileCheckbox = new JCheckBox("Save the generated code");
+
     private ProjectSdksModel jdkModel;
 
     private JdkComboBox myJdk;
@@ -84,9 +86,15 @@ public class TornadoSettingsComponent {
                 .getPanel();
 
         maxArraySizePanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
+
+        JPanel saveFilePanel = FormBuilder.createFormBuilder()
+                .addComponent(saveFileCheckbox)
+                .getPanel();
+
         myMainPanel = FormBuilder.createFormBuilder()
                 .addComponent(innerGrid)
                 .addComponent(maxArraySizePanel)
+                .addComponent(saveFilePanel)
                 .addComponentFillVertically(new JPanel(), 0)
                 .getPanel();
     }
@@ -120,6 +128,14 @@ public class TornadoSettingsComponent {
 
     public void setMaxArraySize(int size) {
         myMaxArraySize.setText(String.valueOf(size));
+    }
+
+    public boolean isSaveFileEnabled() {
+        return saveFileCheckbox.isSelected();
+    }
+
+    public void setSaveFileEnabled(boolean enabled) {
+        saveFileCheckbox.setSelected(enabled);
     }
 
     public String isValidPath() {

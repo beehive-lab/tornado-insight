@@ -41,6 +41,7 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
     public Sdk JdkPath;
     public int parameterSize;
     public boolean isValid;
+    public boolean saveFileEnabled;
 
     /**
      * Retrieves the singleton instance of the TornadoSetting.
