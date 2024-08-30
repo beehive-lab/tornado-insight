@@ -49,7 +49,7 @@ public class CodeGenerator {
             String fileName = method.getName() + RandomStringUtils.randomAlphanumeric(5);
             File file = createFile(project, method, others, fields, importCodeBlock, fileName, dir);
             if (saveFileEnabled) {
-                saveFileToDisk(file, getGeneratedCodesDirectory());
+                saveFileToDisk(file, TornadoSettingState.getInstance().fileSaveLocation);
             }
             methodFile.put(file.getAbsolutePath(), method);
         }
@@ -118,8 +118,9 @@ public class CodeGenerator {
         return javaFile;
     }
 
-    private static void saveFileToDisk(File sourceFile, File targetDir) {
-        File targetFile = new File(targetDir, sourceFile.getName());
+    private static void saveFileToDisk(File sourceFile, String targetDir) {
+        File target = new File(targetDir);
+        File targetFile = new File(target, sourceFile.getName());
         try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(targetFile))) {
             bufferedWriter.write(new String(java.nio.file.Files.readAllBytes(sourceFile.toPath())));
         } catch (IOException e) {
@@ -127,13 +128,4 @@ public class CodeGenerator {
         }
     }
 
-    private static File getGeneratedCodesDirectory() {
-        String pluginRootPath = System.getProperty("user.dir");
-        File generatedCodesDir = Paths.get(pluginRootPath, "GeneratedCode").toFile();
-
-        if (!generatedCodesDir.exists()) {
-            generatedCodesDir.mkdirs();
-        }
-        return generatedCodesDir;
-    }
 }

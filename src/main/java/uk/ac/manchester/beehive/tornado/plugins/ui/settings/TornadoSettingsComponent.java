@@ -53,6 +53,8 @@ public class TornadoSettingsComponent {
 
     private final JCheckBox saveFileCheckbox = new JCheckBox("Save the generated code");
 
+    private final TextFieldWithBrowseButton fileSaveLocationField = new TextFieldWithBrowseButton();
+
     private ProjectSdksModel jdkModel;
 
     private JdkComboBox myJdk;
@@ -71,6 +73,11 @@ public class TornadoSettingsComponent {
                 new FileChooserDescriptor(false, true, false, false, false, false) {
                 });
 
+        fileSaveLocationField.addBrowseFolderListener("Save Location for Generated Code", "Choose the folder you want generated codes to be saved",
+                null,
+                new FileChooserDescriptor(false, true, false, false, false, false) {
+                });
+
         String INNER_COMMENT = MessageBundle.message("ui.settings.comment.env");
 
         JPanel innerGrid = FormBuilder.createFormBuilder()
@@ -80,21 +87,18 @@ public class TornadoSettingsComponent {
                 .addVerticalGap(10)
                 .getPanel();
 
-        JPanel maxArraySizePanel = FormBuilder.createFormBuilder()
+        JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder()
                 .addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + MessageBundle.message("ui.settings.comment.size") + "</div></html>"))
-                .getPanel();
-
-        maxArraySizePanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
-
-        JPanel saveFilePanel = FormBuilder.createFormBuilder()
                 .addComponent(saveFileCheckbox)
+                .addLabeledComponent(new JBLabel("Save Location:"), fileSaveLocationField)
                 .getPanel();
+
+        dynamicInspectionPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
 
         myMainPanel = FormBuilder.createFormBuilder()
                 .addComponent(innerGrid)
-                .addComponent(maxArraySizePanel)
-                .addComponent(saveFilePanel)
+                .addComponent(dynamicInspectionPanel)
                 .addComponentFillVertically(new JPanel(), 0)
                 .getPanel();
     }
@@ -136,6 +140,14 @@ public class TornadoSettingsComponent {
 
     public void setSaveFileEnabled(boolean enabled) {
         saveFileCheckbox.setSelected(enabled);
+    }
+
+    public String getFileSaveLocation() {
+        return fileSaveLocationField.getText();
+    }
+
+    public void setFileSaveLocation(String path) {
+        fileSaveLocationField.setText(path);
     }
 
     public String isValidPath() {
