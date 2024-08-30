@@ -88,6 +88,7 @@ public class VariableInit {
             case "VectorFloat", "VectorFloat2", "VectorFloat3", "VectorFloat4", "VectorFloat8", "VectorFloat16" -> vectorInit(name, type, "Float");
             case "VectorDouble", "VectorDouble2", "VectorDouble3", "VectorDouble4", "VectorDouble8", "VectorDouble16" -> vectorInit(name, type, "Double");
             case "VectorHalf", "VectorHalf2", "VectorHalf3", "VectorHalf4", "VectorHalf8", "VectorHalf16" -> vectorHalfInit(name, type);
+            case "KernelContext" -> " = new KernelContext();";
             default -> "";
         };
     }
@@ -137,6 +138,7 @@ public class VariableInit {
         return " = new " + type + "(" + parameterSize + "," + parameterSize + ");" + "\n" +
                 name + ".fill(" + generateValueByType(primitive) + ");";
     }
+
 
     private static String vectorInit(String name, String type, String innerType){
         return " = new " + type + "(" + parameterSize + ");" + "\n" +
