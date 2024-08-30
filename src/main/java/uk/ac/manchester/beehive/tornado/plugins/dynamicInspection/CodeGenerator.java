@@ -66,6 +66,8 @@ public class CodeGenerator {
                 import uk.ac.manchester.tornado.api.annotations.Parallel;
                 import uk.ac.manchester.tornado.api.annotations.Reduce;
                 import uk.ac.manchester.tornado.api.enums.DataTransferMode;
+                import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
+                import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
                 """;
         StringBuilder methodWithParameters = new StringBuilder();
         String methodWithClass = filename + "::" + method.getName();

@@ -139,7 +139,6 @@ public class VariableInit {
                 name + ".fill(" + generateValueByType(primitive) + ");";
     }
 
-
     private static String vectorInit(String name, String type, String innerType){
         return " = new " + type + "(" + parameterSize + ");" + "\n" +
                 name + ".fill(" + generateValueByType(innerType) + ");";
