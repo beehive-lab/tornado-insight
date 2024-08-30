@@ -37,7 +37,7 @@ repositories {
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
     // Set the version of IntelliJ IDEA that the plugin targets.
-    version.set("2024.1.4")
+    version.set("2024.2")
     // Define the type of the IntelliJ Platform (IC = IntelliJ IDEA Community).
     type.set("IC") // Target IDE Platform
     // Specify any additional plugins this plugin depends on.
@@ -59,7 +59,7 @@ tasks {
     // Configure the plugin's compatibility range with IntelliJ IDEA builds.
     patchPluginXml {
         sinceBuild.set("223")
-        untilBuild.set("241.*")
+        untilBuild.set("242.*")
     }
     // Configure the plugin signing task.
     signPlugin {
