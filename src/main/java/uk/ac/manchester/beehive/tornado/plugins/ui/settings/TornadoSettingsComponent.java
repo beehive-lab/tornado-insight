@@ -39,6 +39,7 @@ import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 import javax.swing.*;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -50,6 +51,10 @@ public class TornadoSettingsComponent {
     private final JPanel myMainPanel;
 
     private final TextFieldWithBrowseButton myTornadoEnv = new TextFieldWithBrowseButton();
+
+    private final JCheckBox saveFileCheckbox = new JCheckBox("Save Internal Debug File (For Developer Use Only)");
+
+    private final TextFieldWithBrowseButton fileSaveLocationField = new TextFieldWithBrowseButton();
 
     private ProjectSdksModel jdkModel;
 
@@ -69,6 +74,13 @@ public class TornadoSettingsComponent {
                 new FileChooserDescriptor(false, true, false, false, false, false) {
                 });
 
+        fileSaveLocationField.addBrowseFolderListener("Save Location for Generated Code", "Choose the folder you want generated codes to be saved",
+                null,
+                new FileChooserDescriptor(false, true, false, false, false, false) {
+                });
+
+        saveFileCheckbox.setSelected(false);
+
         String INNER_COMMENT = MessageBundle.message("ui.settings.comment.env");
 
         JPanel innerGrid = FormBuilder.createFormBuilder()
@@ -78,15 +90,25 @@ public class TornadoSettingsComponent {
                 .addVerticalGap(10)
                 .getPanel();
 
-        JPanel maxArraySizePanel = FormBuilder.createFormBuilder()
+        JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder()
                 .addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + MessageBundle.message("ui.settings.comment.size") + "</div></html>"))
                 .getPanel();
 
-        maxArraySizePanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
+        dynamicInspectionPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
+
+        JPanel debugPanel = FormBuilder.createFormBuilder()
+                .addComponent(saveFileCheckbox)
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + MessageBundle.message("ui.settings.comment.debug.file") + "</div></html>"))
+                .addLabeledComponent(new JBLabel("Save Location:"), fileSaveLocationField)
+                .getPanel();
+
+        debugPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.debugging")));
+
         myMainPanel = FormBuilder.createFormBuilder()
                 .addComponent(innerGrid)
-                .addComponent(maxArraySizePanel)
+                .addComponent(dynamicInspectionPanel)
+                .addComponent(debugPanel)
                 .addComponentFillVertically(new JPanel(), 0)
                 .getPanel();
     }
@@ -122,15 +144,41 @@ public class TornadoSettingsComponent {
         myMaxArraySize.setText(String.valueOf(size));
     }
 
+    public boolean isSaveFileEnabled() {
+        return saveFileCheckbox.isSelected();
+    }
+
+    public void setSaveFileEnabled(boolean enabled) {
+        saveFileCheckbox.setSelected(enabled);
+    }
+
+    public String getFileSaveLocation() {
+        return fileSaveLocationField.getText();
+    }
+
+    public void setFileSaveLocation(String path) {
+        fileSaveLocationField.setText(path);
+    }
+
     public String isValidPath() {
         String path = myTornadoEnv.getText() + "/setvars.sh";
         String parameterSize = myMaxArraySize.getText();
         AtomicReference<String> stringAtomicReference = new AtomicReference<>();
         stringAtomicReference.set("");
-        if (StringUtil.isEmpty(path))
-            return MessageBundle.message("ui.settings.validation.emptyTornadovm");
-        if (myJdk.getSelectedJdk() == null) {
-            return MessageBundle.message("ui.settings.validation.emptyJava");
+        if (isSaveFileEnabled()) {
+            if (StringUtil.isEmpty(path))
+                return MessageBundle.message("ui.settings.validation.emptyTornadovm");
+            if (myJdk.getSelectedJdk() == null) {
+                return MessageBundle.message("ui.settings.validation.emptyJava");
+            }
+            String saveLocation = fileSaveLocationField.getText();
+            if (saveLocation.isEmpty()) {
+                return MessageBundle.message("ui.settings.validation.emptySave");
+            }
+            File saveDir = new File(saveLocation);
+            if (!saveDir.exists() || !saveDir.isDirectory() || !saveDir.canWrite()) {
+                return MessageBundle.message("ui.settings.validation.invalidSave");
+            }
         }
         String versionString = myJdk.getSelectedJdk().getVersionString();
         String regEx = "(?:version\\s+)?(\\d+\\.\\d+\\.\\d+)";

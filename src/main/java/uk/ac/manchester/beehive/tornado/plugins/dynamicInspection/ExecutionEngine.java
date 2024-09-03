@@ -110,11 +110,12 @@ public class ExecutionEngine {
 
         // Execute the command
         try {
-            int exitCode = ExecUtil.execAndGetOutput(commandLine).getExitCode();
+            ProcessOutput output = ExecUtil.execAndGetOutput(commandLine);
+            int exitCode = output.getExitCode();
+            String stderr = output.getStderr();
             if (exitCode == 1) {
-                MessageUtils.getInstance(project).showErrorMsg(MessageBundle.message("dynamic.info.title"),
-                        MessageBundle.message("dynamic.error.compile"));
-                throw new UnsupportedOperationException(MessageBundle.message("dynamic.error.compile"));
+                MessageUtils.getInstance(project).showErrorMsg("Internal error when running generated code", "Exit code: " + exitCode + "\n" + stderr);
+                throw new UnsupportedOperationException("Compilation failed with exit code " + exitCode);
             }
         } catch (ExecutionException e) {
             MessageUtils.getInstance(project).showErrorMsg(MessageBundle.message("dynamic.info.title"),
