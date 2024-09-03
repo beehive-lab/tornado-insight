@@ -39,6 +39,7 @@ import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 import javax.swing.*;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -51,7 +52,7 @@ public class TornadoSettingsComponent {
 
     private final TextFieldWithBrowseButton myTornadoEnv = new TextFieldWithBrowseButton();
 
-    private final JCheckBox saveFileCheckbox = new JCheckBox("Save the generated code");
+    private final JCheckBox saveFileCheckbox = new JCheckBox("Save Internal Debug File (For Developer Use Only)");
 
     private final TextFieldWithBrowseButton fileSaveLocationField = new TextFieldWithBrowseButton();
 
@@ -90,15 +91,22 @@ public class TornadoSettingsComponent {
         JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder()
                 .addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + MessageBundle.message("ui.settings.comment.size") + "</div></html>"))
-                .addComponent(saveFileCheckbox)
-                .addLabeledComponent(new JBLabel("Save Location:"), fileSaveLocationField)
                 .getPanel();
 
         dynamicInspectionPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
 
+        JPanel debugPanel = FormBuilder.createFormBuilder()
+                .addComponent(saveFileCheckbox)
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + MessageBundle.message("ui.settings.comment.debug.file") + "</div></html>"))
+                .addLabeledComponent(new JBLabel("Save Location:"), fileSaveLocationField)
+                .getPanel();
+
+        debugPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.debugging")));
+
         myMainPanel = FormBuilder.createFormBuilder()
                 .addComponent(innerGrid)
                 .addComponent(dynamicInspectionPanel)
+                .addComponent(debugPanel)
                 .addComponentFillVertically(new JPanel(), 0)
                 .getPanel();
     }
@@ -159,6 +167,14 @@ public class TornadoSettingsComponent {
             return MessageBundle.message("ui.settings.validation.emptyTornadovm");
         if (myJdk.getSelectedJdk() == null) {
             return MessageBundle.message("ui.settings.validation.emptyJava");
+        }
+        String saveLocation = fileSaveLocationField.getText();
+        if (saveLocation.isEmpty()) {
+            return MessageBundle.message("ui.settings.validation.emptySave");
+        }
+        File saveDir = new File(saveLocation);
+        if (!saveDir.exists() || !saveDir.isDirectory() || !saveDir.canWrite()) {
+            return MessageBundle.message("ui.settings.validation.invalidSave");
         }
         String versionString = myJdk.getSelectedJdk().getVersionString();
         String regEx = "(?:version\\s+)?(\\d+\\.\\d+\\.\\d+)";
