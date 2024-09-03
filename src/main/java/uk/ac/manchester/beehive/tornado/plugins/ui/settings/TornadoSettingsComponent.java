@@ -79,6 +79,8 @@ public class TornadoSettingsComponent {
                 new FileChooserDescriptor(false, true, false, false, false, false) {
                 });
 
+        saveFileCheckbox.setSelected(false);
+
         String INNER_COMMENT = MessageBundle.message("ui.settings.comment.env");
 
         JPanel innerGrid = FormBuilder.createFormBuilder()
