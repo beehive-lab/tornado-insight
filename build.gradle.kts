@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2024, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,7 @@ plugins {
 
 // Define the group and version of the plugin.
 group = "uk.ac.manchester.beehive.tornado.plugins"
-version = "1.2.2"
+version = "1.2.3"
 
 // Define the repositories where dependencies can be fetched.
 repositories {
