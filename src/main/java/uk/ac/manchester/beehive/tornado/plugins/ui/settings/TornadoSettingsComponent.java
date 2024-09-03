@@ -163,18 +163,20 @@ public class TornadoSettingsComponent {
         String parameterSize = myMaxArraySize.getText();
         AtomicReference<String> stringAtomicReference = new AtomicReference<>();
         stringAtomicReference.set("");
-        if (StringUtil.isEmpty(path))
-            return MessageBundle.message("ui.settings.validation.emptyTornadovm");
-        if (myJdk.getSelectedJdk() == null) {
-            return MessageBundle.message("ui.settings.validation.emptyJava");
-        }
-        String saveLocation = fileSaveLocationField.getText();
-        if (saveLocation.isEmpty()) {
-            return MessageBundle.message("ui.settings.validation.emptySave");
-        }
-        File saveDir = new File(saveLocation);
-        if (!saveDir.exists() || !saveDir.isDirectory() || !saveDir.canWrite()) {
-            return MessageBundle.message("ui.settings.validation.invalidSave");
+        if (isSaveFileEnabled()) {
+            if (StringUtil.isEmpty(path))
+                return MessageBundle.message("ui.settings.validation.emptyTornadovm");
+            if (myJdk.getSelectedJdk() == null) {
+                return MessageBundle.message("ui.settings.validation.emptyJava");
+            }
+            String saveLocation = fileSaveLocationField.getText();
+            if (saveLocation.isEmpty()) {
+                return MessageBundle.message("ui.settings.validation.emptySave");
+            }
+            File saveDir = new File(saveLocation);
+            if (!saveDir.exists() || !saveDir.isDirectory() || !saveDir.canWrite()) {
+                return MessageBundle.message("ui.settings.validation.invalidSave");
+            }
         }
         String versionString = myJdk.getSelectedJdk().getVersionString();
         String regEx = "(?:version\\s+)?(\\d+\\.\\d+\\.\\d+)";
