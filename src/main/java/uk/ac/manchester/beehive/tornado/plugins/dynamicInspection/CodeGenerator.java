@@ -30,7 +30,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Paths;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -75,20 +75,24 @@ public class CodeGenerator {
                 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
                 import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
                 """;
-        StringBuilder methodWithParameters = new StringBuilder();
+        StringBuilder taskParameters = new StringBuilder();
+        StringBuilder taskGraphParameters = new StringBuilder();
         String methodWithClass = filename + "::" + method.getName();
         String variableInit = VariableInit.variableInitHelper(method);
 
         for (PsiParameter p : method.getParameterList().getParameters()) {
-            methodWithParameters.append(", ").append(p.getName());
+            taskParameters.append(", ").append(p.getName());
+            if (isParameterBoxedType(p)) {
+                taskGraphParameters.append(", ").append(p.getName());
+            }
         }
         String mainCode = "\n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {\n" +
                 "\n" +
                 variableInit +
                 "TaskGraph taskGraph = new TaskGraph(\"s0\") \n" +
-                ".transferToDevice(DataTransferMode.EVERY_EXECUTION" + methodWithParameters + ")\n" +
-                ".task(\"t0\", " + methodWithClass + methodWithParameters + ") \n" +
-                ".transferToHost(DataTransferMode.EVERY_EXECUTION" + methodWithParameters + ");\n" +
+                ".transferToDevice(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ")\n" +
+                ".task(\"t0\", " + methodWithClass + taskParameters + ") \n" +
+                ".transferToHost(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ");\n" +
                 "ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" +
                 "try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {\n" +
                 "executionPlan.withWarmUp().execute();\n" +
@@ -123,11 +127,17 @@ public class CodeGenerator {
         return javaFile;
     }
 
+ private static boolean isParameterBoxedType(PsiParameter p) {
+    return switch (p.getTypeElement().getText()) {
+        case "int", "float", "double", "long", "boolean" -> false;
+        default -> true;
+    };
+}
     private static void saveFileToDisk(File sourceFile, String targetDir) {
         File target = new File(targetDir);
         File targetFile = new File(target, sourceFile.getName());
         try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(targetFile))) {
-            bufferedWriter.write(new String(java.nio.file.Files.readAllBytes(sourceFile.toPath())));
+            bufferedWriter.write(new String(Files.readAllBytes(sourceFile.toPath())));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
