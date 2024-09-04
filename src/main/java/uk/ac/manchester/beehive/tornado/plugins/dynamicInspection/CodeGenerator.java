@@ -127,17 +127,12 @@ public class CodeGenerator {
         return javaFile;
     }
 
-    private static boolean isParameterBoxedType(PsiParameter p) {
-        return switch (p.getTypeElement().getText()) {
-            case "int" -> false;
-            case "float" -> false;
-            case "double" -> false;
-            case "long" -> false;
-            case "boolean" -> false;
-            default -> true;
-        };
-    }
-
+ private static boolean isParameterBoxedType(PsiParameter p) {
+    return switch (p.getTypeElement().getText()) {
+        case "int", "float", "double", "long", "boolean" -> false;
+        default -> true;
+    };
+}
     private static void saveFileToDisk(File sourceFile, String targetDir) {
         File target = new File(targetDir);
         File targetFile = new File(target, sourceFile.getName());
