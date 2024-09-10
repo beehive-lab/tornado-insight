@@ -57,6 +57,8 @@ public class TornadoSettingConfiguration implements Configurable {
         boolean modified = !mySettingsComponent.getJdk().equals(settings.JdkPath);
         modified |= !mySettingsComponent.getTornadoEnvPath().equals(settings.TornadoRoot);
         modified |= mySettingsComponent.getMaxArraySize() != settings.parameterSize;
+        modified |= mySettingsComponent.getTensorShapeDimension() != settings.tensorShapeDimension;
+        modified |= mySettingsComponent.getTensorShapeDimensionSizes() != settings.tensorShapeDimensions;
         modified |= mySettingsComponent.isSaveFileEnabled() != settings.saveFileEnabled;
         modified |= !mySettingsComponent.getFileSaveLocation().equals(settings.fileSaveLocation);
         return modified;
@@ -74,6 +76,8 @@ public class TornadoSettingConfiguration implements Configurable {
         settings.TornadoRoot = mySettingsComponent.getTornadoEnvPath();
         settings.JdkPath = mySettingsComponent.getJdk();
         settings.parameterSize = mySettingsComponent.getMaxArraySize();
+        settings.tensorShapeDimension = mySettingsComponent.getTensorShapeDimension();
+        settings.tensorShapeDimensions = mySettingsComponent.getTensorShapeDimensionSizes();
         settings.saveFileEnabled = mySettingsComponent.isSaveFileEnabled();
         settings.fileSaveLocation = mySettingsComponent.getFileSaveLocation();
     }
@@ -85,6 +89,8 @@ public class TornadoSettingConfiguration implements Configurable {
         mySettingsComponent.setTornadoEnvPath(settings.TornadoRoot);
         mySettingsComponent.setMyJdk(settings.JdkPath);
         mySettingsComponent.setMaxArraySize(settings.parameterSize);
+        mySettingsComponent.setTensorShapeDimension(settings.tensorShapeDimension);
+        mySettingsComponent.setTensorShapeDimensionSizes(settings.tensorShapeDimensions);
         mySettingsComponent.setSaveFileEnabled(settings.saveFileEnabled);
         mySettingsComponent.setFileSaveLocation(settings.fileSaveLocation);
     }

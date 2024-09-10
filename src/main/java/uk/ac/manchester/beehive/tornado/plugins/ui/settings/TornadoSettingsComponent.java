@@ -39,8 +39,11 @@ import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 import javax.swing.*;
 
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
@@ -61,6 +64,8 @@ public class TornadoSettingsComponent {
     private JdkComboBox myJdk;
 
     private final JBTextField myMaxArraySize = new JBTextField(4);
+    private final JBTextField tensorShapeDimension = new JBTextField();
+    private final List<JBTextField> tensorShapeDimensionsSizes = new ArrayList<>();
 
     public TornadoSettingsComponent() {
         jdkModel = ProjectStructureConfigurable.getInstance(ProjectManager.getInstance().getDefaultProject()).getProjectJdksModel();
@@ -81,6 +86,10 @@ public class TornadoSettingsComponent {
 
         saveFileCheckbox.setSelected(false);
 
+        JPanel tensorsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton setDimensionsButton = createButtonToSetShapeDimensionsInPanel(tensorsPanel);
+        JPanel dynamicTensorsPanel = createDynamicTensorsConfigurationPanel(setDimensionsButton);
+
         String INNER_COMMENT = MessageBundle.message("ui.settings.comment.env");
 
         JPanel innerGrid = FormBuilder.createFormBuilder()
@@ -92,7 +101,11 @@ public class TornadoSettingsComponent {
 
         JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder()
                 .addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
-                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + MessageBundle.message("ui.settings.comment.size") + "</div></html>"))
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + MessageBundle.message("ui.settings.max.array.size") + "</div></html>"))
+                .addLabeledComponent("Tensor shape dimensions:", tensorShapeDimension)
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + MessageBundle.message("ui.settings.tensor.shape.dimensions.size") + "</div></html>"))
+                .addComponent(tensorsPanel)
+                .addComponent(dynamicTensorsPanel)
                 .getPanel();
 
         dynamicInspectionPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
@@ -111,6 +124,38 @@ public class TornadoSettingsComponent {
                 .addComponent(debugPanel)
                 .addComponentFillVertically(new JPanel(), 0)
                 .getPanel();
+    }
+
+    public JButton createButtonToSetShapeDimensionsInPanel(JPanel panel) {
+        JButton setDimensionsButton = new JButton("Set shape");
+        panel.add(setDimensionsButton);
+        return setDimensionsButton;
+    }
+
+    public JPanel createDynamicTensorsConfigurationPanel(JButton setDimensionsButton) {
+        JPanel dynamicTensorsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        setDimensionsButton.addActionListener(e -> {
+            dynamicTensorsPanel.removeAll();
+            try {
+                int dimensions = Integer.parseInt(tensorShapeDimension.getText());
+                if (dimensions < 0) { throw new RuntimeException("Dimensions cannot be negative"); }
+                for (int i = 0; i < dimensions; i++) {
+                    JBTextField dimensionSizeField = new JBTextField();
+                    dynamicTensorsPanel.add(new JLabel("Dimension " + (i + 1) + " size:"));
+                    dynamicTensorsPanel.add(dimensionSizeField);
+                    tensorShapeDimensionsSizes.add(dimensionSizeField);
+                }
+
+                // Refresh the panel
+                dynamicTensorsPanel.revalidate();
+                dynamicTensorsPanel.repaint();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(null, "Please enter a valid number for dimensions.");
+            } catch (RuntimeException ex) {
+                JOptionPane.showMessageDialog(null, "Please enter a valid number for dimensions.");
+            }
+        });
+        return dynamicTensorsPanel;
     }
 
     public JPanel getPanel() {
@@ -144,6 +189,46 @@ public class TornadoSettingsComponent {
         myMaxArraySize.setText(String.valueOf(size));
     }
 
+    public int getTensorShapeDimension() {
+        if (tensorShapeDimension.getText().isEmpty() || Objects.equals(tensorShapeDimension.getText(), "0")) {
+            return 64;
+        }
+        return Integer.parseInt(tensorShapeDimension.getText());
+    }
+
+    public void setTensorShapeDimension(int size) {
+        tensorShapeDimension.setText(String.valueOf(size));
+    }
+
+    public int[] getTensorShapeDimensionSizes() {
+        boolean shapeDimensionsIsValid = true;
+        int[] dimensions = new int[tensorShapeDimensionsSizes.size()];
+        for (int i = 0; i < tensorShapeDimensionsSizes.size(); i++) {
+            if (tensorShapeDimensionsSizes.get(i).getText().isEmpty() || Objects.equals(tensorShapeDimensionsSizes.get(i), "0")) {
+                shapeDimensionsIsValid = false;
+                break;
+            }
+            dimensions[i] = Integer.parseInt(tensorShapeDimensionsSizes.get(i).getText());
+        }
+        if (shapeDimensionsIsValid) {
+            return dimensions;
+        } else {
+            return new int[] {1, 1, 1};
+        }
+    }
+
+    public void setTensorShapeDimensionSizes(int[] dimensions) {
+        for (int i = 0; i < dimensions.length; i++) {
+            JBTextField tensorShapeDimension = new JBTextField();
+            tensorShapeDimension.setText(String.valueOf(dimensions[i]));
+            tensorShapeDimensionsSizes.add(tensorShapeDimension);
+        }
+    }
+
+    public boolean isTensorShapeConfigured() {
+        return !tensorShapeDimension.getText().isEmpty();
+    }
+
     public boolean isSaveFileEnabled() {
         return saveFileCheckbox.isSelected();
     }
@@ -165,6 +250,14 @@ public class TornadoSettingsComponent {
         String parameterSize = myMaxArraySize.getText();
         AtomicReference<String> stringAtomicReference = new AtomicReference<>();
         stringAtomicReference.set("");
+        if (isTensorShapeConfigured()) {
+            for (int i = 0; i < tensorShapeDimensionsSizes.size(); i++) {
+                int dim = Integer.parseInt(tensorShapeDimensionsSizes.get(i).getText());
+                if (dim <= 0 ) {
+                    return MessageBundle.message("ui.settings.validation.shapeSize");
+                }
+            }
+        }
         if (isSaveFileEnabled()) {
             if (StringUtil.isEmpty(path))
                 return MessageBundle.message("ui.settings.validation.emptyTornadovm");
