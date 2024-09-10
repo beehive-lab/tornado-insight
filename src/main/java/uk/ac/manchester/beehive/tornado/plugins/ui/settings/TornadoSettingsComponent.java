@@ -139,6 +139,7 @@ public class TornadoSettingsComponent {
             try {
                 int dimensions = Integer.parseInt(tensorShapeDimension.getText());
                 if (dimensions < 0) { throw new RuntimeException("Dimensions cannot be negative"); }
+                tensorShapeDimensionsSizes.clear();
                 for (int i = 0; i < dimensions; i++) {
                     JBTextField dimensionSizeField = new JBTextField();
                     dynamicTensorsPanel.add(new JLabel("Dimension " + (i + 1) + " size:"));
