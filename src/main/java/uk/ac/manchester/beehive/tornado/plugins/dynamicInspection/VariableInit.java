@@ -27,12 +27,14 @@ import java.util.Random;
 
 public class VariableInit {
 
-    public static int parameterSize;
-    public static int[] tensorShapeDimensions;
+    private static int parameterSize;
+    private static String tensorShapeDimension;
+    private static int[] tensorShapeDimensions;
 
     public static String variableInitHelper(@NotNull PsiMethod method) {
         parameterSize = TornadoSettingState.getInstance().parameterSize;
-        tensorShapeDimensions = TornadoSettingState.getInstance().tensorShapeDimensions;
+        tensorShapeDimension = TornadoSettingState.getInstance().tensorShapeDimensions;
+        tensorShapeDimensions = convertShapeStringToIntArray(tensorShapeDimension);
 
         ArrayList<String> parametersName = new ArrayList<>();
         ArrayList<String> parametersType = new ArrayList<>();
@@ -156,6 +158,7 @@ public class VariableInit {
     private static String tensorInit(String type){
         StringBuilder builder = new StringBuilder();
         builder.append(" = new ").append(type).append("(").append("new Shape(");
+
         for (int i = 0; i < tensorShapeDimensions.length; i++){
             builder.append(tensorShapeDimensions[i]);
             if (i < tensorShapeDimensions.length - 1){
@@ -164,6 +167,16 @@ public class VariableInit {
         }
         builder.append("));").append("\n");
         return builder.toString();
+    }
+
+    private static int[] convertShapeStringToIntArray(String shapeString){
+        String[] stringArray = shapeString.split(",");
+        int[] numbers = new int[stringArray.length];
+
+        for (int i = 0; i < stringArray.length; i++) {
+            numbers[i] = Integer.parseInt(stringArray[i].trim());
+        }
+        return numbers;
     }
 
     private static String generateValueByType(String type){
