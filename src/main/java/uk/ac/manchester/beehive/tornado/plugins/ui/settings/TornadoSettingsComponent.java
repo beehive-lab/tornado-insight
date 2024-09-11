@@ -149,7 +149,7 @@ public class TornadoSettingsComponent {
 
     public String getTensorShapeDimensions() {
         if (tensorShapeDimensions.getText().isEmpty() || Objects.equals(tensorShapeDimensions.getText(), "0")) {
-            return "64";
+            return "";
         }
         return tensorShapeDimensions.getText();
     }

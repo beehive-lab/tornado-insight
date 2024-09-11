@@ -174,7 +174,9 @@ public class VariableInit {
         int[] numbers = new int[stringArray.length];
 
         for (int i = 0; i < stringArray.length; i++) {
-            numbers[i] = Integer.parseInt(stringArray[i].trim());
+            if (!stringArray[i].trim().isEmpty()) {
+                numbers[i] = Integer.parseInt(stringArray[i].trim());
+            }
         }
         return numbers;
     }
