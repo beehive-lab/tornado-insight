@@ -216,7 +216,7 @@ public class TornadoTWTask {
             PsiImportStatement[] importStatements = importList.getImportStatements();
             for (PsiImportStatement importStatement : importStatements) {
                 String importText = importStatement.getText();
-                if (isJunit(importText)) {
+                if (statementImportsJunit(importText)) {
                     continue;
                 }
                 importCodeBlock.append(importStatement.getText());
@@ -244,8 +244,8 @@ public class TornadoTWTask {
         return importCodeBlock;
     }
 
-    private static boolean isJunit(String importStatement) {
-        return importStatement.equals("import org.junit.Test;");
+    private static boolean statementImportsJunit(String importStatement) {
+        return importStatement.contains("import org.junit.");
     }
 
 }

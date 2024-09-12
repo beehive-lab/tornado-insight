@@ -40,6 +40,7 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
     @OptionTag(converter = JdkConverter.class)
     public Sdk JdkPath;
     public int parameterSize;
+    public String tensorShapeDimensions;
     public boolean isValid;
     public boolean saveFileEnabled;
     public String fileSaveLocation;

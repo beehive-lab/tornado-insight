@@ -27,10 +27,15 @@ import java.util.Random;
 
 public class VariableInit {
 
-    public static int parameterSize;
+    private static int parameterSize;
+    private static String tensorShapeDimension;
+    private static int[] tensorShapeDimensions;
 
     public static String variableInitHelper(@NotNull PsiMethod method) {
         parameterSize = TornadoSettingState.getInstance().parameterSize;
+        tensorShapeDimension = TornadoSettingState.getInstance().tensorShapeDimensions;
+        tensorShapeDimensions = convertShapeStringToIntArray(tensorShapeDimension);
+
         ArrayList<String> parametersName = new ArrayList<>();
         ArrayList<String> parametersType = new ArrayList<>();
         for (PsiParameter parameter : method.getParameterList().getParameters()) {
@@ -89,6 +94,7 @@ public class VariableInit {
             case "VectorDouble", "VectorDouble2", "VectorDouble3", "VectorDouble4", "VectorDouble8", "VectorDouble16" -> vectorInit(name, type, "Double");
             case "VectorHalf", "VectorHalf2", "VectorHalf3", "VectorHalf4", "VectorHalf8", "VectorHalf16" -> vectorHalfInit(name, type);
             case "KernelContext" -> " = new KernelContext();";
+            case "TensorByte", "TensorFP16", "TensorFP32", "TensorFP64", "TensorInt16", "TensorInt32", "TensorInt64" -> tensorInit(type);
             default -> "";
         };
     }
@@ -147,6 +153,32 @@ public class VariableInit {
     private static String vectorHalfInit(String name, String type){
         return " = new " + type + "(" + parameterSize + ");" + "\n" +
                 name + ".fill(new HalfFloat(" + generateValueByType("HalfFloat") + "));";
+    }
+
+    private static String tensorInit(String type){
+        StringBuilder builder = new StringBuilder();
+        builder.append(" = new ").append(type).append("(").append("new Shape(");
+
+        for (int i = 0; i < tensorShapeDimensions.length; i++){
+            builder.append(tensorShapeDimensions[i]);
+            if (i < tensorShapeDimensions.length - 1){
+                builder.append(", ");
+            }
+        }
+        builder.append("));").append("\n");
+        return builder.toString();
+    }
+
+    private static int[] convertShapeStringToIntArray(String shapeString){
+        String[] stringArray = shapeString.split(",");
+        int[] numbers = new int[stringArray.length];
+
+        for (int i = 0; i < stringArray.length; i++) {
+            if (!stringArray[i].trim().isEmpty()) {
+                numbers[i] = Integer.parseInt(stringArray[i].trim());
+            }
+        }
+        return numbers;
     }
 
     private static String generateValueByType(String type){
