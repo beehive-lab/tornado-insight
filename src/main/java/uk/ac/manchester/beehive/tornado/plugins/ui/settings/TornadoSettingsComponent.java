@@ -87,22 +87,22 @@ public class TornadoSettingsComponent {
         JPanel innerGrid = FormBuilder.createFormBuilder()
                 .addLabeledComponent(new JBLabel("TornadoVM Root:"), myTornadoEnv)
                 .addLabeledComponent(new JBLabel("Java SDK:"), myJdk)
-                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + INNER_COMMENT + "</div></html>"))
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + INNER_COMMENT + "</div></html>"))
                 .addVerticalGap(10)
                 .getPanel();
 
         JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder()
                 .addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
-                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + MessageBundle.message("ui.settings.max.array.size") + "</div></html>"))
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.max.array.size") + "</div></html>"))
                 .addLabeledComponent("Tensor shape dimensions:", tensorShapeDimensions)
-                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + MessageBundle.message("ui.settings.tensor.shape.dimensions.doc") + "</div></html>"))
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.tensor.shape.dimensions.doc") + "</div></html>"))
                 .getPanel();
 
         dynamicInspectionPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
 
         JPanel debugPanel = FormBuilder.createFormBuilder()
                 .addComponent(saveFileCheckbox)
-                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray; font-size:15px;'>" + MessageBundle.message("ui.settings.comment.debug.file") + "</div></html>"))
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.comment.debug.file") + "</div></html>"))
                 .addLabeledComponent(new JBLabel("Save Location:"), fileSaveLocationField)
                 .getPanel();
 
