@@ -103,7 +103,7 @@ public class TornadoSettingsComponent {
 
             FileChooser.chooseFile(descriptor, null, null, null, file -> {
                 if (file != null) {
-                    myTornadoEnv.setText(file.getPath());
+                    field.setText(file.getPath());
                 }
             });
         });
