@@ -23,7 +23,6 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
-import org.apache.commons.lang3.RandomStringUtils;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
 
 import java.io.BufferedWriter;
@@ -35,7 +34,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.security.SecureRandom;
+
 public class CodeGenerator {
+
+    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final SecureRandom random = new SecureRandom();
+
+    private static String randomAlphanumeric(int length) {
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append(CHARACTERS.charAt(random.nextInt(CHARACTERS.length())));
+        }
+        return sb.toString();
+    }
 
     public static void fileCreationHandler(Project project, List<String> data) throws IOException {
         HashMap<String, PsiMethod> methodFile = new HashMap<>();
@@ -46,7 +58,7 @@ public class CodeGenerator {
         boolean saveFileEnabled = TornadoSettingState.getInstance().saveFileEnabled;
         File dir = FileUtilRt.createTempDirectory("files", null);
         for (PsiMethod method : methods) {
-            String fileName = method.getName() + RandomStringUtils.randomAlphanumeric(5);
+            String fileName = method.getName() + randomAlphanumeric(5);
             File file = createFile(project, method, others, fields, importCodeBlock, fileName, dir);
             if (saveFileEnabled) {
                 saveFileToDisk(file, TornadoSettingState.getInstance().fileSaveLocation);
@@ -86,34 +98,34 @@ public class CodeGenerator {
                 taskGraphParameters.append(", ").append(p.getName());
             }
         }
-        String mainCode = "\n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {\n" +
-                "\n" +
-                variableInit +
-                "TaskGraph taskGraph = new TaskGraph(\"s0\") \n" +
-                ".transferToDevice(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ")\n" +
-                ".task(\"t0\", " + methodWithClass + taskParameters + ") \n" +
-                ".transferToHost(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ");\n" +
-                "ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" +
-                "try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {\n" +
-                "executionPlan.withWarmUp().execute();\n" +
-                "        }\n"+
-                "    }";
-        MessageUtils.getInstance(project).showInfoMsg("Info",variableInit);
+        String mainCode = "\n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {\n" + //
+                "\n" + //
+                variableInit + //
+                "TaskGraph taskGraph = new TaskGraph(\"s0\") \n" + //
+                ".transferToDevice(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ")\n" + //
+                ".task(\"t0\", " + methodWithClass + taskParameters + ") \n" + //
+                ".transferToHost(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ");\n" + //
+                "ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" + //
+                "try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {\n" + //
+                "executionPlan.withWarmUp().execute();\n" + //
+                "        }\n" + //
+                "    }"; //
+        MessageUtils.getInstance(project).showInfoMsg("Info", variableInit);
         try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(javaFile))) {
             System.out.println(javaFile.getPath());
             bufferedWriter.write(importCode + importCodeBlock);
             bufferedWriter.write("\n");
             bufferedWriter.write("public class " + javaFile.getName().replace(".java", "") + "{");
             bufferedWriter.write("\n");
-            for (Map.Entry<String, Object> field: fields.entrySet()) {
+            for (Map.Entry<String, Object> field : fields.entrySet()) {
                 bufferedWriter.write(field.getKey());
                 if (field.getValue() != null) {
-                    bufferedWriter.write(" = "+ field.getValue());
+                    bufferedWriter.write(" = " + field.getValue());
                 }
                 bufferedWriter.write("; \n");
             }
             bufferedWriter.write(method.getText());
-            for (PsiMethod other: others) {
+            for (PsiMethod other : others) {
                 String methodText = other.getText();
                 bufferedWriter.write(methodText);
                 bufferedWriter.write("\n");
@@ -127,12 +139,13 @@ public class CodeGenerator {
         return javaFile;
     }
 
- private static boolean isParameterBoxedType(PsiParameter p) {
-    return switch (p.getTypeElement().getText()) {
-        case "int", "float", "double", "long", "boolean" -> false;
-        default -> true;
-    };
-}
+    private static boolean isParameterBoxedType(PsiParameter p) {
+        return switch (p.getTypeElement().getText()) {
+            case "int", "float", "double", "long", "boolean" -> false;
+            default -> true;
+        };
+    }
+
     private static void saveFileToDisk(File sourceFile, String targetDir) {
         File target = new File(targetDir);
         File targetFile = new File(target, sourceFile.getName());

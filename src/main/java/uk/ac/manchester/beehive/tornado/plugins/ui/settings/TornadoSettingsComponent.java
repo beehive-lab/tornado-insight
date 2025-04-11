@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2025, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ package uk.ac.manchester.beehive.tornado.plugins.ui.settings;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.process.CapturingProcessHandler;
 import com.intellij.execution.process.ProcessOutput;
+import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.ProjectManager;
@@ -65,34 +66,19 @@ public class TornadoSettingsComponent {
 
     public TornadoSettingsComponent() {
         jdkModel = ProjectStructureConfigurable.getInstance(ProjectManager.getInstance().getDefaultProject()).getProjectJdksModel();
-        myJdk = new JdkComboBox(null,
-                jdkModel,
-                sdkTypeId -> JavaSdk.getInstance() == sdkTypeId,
-                null, null, null);
+        myJdk = new JdkComboBox(null, jdkModel, sdkTypeId -> JavaSdk.getInstance() == sdkTypeId, null, null, null);
 
-        myTornadoEnv.addBrowseFolderListener("TornadoVM Root Folder", "Choose the .sh file",
-                null,
-                new FileChooserDescriptor(false, true, false, false, false, false) {
-                });
-
-        fileSaveLocationField.addBrowseFolderListener("Save Location for Generated Code", "Choose the folder you want generated codes to be saved",
-                null,
-                new FileChooserDescriptor(false, true, false, false, false, false) {
-                });
+        attachFolderChooser(myTornadoEnv, "TornadoVM Root Folder", "Choose the .sh file");
+        attachFolderChooser(fileSaveLocationField, "Save Location for Generated Code", "Choose the folder you want generated codes to be saved");
 
         saveFileCheckbox.setSelected(false);
 
-        String INNER_COMMENT = MessageBundle.message("ui.settings.comment.env");
+        String innerComment = MessageBundle.message("ui.settings.comment.env");
 
-        JPanel innerGrid = FormBuilder.createFormBuilder()
-                .addLabeledComponent(new JBLabel("TornadoVM Root:"), myTornadoEnv)
-                .addLabeledComponent(new JBLabel("Java SDK:"), myJdk)
-                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + INNER_COMMENT + "</div></html>"))
-                .addVerticalGap(10)
-                .getPanel();
+        JPanel innerGrid = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel("TornadoVM Root:"), myTornadoEnv).addLabeledComponent(new JBLabel("Java SDK:"), myJdk)
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + innerComment + "</div></html>")).addVerticalGap(10).getPanel();
 
-        JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder()
-                .addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
+        JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.max.array.size") + "</div></html>"))
                 .addLabeledComponent("Tensor shape dimensions:", tensorShapeDimensions)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.tensor.shape.dimensions.doc") + "</div></html>"))
@@ -100,20 +86,27 @@ public class TornadoSettingsComponent {
 
         dynamicInspectionPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
 
-        JPanel debugPanel = FormBuilder.createFormBuilder()
-                .addComponent(saveFileCheckbox)
+        JPanel debugPanel = FormBuilder.createFormBuilder().addComponent(saveFileCheckbox)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.comment.debug.file") + "</div></html>"))
-                .addLabeledComponent(new JBLabel("Save Location:"), fileSaveLocationField)
-                .getPanel();
+                .addLabeledComponent(new JBLabel("Save Location:"), fileSaveLocationField).getPanel();
 
         debugPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.debugging")));
 
-        myMainPanel = FormBuilder.createFormBuilder()
-                .addComponent(innerGrid)
-                .addComponent(dynamicInspectionPanel)
-                .addComponent(debugPanel)
-                .addComponentFillVertically(new JPanel(), 0)
-                .getPanel();
+        myMainPanel = FormBuilder.createFormBuilder().addComponent(innerGrid).addComponent(dynamicInspectionPanel).addComponent(debugPanel).addComponentFillVertically(new JPanel(), 0).getPanel();
+    }
+
+    private void attachFolderChooser(TextFieldWithBrowseButton field, String title, String description) {
+        field.addActionListener(e -> {
+            FileChooserDescriptor descriptor = new FileChooserDescriptor(false, true, false, false, false, false);
+            descriptor.setTitle(title);
+            descriptor.setDescription(description);
+
+            FileChooser.chooseFile(descriptor, null, null, null, file -> {
+                if (file != null) {
+                    field.setText(file.getPath());
+                }
+            });
+        });
     }
 
     public JPanel getPanel() {
@@ -128,11 +121,11 @@ public class TornadoSettingsComponent {
         myTornadoEnv.setText(path);
     }
 
-    public Sdk getJdk(){
+    public Sdk getJdk() {
         return myJdk.getSelectedJdk();
     }
 
-    public void setMyJdk(Sdk sdk){
+    public void setMyJdk(Sdk sdk) {
         myJdk.setSelectedJdk(sdk);
     }
 
@@ -178,7 +171,7 @@ public class TornadoSettingsComponent {
         fileSaveLocationField.setText(path);
     }
 
-    private static String evaluateConditionsOfUserDefinedShape(String shapeString){
+    private static String evaluateConditionsOfUserDefinedShape(String shapeString) {
         String[] stringArray = shapeString.split(",");
         int[] numbers = new int[stringArray.length];
 
@@ -212,8 +205,9 @@ public class TornadoSettingsComponent {
             return evaluateConditionsOfUserDefinedShape(tensorShapeDimensions.getText());
         }
         if (isSaveFileEnabled()) {
-            if (StringUtil.isEmpty(path))
+            if (StringUtil.isEmpty(path)) {
                 return MessageBundle.message("ui.settings.validation.emptyTornadovm");
+            }
             if (myJdk.getSelectedJdk() == null) {
                 return MessageBundle.message("ui.settings.validation.emptyJava");
             }
@@ -230,21 +224,23 @@ public class TornadoSettingsComponent {
         String regEx = "(?:version\\s+)?(\\d+\\.\\d+\\.\\d+)";
         Pattern compile = Pattern.compile(regEx);
         Matcher matcher = compile.matcher(versionString);
-        if (matcher.find()){
+        if (matcher.find()) {
             String version = matcher.group(1);
             String[] split = version.split("\\.");
             int majorVersion = Integer.parseInt(split[0]);
-            if (majorVersion < 21){
+            if (majorVersion < 21) {
                 return MessageBundle.message("ui.settings.validation.javaVersion");
             }
         }
 
-        if (StringUtil.isEmpty(parameterSize)){
+        if (StringUtil.isEmpty(parameterSize)) {
             return MessageBundle.message("ui.settings.validation.emptySize");
         }
         try {
             int size = Integer.parseInt(parameterSize);
-            if (size >= 16384 || size <= 0) return MessageBundle.message("ui.settings.validation.invalidSize");
+            if (size >= 16384 || size <= 0) {
+                return MessageBundle.message("ui.settings.validation.invalidSize");
+            }
         } catch (NumberFormatException e) {
             return MessageBundle.message("ui.settings.validation.invalidSize");
         }
@@ -257,11 +253,8 @@ public class TornadoSettingsComponent {
             GeneralCommandLine commandLine = new GeneralCommandLine();
             commandLine.setExePath("/bin/sh");
             commandLine.addParameter("-c");
-            commandLine.addParameter("export JAVA_HOME=" + EnvironmentVariable.getJavaHome()
-                    + ";export PATH=" + EnvironmentVariable.getPath()
-                    + ";export CMAKE_ROOT=" + EnvironmentVariable.getCmakeRoot()
-                    + ";export TORNADO_SDK=" + EnvironmentVariable.getTornadoSdk()
-                    + ";tornado --device");
+            commandLine.addParameter(
+                    "export JAVA_HOME=" + EnvironmentVariable.getJavaHome() + ";export PATH=" + EnvironmentVariable.getPath() + ";export CMAKE_ROOT=" + EnvironmentVariable.getCmakeRoot() + ";export TORNADO_SDK=" + EnvironmentVariable.getTornadoSdk() + ";tornado --device");
             try {
                 CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
                 System.out.println(commandLine.getCommandLineString());

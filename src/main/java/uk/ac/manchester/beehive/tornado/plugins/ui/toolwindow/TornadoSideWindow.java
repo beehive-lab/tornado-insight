@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2025, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,8 @@ package uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionToolbar;
+import com.intellij.openapi.actionSystem.DataKey;
+import com.intellij.openapi.actionSystem.DataProvider;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.Project;
@@ -58,7 +60,7 @@ public class TornadoSideWindow implements ToolWindowFactory, Disposable {
     public void dispose() {
     }
 
-    private static class ToolWindowContent extends SimpleToolWindowPanel{
+    private static class ToolWindowContent extends SimpleToolWindowPanel implements DataProvider {
 
         JBList<String> TornadoList = new JBList<>();
 
@@ -72,55 +74,64 @@ public class TornadoSideWindow implements ToolWindowFactory, Disposable {
             simpleToolWindowPanel.add(TornadoList);
             setContent(simpleToolWindowPanel);
 
+            ActionToolbar toolbar = ActionManager.getInstance().createActionToolbar("TornadoInsight Toolbar", (DefaultActionGroup) ActionManager.getInstance().getAction("tornado.bar"), true);
+            toolbar.setTargetComponent(simpleToolWindowPanel);
+            setToolbar(toolbar.getComponent());
 
-            ActionToolbar test = ActionManager.getInstance().createActionToolbar(
-                    "TornadoInsight Toolbar",
-                    (DefaultActionGroup) ActionManager.getInstance().getAction("tornado.bar"),
-                    true);
-            test.setTargetComponent(simpleToolWindowPanel);
-            setToolbar(test.getComponent());
             init(project);
-       }
+        }
 
+        public <T> @Nullable T getData(@NotNull DataKey<T> key) {
+            if (key == DataKeys.TORNADOINSIGHT_LIST_MODEL) {
+                return (T) getModel();
+            }
+            if (key == DataKeys.TORNADO_SELECTED_LIST) {
+                return (T) TornadoList.getSelectedValuesList();
+            }
+            if (key == DataKeys.TORNADO_LIST) {
+                return (T) TornadoList;
+            }
+            return null;
+        }
+
+        /**
+         * @deprecated Use {@link #getData(DataKey)} instead.
+         */
+        @Deprecated
         @Override
         public @Nullable Object getData(@NotNull @NonNls String dataId) {
-            if (DataKeys.TORNADOINSIGHT_LIST_MODEL.is(dataId)){
+            if (DataKeys.TORNADOINSIGHT_LIST_MODEL.is(dataId)) {
                 return getModel();
             }
-            if (DataKeys.TORNADO_SELECTED_LIST.is(dataId)){
+            if (DataKeys.TORNADO_SELECTED_LIST.is(dataId)) {
                 return TornadoList.getSelectedValuesList();
             }
-            if (DataKeys.TORNADO_LIST.is(dataId)){
+            if (DataKeys.TORNADO_LIST.is(dataId)) {
                 return TornadoList;
             }
             return null;
         }
 
-        public DefaultListModel<String> getModel(){
+        public DefaultListModel<String> getModel() {
             return (DefaultListModel<String>) TornadoList.getModel();
         }
 
-        public void init(Project project){
-            project.getMessageBus().connect().subscribe(
-                    TornadoTaskRefreshListener.REFRESH_TOPIC,
-                    new TornadoTaskRefreshListener() {
-                        @Override
-                        public void refresh() {
-                            TornadoTWTask.refresh(project,
-                                    Objects.requireNonNull(FileEditorManager.getInstance(project).getSelectedFiles()[0]),
-                                    getModel());
-                        }
+        public void init(Project project) {
+            project.getMessageBus().connect().subscribe(TornadoTaskRefreshListener.REFRESH_TOPIC, new TornadoTaskRefreshListener() {
+                @Override
+                public void refresh() {
+                    TornadoTWTask.refresh(project, Objects.requireNonNull(FileEditorManager.getInstance(project).getSelectedFiles()[0]), getModel());
+                }
 
-                        @Override
-                        public void refresh(Project project, VirtualFile newFile) {
-                            TornadoTWTask.refresh(project, newFile, getModel());
-                        }
-                    }
-            );
+                @Override
+                public void refresh(Project project, VirtualFile newFile) {
+                    TornadoTWTask.refresh(project, newFile, getModel());
+                }
+            });
         }
     }
 
-    private static class InspectorInfoPanel extends SimpleToolWindowPanel{
+    private static class InspectorInfoPanel extends SimpleToolWindowPanel {
 
         JScrollPane scrollPane = new JBScrollPane(InspectorInfoKt.inspectorPane());
 
@@ -133,6 +144,3 @@ public class TornadoSideWindow implements ToolWindowFactory, Disposable {
     }
 
 }
-
-
-
