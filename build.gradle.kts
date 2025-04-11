@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, APT Group, Department of Computer Science,
+ * Copyright (c) 2024-2025, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,7 @@ plugins {
 
 // Define the group and version of the plugin.
 group = "uk.ac.manchester.beehive.tornado.plugins"
-version = "1.2.3"
+version = "1.2.5"
 
 // Define the repositories where dependencies can be fetched.
 repositories {
@@ -37,7 +37,7 @@ repositories {
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
     // Set the version of IntelliJ IDEA that the plugin targets.
-    version.set("2024.2")
+    version.set("2024.3.5")
     // Define the type of the IntelliJ Platform (IC = IntelliJ IDEA Community).
     type.set("IC") // Target IDE Platform
     // Specify any additional plugins this plugin depends on.
@@ -59,7 +59,7 @@ tasks {
     // Configure the plugin's compatibility range with IntelliJ IDEA builds.
     patchPluginXml {
         sinceBuild.set("223")
-        untilBuild.set("242.*")
+        untilBuild.set("251.*")
     }
     // Configure the plugin signing task.
     signPlugin {
@@ -71,4 +71,8 @@ tasks {
     publishPlugin {
         token.set(System.getenv("PUBLISH_TOKEN"))
     }
+}
+
+tasks.named("buildSearchableOptions").configure {
+    enabled = false
 }
