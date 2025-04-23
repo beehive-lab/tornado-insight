@@ -244,8 +244,150 @@ public class TornadoTWTask {
         return importCodeBlock;
     }
 
+    public static PsiFile getPsiFile() {
+        return psiFile;
+    }
+
     private static boolean statementImportsJunit(String importStatement) {
         return importStatement.contains("import org.junit.");
     }
 
+    public static class TaskGraphTransfer {
+        public final String direction; // "device" or "host"
+        public final String mode; // DataTransferMode.X
+        public final List<String> variables;
+
+        public TaskGraphTransfer(String direction, String mode, List<String> variables) {
+            this.direction = direction;
+            this.mode = mode;
+            this.variables = variables;
+        }
+
+        @Override
+        public String toString() {
+            return "transferTo" + capitalize(direction) + "(" + mode + ", " + String.join(", ", variables) + ")";
+        }
+
+        private static String capitalize(String s) {
+            return s.substring(0, 1).toUpperCase() + s.substring(1);
+        }
+    }
+
+    /**
+     * Extracts all unique {@code transferToDevice(...)} and {@code transferToHost(...)} method calls
+     * from a given {@link PsiFile}, specifically those that are part of a {@code TaskGraph} chain.
+     * <p>
+     * The method identifies all {@link PsiMethodCallExpression}s, filters out non-transfer methods,
+     * and ensures that only top-level (non-nested) calls are considered. It deduplicates transfer entries
+     * using a {@link Set} of unique keys formed from the transfer direction, mode, and variables.
+     * Each valid and unique transfer is stored in a {@link TaskGraphTransfer} object and returned.
+     * </p>
+     * <p>
+     * Nested or repeated calls due to fluent-style chains (e.g., {@code .transferToDevice().task().transferToHost()})
+     * are intentionally skipped to avoid duplication.
+     * </p>
+     *
+     * @param psiFile the PSI file representing the source code to analyze
+     * @return a list of unique {@link TaskGraphTransfer} objects representing transfer instructions found in the file
+     */
+    public static List<TaskGraphTransfer> extractTaskGraphTransfers(PsiFile psiFile) {
+        Set<String> seen = new HashSet<>();
+        List<TaskGraphTransfer> result = new ArrayList<>();
+
+        Collection<PsiMethodCallExpression> methodCalls =
+                PsiTreeUtil.findChildrenOfType(psiFile, PsiMethodCallExpression.class);
+
+        for (PsiMethodCallExpression call : methodCalls) {
+            PsiMethod method = call.resolveMethod();
+            if (method == null) {
+                continue;
+            }
+
+            String methodName = method.getName();
+            if (!isTransferMethod(methodName)) {
+                continue;
+            }
+
+            PsiExpression qualifier = call.getMethodExpression().getQualifierExpression();
+            if (qualifier instanceof PsiMethodCallExpression qualifiedCall) {
+                String parentMethod = qualifiedCall.getMethodExpression().getReferenceName();
+                if (isTransferMethod(parentMethod)) {
+                    continue;
+                }
+            }
+            processTransferCall(call, methodName.equals("transferToDevice") ? "device" : "host", result, seen);
+        }
+
+        return result;
+    }
+
+    private static boolean isTransferMethod(String name) {
+        return "transferToDevice".equals(name) || "transferToHost".equals(name);
+    }
+
+    /**
+     * Processes a {@code transferToDevice(...)} or {@code transferToHost(...)} method call within a TaskGraph chain
+     * and adds a corresponding {@link TaskGraphTransfer} entry to the result list if it hasn't already been seen.
+     * <p>
+     * The method extracts the {@link DataTransferMode} and all variables passed in the call. It uses a combination
+     * of transfer direction, mode, and variable names to create a unique key for deduplication. If this key has
+     * not been previously processed, it adds a new {@code TaskGraphTransfer} to the output.
+     * </p>
+     *
+     * @param call     the {@link PsiMethodCallExpression} representing the transfer method call
+     * @param direction the direction of transfer, either {@code "device"} or {@code "host"}
+     * @param result   the list collecting unique {@link TaskGraphTransfer} entries
+     * @param seen     a set of keys used to track and avoid duplicate transfer instructions
+     */
+    private static void processTransferCall(PsiMethodCallExpression call, String direction,
+            List<TaskGraphTransfer> result, Set<String> seen) {
+        PsiExpression[] args = call.getArgumentList().getExpressions();
+        if (args.length < 2) return;
+
+        String mode = args[0].getText();
+        List<String> vars = new ArrayList<>();
+        for (int i = 1; i < args.length; i++) {
+            vars.add(args[i].getText());
+        }
+
+        String key = direction + "::" + mode + "::" + String.join(",", vars);
+        if (seen.contains(key)) return;
+        seen.add(key);
+
+        result.add(new TaskGraphTransfer(direction, mode, vars));
+    }
+
+    /**
+     * Attempts to extract the original TaskGraph declaration from the given {@link PsiFile}
+     * that includes a {@code .task(...)} invocation matching the provided method name.
+     * <p>
+     * If a matching {@code TaskGraph} declaration is found, the method reference (e.g., {@code SomeClass::someMethod})
+     * in the {@code .task(...)} call is replaced with the provided {@code methodWithClass}, ensuring the generated
+     * file references the correct target method.
+     * </p>
+     *
+     * @param psiFile         the PSI file to search for TaskGraph declarations
+     * @param methodName      the name of the method to match in the .task(...) call (e.g., "vectorAddFloat")
+     * @param methodWithClass the replacement method reference (e.g., "GeneratedClassName::vectorAddFloat")
+     * @return an {@code Optional<String>} containing the updated TaskGraph declaration if found; otherwise, {@code Optional.empty()}
+     */
+    public static Optional<String> extractOriginalTaskGraphDeclaration(PsiFile psiFile, String methodName, String methodWithClass) {
+        Collection<PsiDeclarationStatement> declarations = PsiTreeUtil.findChildrenOfType(psiFile, PsiDeclarationStatement.class);
+        for (PsiDeclarationStatement declaration : declarations) {
+            for (PsiElement element : declaration.getDeclaredElements()) {
+                if (element instanceof PsiLocalVariable variable) {
+                    PsiType type = variable.getType();
+                    if (type.getCanonicalText().contains("TaskGraph")) {
+                        String code = declaration.getText();
+                        if (code.contains(".task(") && code.contains(methodName)) {
+
+                            String updatedCode = code.replaceAll("(\\.task\\s*\\(\\s*\"[^\"]+\"\\s*,\\s*)([\\w\\.]+::\\w+)","$1" + methodWithClass);
+                            return Optional.of(updatedCode);
+                        }
+                    }
+                }
+            }
+        }
+        return Optional.empty();
+    }
 }
