@@ -120,7 +120,13 @@ public class TornadoSideWindow implements ToolWindowFactory, Disposable {
             project.getMessageBus().connect().subscribe(TornadoTaskRefreshListener.REFRESH_TOPIC, new TornadoTaskRefreshListener() {
                 @Override
                 public void refresh() {
-                    TornadoTWTask.refresh(project, Objects.requireNonNull(FileEditorManager.getInstance(project).getSelectedFiles()[0]), getModel());
+                    VirtualFile[] selectedFiles = FileEditorManager.getInstance(project).getSelectedFiles();
+                    if (selectedFiles.length > 0) {
+                        TornadoTWTask.refresh(project, selectedFiles[0], getModel());
+                    } else {
+                        // Optional: handle the case where no file is selected
+                        System.out.println("No file selected in editor for Tornado refresh.");
+                    }
                 }
 
                 @Override

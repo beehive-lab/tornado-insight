@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2025, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,41 +24,56 @@ import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.startup.StartupActivity;
+import com.intellij.openapi.startup.ProjectActivity;
+import kotlin.coroutines.Continuation;
+import org.jetbrains.annotations.NotNull;
 import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
-public class TornadoSettingListener implements StartupActivity {
+/**
+ * Initializes TornadoVM settings on project open.
+ * Migrated from StartupActivity to ProjectActivity.
+ */
+public class TornadoSettingListener implements ProjectActivity {
+
     @Override
-    public void runActivity(@NotNull Project project) {
-        if (TornadoSettingState.getInstance().TornadoRoot == null) {
-            TornadoSettingState.getInstance().isValid = false;
-            Notification notification = new Notification("Print", "TornadoVM",
-                    "Please configure the TornadoVM environment variable file", NotificationType.INFORMATION);
+    public @NotNull CompletableFuture<Void> execute(@NotNull Project project, @NotNull Continuation<? super kotlin.Unit> continuation) {
+        TornadoSettingState settingState = TornadoSettingState.getInstance();
+
+        if (settingState.TornadoRoot == null) {
+            settingState.isValid = false;
+            Notification notification = new Notification(
+                    "Print", "TornadoVM",
+                    "Please configure the TornadoVM environment variable file",
+                    NotificationType.INFORMATION
+            );
             notification.addAction(new OpenTornadoSettingAction());
             Notifications.Bus.notify(notification, project);
-        }else {
-            TornadoSettingState.getInstance().isValid = true;
+        } else {
+            settingState.isValid = true;
             try {
-                EnvironmentVariable.parseFile(TornadoSettingState.getInstance().TornadoRoot + "/setvars.sh");
+                EnvironmentVariable.parseFile(settingState.TornadoRoot + "/setvars.sh");
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Failed to load TornadoVM environment variables", e);
             }
         }
+
+        return CompletableFuture.completedFuture(null);
     }
 
+    /**
+     * Action to open TornadoVM plugin settings from the notification.
+     */
     static class OpenTornadoSettingAction extends NotificationAction {
-
         public OpenTornadoSettingAction() {
             super("Configure TornadoVM");
         }
 
         @Override
         public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
-            // To show specific Configurable, TornadoVM
             ShowSettingsUtil.getInstance().showSettingsDialog(e.getProject(), "TornadoVM");
             notification.expire();
         }

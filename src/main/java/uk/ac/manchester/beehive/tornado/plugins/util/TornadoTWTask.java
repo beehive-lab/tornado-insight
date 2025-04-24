@@ -17,11 +17,14 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.util;
 
+import com.intellij.openapi.application.ModalityState;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.intellij.util.concurrency.AppExecutorUtil;
 import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
 
 import javax.swing.*;
@@ -48,24 +51,49 @@ public class TornadoTWTask {
      * @param project the IntelliJ project
      * @param model the list model to which tasks should be added
      */
-    public static void refresh(Project project, VirtualFile virtualFile, DefaultListModel<String> model){
+    public static void refresh(Project project, VirtualFile virtualFile, DefaultListModel<String> model) {
         if (DumbService.isDumb(project) || model == null) return;
-        model.clear();
-        taskList = new ArrayList<>();
-        taskMap = new HashMap<>();
-        PsiFile file = PsiManager.getInstance(project).findFile(virtualFile);
-        psiFile = file;
-        assert file != null;
-        importCodeBlock = getImportCode(file);
-        taskList = findSuitableMethods(file);
-        if (taskList == null) return;
-        for (PsiMethod task : taskList) {
-            if (validateTask(task)) {
-                String displayName = psiMethodFormat(task);
-                taskMap.put(displayName, task);
-                model.addElement(displayName);
+
+        ReadAction.nonBlocking(() -> {
+            DefaultListModel<String> newModel = new DefaultListModel<>();
+            List<PsiMethod> newTaskList = new ArrayList<>();
+            Map<String, PsiMethod> newTaskMap = new HashMap<>();
+
+            PsiFile file = PsiManager.getInstance(project).findFile(virtualFile);
+            if (file == null) return null;
+
+            List<PsiMethod> tasks = findSuitableMethods(file);
+            String imports = getImportCode(file);
+
+            if (tasks != null) {
+                for (PsiMethod task : tasks) {
+                    if (validateTask(task)) {
+                        String displayName = psiMethodFormat(task);
+                        newTaskList.add(task);
+                        newTaskMap.put(displayName, task);
+                        newModel.addElement(displayName);
+                    }
+                }
             }
-        }
+
+            // Store global state
+            taskList = newTaskList;
+            taskMap = newTaskMap;
+            psiFile = file;
+            importCodeBlock = imports;
+
+            return newModel;
+
+        }).inSmartMode(project)
+        .expireWith(project)
+        .finishOnUiThread(ModalityState.defaultModalityState(), newModel -> {
+            if (newModel != null) {
+                model.clear();
+                for (int i = 0; i < newModel.size(); i++) {
+                    model.addElement(newModel.get(i));
+                }
+            }
+        }).submit(AppExecutorUtil.getAppExecutorService());
     }
 
     public static Map<String, Object> getFields() {
