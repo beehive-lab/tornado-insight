@@ -19,10 +19,11 @@ package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.io.FileUtilRt;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
+import org.jetbrains.annotations.NotNull;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
-import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
 
 import java.io.BufferedWriter;
@@ -35,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.security.SecureRandom;
+import java.util.Optional;
 
 public class CodeGenerator {
 
@@ -56,10 +58,14 @@ public class CodeGenerator {
         Map<String, Object> fields = TornadoTWTask.getFields();
         String importCodeBlock = TornadoTWTask.getImportCodeBlock();
         boolean saveFileEnabled = TornadoSettingState.getInstance().saveFileEnabled;
+
+        PsiFile psiFile = TornadoTWTask.getPsiFile();
+        List<TornadoTWTask.TaskGraphTransfer> transfers = TornadoTWTask.extractTaskGraphTransfers(psiFile);
+
         File dir = FileUtilRt.createTempDirectory("files", null);
         for (PsiMethod method : methods) {
             String fileName = method.getName() + randomAlphanumeric(5);
-            File file = createFile(project, method, others, fields, importCodeBlock, fileName, dir);
+            File file = createFile(method, others, fields, importCodeBlock, transfers, fileName, dir);
             if (saveFileEnabled) {
                 saveFileToDisk(file, TornadoSettingState.getInstance().fileSaveLocation);
             }
@@ -69,7 +75,7 @@ public class CodeGenerator {
         executionEngine.run();
     }
 
-    private static File createFile(Project project, PsiMethod method, ArrayList<PsiMethod> others, Map<String, Object> fields, String importCodeBlock, String filename, File dir) {
+    private static File createFile(PsiMethod method, ArrayList<PsiMethod> others, Map<String, Object> fields, String importCodeBlock, List<TornadoTWTask.TaskGraphTransfer> transfers, String filename, File dir) {
         File javaFile;
         try {
             javaFile = FileUtilRt.createTempFile(dir, filename, ".java", true);
@@ -78,65 +84,88 @@ public class CodeGenerator {
         }
 
         String importCode = """
-                import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
-                import uk.ac.manchester.tornado.api.TaskGraph;
-                import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
-                import uk.ac.manchester.tornado.api.annotations.Parallel;
-                import uk.ac.manchester.tornado.api.annotations.Reduce;
-                import uk.ac.manchester.tornado.api.enums.DataTransferMode;
-                import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
-                import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
-                """;
-        StringBuilder taskParameters = new StringBuilder();
-        StringBuilder taskGraphParameters = new StringBuilder();
+            import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
+            import uk.ac.manchester.tornado.api.TaskGraph;
+            import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
+            import uk.ac.manchester.tornado.api.annotations.Parallel;
+            import uk.ac.manchester.tornado.api.annotations.Reduce;
+            import uk.ac.manchester.tornado.api.enums.DataTransferMode;
+            import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
+            """;
+
         String methodWithClass = filename + "::" + method.getName();
+
         String variableInit = VariableInit.variableInitHelper(method);
+        Optional<String> maybeOriginalTaskGraph = TornadoTWTask.extractOriginalTaskGraphDeclaration(TornadoTWTask.getPsiFile(), method.getName(), methodWithClass);
+        String mainCode = getTaskGraphCode(method, maybeOriginalTaskGraph, variableInit, methodWithClass);
 
-        for (PsiParameter p : method.getParameterList().getParameters()) {
-            taskParameters.append(", ").append(p.getName());
-            if (isParameterBoxedType(p)) {
-                taskGraphParameters.append(", ").append(p.getName());
-            }
-        }
-        String mainCode = "\n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {\n" + //
-                "\n" + //
-                variableInit + //
-                "TaskGraph taskGraph = new TaskGraph(\"s0\") \n" + //
-                ".transferToDevice(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ")\n" + //
-                ".task(\"t0\", " + methodWithClass + taskParameters + ") \n" + //
-                ".transferToHost(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ");\n" + //
-                "ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" + //
-                "try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {\n" + //
-                "executionPlan.withWarmUp().execute();\n" + //
-                "        }\n" + //
-                "    }"; //
-        MessageUtils.getInstance(project).showInfoMsg("Info", variableInit);
-        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(javaFile))) {
-            System.out.println(javaFile.getPath());
-            bufferedWriter.write(importCode + importCodeBlock);
-            bufferedWriter.write("\n");
-            bufferedWriter.write("public class " + javaFile.getName().replace(".java", "") + "{");
-            bufferedWriter.write("\n");
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(javaFile))) {
+            writer.write(importCode + importCodeBlock);
+            writer.write("\n");
+            writer.write("public class " + javaFile.getName().replace(".java", "") + " {\n");
+
             for (Map.Entry<String, Object> field : fields.entrySet()) {
-                bufferedWriter.write(field.getKey());
+                writer.write(field.getKey());
                 if (field.getValue() != null) {
-                    bufferedWriter.write(" = " + field.getValue());
+                    writer.write(" = " + field.getValue());
                 }
-                bufferedWriter.write("; \n");
-            }
-            bufferedWriter.write(method.getText());
-            for (PsiMethod other : others) {
-                String methodText = other.getText();
-                bufferedWriter.write(methodText);
-                bufferedWriter.write("\n");
+                writer.write(";\n");
             }
 
-            bufferedWriter.write(mainCode);
-            bufferedWriter.write("}");
+            writer.write(method.getText());
+            for (PsiMethod other : others) {
+                writer.write(other.getText());
+                writer.write("\n");
+            }
+
+            writer.write(mainCode);
+            writer.write("}");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         return javaFile;
+    }
+
+    private static @NotNull String getTaskGraphCode(PsiMethod method, Optional<String> maybeOriginalTaskGraph, String variableInit, String methodWithClass) {
+        boolean isChainComplete = maybeOriginalTaskGraph.isPresent() && maybeOriginalTaskGraph.get().contains(".task(");
+        String mainCode;
+
+        if (isChainComplete) {
+            mainCode = """
+            \n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {
+            %s
+            %s
+            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+            try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {
+                executionPlan.withWarmUp().execute();
+            }
+            }
+            """.formatted(variableInit, maybeOriginalTaskGraph.get());
+        } else {
+            // Fallback: Dynamically build TaskGraph from method parameters
+            StringBuilder taskParameters = new StringBuilder();
+            StringBuilder taskGraphParameters = new StringBuilder();
+
+            for (PsiParameter p : method.getParameterList().getParameters()) {
+                taskParameters.append(", ").append(p.getName());
+                if (isParameterBoxedType(p)) {
+                    taskGraphParameters.append(", ").append(p.getName());
+                }
+            }
+            mainCode = "\n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {\n" + //
+                    "\n" + //
+                    variableInit + //
+                    "TaskGraph taskGraph = new TaskGraph(\"insightTaskGraphName\") \n" + //
+                    ".transferToDevice(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ")\n" + //
+                    ".task(\"insightTaskName\", " + methodWithClass + taskParameters + ") \n" + //
+                    ".transferToHost(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ");\n" + //
+                    "ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" + //
+                    "try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {\n" + //
+                    "executionPlan.withWarmUp().execute();\n" + //
+                    "        }\n" + //
+                    "    }"; //
+        }
+        return mainCode;
     }
 
     private static boolean isParameterBoxedType(PsiParameter p) {
