@@ -53,9 +53,13 @@ public class TornadoSettingsComponent {
 
     private final TextFieldWithBrowseButton myTornadoEnv = new TextFieldWithBrowseButton();
 
+    private final JCheckBox bytecodeVisualizerCheckbox = new JCheckBox("Use the TornadoVM Bytecode Visualizer Tool");
+
     private final JCheckBox saveFileCheckbox = new JCheckBox("Save Internal Debug File (For Developer Use Only)");
 
-    private final TextFieldWithBrowseButton fileSaveLocationField = new TextFieldWithBrowseButton();
+    private final TextFieldWithBrowseButton debugFileSaveLocationField = new TextFieldWithBrowseButton();
+
+    private final TextFieldWithBrowseButton bytecodesFileSaveLocationField = new TextFieldWithBrowseButton();
 
     private ProjectSdksModel jdkModel;
 
@@ -69,14 +73,22 @@ public class TornadoSettingsComponent {
         myJdk = new JdkComboBox(null, jdkModel, sdkTypeId -> JavaSdk.getInstance() == sdkTypeId, null, null, null);
 
         attachFolderChooser(myTornadoEnv, "TornadoVM Root Folder", "Choose the .sh file");
-        attachFolderChooser(fileSaveLocationField, "Save Location for Generated Code", "Choose the folder you want generated codes to be saved");
+        attachFolderChooser(debugFileSaveLocationField, "Save Location for Generated Code", "Choose the folder you want generated codes to be saved");
+        attachFolderChooser(bytecodesFileSaveLocationField, "Save Location for TornadoVM Bytecodes", "Choose the folder you want the TornadoVM Bytecodes to be saved");
 
+        bytecodeVisualizerCheckbox.setSelected(false);
         saveFileCheckbox.setSelected(false);
 
         String innerComment = MessageBundle.message("ui.settings.comment.env");
 
         JPanel innerGrid = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel("TornadoVM Root:"), myTornadoEnv).addLabeledComponent(new JBLabel("Java SDK:"), myJdk)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + innerComment + "</div></html>")).addVerticalGap(10).getPanel();
+
+
+        JPanel bytecodesVisualizerPanel = FormBuilder.createFormBuilder().addComponent(bytecodeVisualizerCheckbox)
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.comment.visualizer.file") + "</div></html>"))
+                .addLabeledComponent(new JBLabel("Save Location:"), bytecodesFileSaveLocationField).getPanel();
+        bytecodesVisualizerPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.visualizer")));
 
         JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.max.array.size") + "</div></html>"))
@@ -88,11 +100,11 @@ public class TornadoSettingsComponent {
 
         JPanel debugPanel = FormBuilder.createFormBuilder().addComponent(saveFileCheckbox)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.comment.debug.file") + "</div></html>"))
-                .addLabeledComponent(new JBLabel("Save Location:"), fileSaveLocationField).getPanel();
+                .addLabeledComponent(new JBLabel("Save Location:"), debugFileSaveLocationField).getPanel();
 
         debugPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.debugging")));
 
-        myMainPanel = FormBuilder.createFormBuilder().addComponent(innerGrid).addComponent(dynamicInspectionPanel).addComponent(debugPanel).addComponentFillVertically(new JPanel(), 0).getPanel();
+        myMainPanel = FormBuilder.createFormBuilder().addComponent(innerGrid).addComponent(bytecodesVisualizerPanel).addComponent(dynamicInspectionPanel).addComponent(debugPanel).addComponentFillVertically(new JPanel(), 0).getPanel();
     }
 
     private void attachFolderChooser(TextFieldWithBrowseButton field, String title, String description) {
@@ -129,6 +141,14 @@ public class TornadoSettingsComponent {
         myJdk.setSelectedJdk(sdk);
     }
 
+    public boolean isBytecodeVisualizerEnabled() {
+        return bytecodeVisualizerCheckbox.isSelected();
+    }
+
+    public void setBytecodeVisualizerEnabled(boolean enabled) {
+        bytecodeVisualizerCheckbox.setSelected(enabled);
+    }
+
     public int getMaxArraySize() {
         if (myMaxArraySize.getText().isEmpty() || Objects.equals(myMaxArraySize.getText(), "0")) {
             return 32;
@@ -163,12 +183,20 @@ public class TornadoSettingsComponent {
         saveFileCheckbox.setSelected(enabled);
     }
 
-    public String getFileSaveLocation() {
-        return fileSaveLocationField.getText();
+    public String getDebugFileSaveLocation() {
+        return debugFileSaveLocationField.getText();
     }
 
-    public void setFileSaveLocation(String path) {
-        fileSaveLocationField.setText(path);
+    public void setDebugFileSaveLocation(String path) {
+        debugFileSaveLocationField.setText(path);
+    }
+
+    public String getBytecodesFileSaveLocation() {
+        return bytecodesFileSaveLocationField.getText();
+    }
+
+    public void setBytecodesFileSaveLocation(String path) {
+        bytecodesFileSaveLocationField.setText(path);
     }
 
     private static String evaluateConditionsOfUserDefinedShape(String shapeString) {
@@ -211,7 +239,7 @@ public class TornadoSettingsComponent {
             if (myJdk.getSelectedJdk() == null) {
                 return MessageBundle.message("ui.settings.validation.emptyJava");
             }
-            String saveLocation = fileSaveLocationField.getText();
+            String saveLocation = debugFileSaveLocationField.getText();
             if (saveLocation.isEmpty()) {
                 return MessageBundle.message("ui.settings.validation.emptySave");
             }

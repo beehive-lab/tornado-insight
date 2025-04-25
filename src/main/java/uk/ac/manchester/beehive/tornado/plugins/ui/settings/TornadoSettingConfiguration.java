@@ -56,10 +56,12 @@ public class TornadoSettingConfiguration implements Configurable {
         if (mySettingsComponent.getJdk() == null) return true;
         boolean modified = !mySettingsComponent.getJdk().equals(settings.JdkPath);
         modified |= !mySettingsComponent.getTornadoEnvPath().equals(settings.TornadoRoot);
+        modified |= mySettingsComponent.isBytecodeVisualizerEnabled() != settings.bytecodeVisualizerEnabled;
         modified |= mySettingsComponent.getMaxArraySize() != settings.parameterSize;
         modified |= mySettingsComponent.getTensorShapeDimensions() != settings.tensorShapeDimensions;
         modified |= mySettingsComponent.isSaveFileEnabled() != settings.saveFileEnabled;
-        modified |= !mySettingsComponent.getFileSaveLocation().equals(settings.fileSaveLocation);
+        modified |= !mySettingsComponent.getDebugFileSaveLocation().equals(settings.debugFileSaveLocation);
+        modified |= !mySettingsComponent.getBytecodesFileSaveLocation().equals(settings.bytecodesFileSaveLocation);
         return modified;
     }
 
@@ -71,13 +73,15 @@ public class TornadoSettingConfiguration implements Configurable {
             settings.isValid = false;
             throw new ConfigurationException(error);
         }
-        settings.isValid = true;
+//        settings.isValid = true;
         settings.TornadoRoot = mySettingsComponent.getTornadoEnvPath();
         settings.JdkPath = mySettingsComponent.getJdk();
+        settings.bytecodeVisualizerEnabled = mySettingsComponent.isBytecodeVisualizerEnabled();
         settings.parameterSize = mySettingsComponent.getMaxArraySize();
         settings.tensorShapeDimensions = mySettingsComponent.getTensorShapeDimensions();
         settings.saveFileEnabled = mySettingsComponent.isSaveFileEnabled();
-        settings.fileSaveLocation = mySettingsComponent.getFileSaveLocation();
+        settings.debugFileSaveLocation = mySettingsComponent.getDebugFileSaveLocation();
+        settings.bytecodesFileSaveLocation = mySettingsComponent.getBytecodesFileSaveLocation();
     }
 
     //The method is invoked immediately after createComponent().
@@ -86,10 +90,12 @@ public class TornadoSettingConfiguration implements Configurable {
         TornadoSettingState settings = TornadoSettingState.getInstance();
         mySettingsComponent.setTornadoEnvPath(settings.TornadoRoot);
         mySettingsComponent.setMyJdk(settings.JdkPath);
+        mySettingsComponent.setBytecodeVisualizerEnabled(settings.bytecodeVisualizerEnabled);
         mySettingsComponent.setMaxArraySize(settings.parameterSize);
         mySettingsComponent.setTensorShapeDimensions(settings.tensorShapeDimensions);
         mySettingsComponent.setSaveFileEnabled(settings.saveFileEnabled);
-        mySettingsComponent.setFileSaveLocation(settings.fileSaveLocation);
+        mySettingsComponent.setDebugFileSaveLocation(settings.debugFileSaveLocation);
+        mySettingsComponent.setBytecodesFileSaveLocation(settings.bytecodesFileSaveLocation);
     }
 
     @Override

@@ -67,7 +67,7 @@ public class CodeGenerator {
             String fileName = method.getName() + randomAlphanumeric(5);
             File file = createFile(method, others, fields, importCodeBlock, transfers, fileName, dir);
             if (saveFileEnabled) {
-                saveFileToDisk(file, TornadoSettingState.getInstance().fileSaveLocation);
+                saveFileToDisk(file, TornadoSettingState.getInstance().debugFileSaveLocation);
             }
             methodFile.put(file.getAbsolutePath(), method);
         }
