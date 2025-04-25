@@ -1,3 +1,3 @@
-[submodule "lib/tornadovm-bytecode-analyzer"]
-	path = lib/tornadovm-bytecode-analyzer
+[submodule "src/main/resources/lib/tornadovm-bytecode-analyzer"]
+	path = src/main/resources/lib/tornadovm-bytecode-analyzer
 	url = https://github.com/beehive-lab/tornadovm-bytecode-analyzer.git
