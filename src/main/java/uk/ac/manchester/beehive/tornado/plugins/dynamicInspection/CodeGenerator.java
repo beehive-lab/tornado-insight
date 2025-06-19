@@ -107,7 +107,7 @@ public class CodeGenerator {
                 ".transferToHost(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ");\n" + //
                 "ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" + //
                 "try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {\n" + //
-                "executionPlan.withWarmUp().execute();\n" + //
+                "executionPlan.execute();\n" + //
                 "        }\n" + //
                 "    }"; //
         MessageUtils.getInstance(project).showInfoMsg("Info", variableInit);
