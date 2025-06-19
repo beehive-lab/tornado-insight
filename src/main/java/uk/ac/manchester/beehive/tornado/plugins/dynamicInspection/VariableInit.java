@@ -85,8 +85,13 @@ public class VariableInit {
                     "= new ByteArray(" + size + ");" + name + ".init(" + generateValueByType("Byte") + ");";
             case "LongArray" ->
                     "= new LongArray(" + size + ");" + name + ".init(" + generateValueByType("Long") + ");";
-            case "Matrix2DFloat", "Matrix2DFloat4", "Matrix2DDouble", "Matrix2DInt" -> matrix2DInit(type, name);
+            case "Matrix2DFloat", "Matrix2DFloat4", "Matrix2DDouble", "Matrix2DInt" -> matrix2DInit(type, name, "Int");
+            case "Matrix3DInt" -> matrix3DInit(type, name, "Int");
+            case "Matrix3DShort" -> matrix3DInit(type, name, "Short");
             case "Matrix3DFloat", "Matrix3DFloat4", "Matrix" -> matrix3DInit(type, name, "Float");
+            case "Matrix3DLong" -> matrix3DInit(type, name, "Long");
+            case "Matrix3DDouble" -> matrix3DInit(type, name, "Double");
+            case "Matrix4x4Float" -> matrix1DInit(type, name, "Float");
             case "ImageByte3", "ImageByte4" -> imageInit(type,name, "Byte");
             case "ImageFloat", "ImageFloat3", "ImageFloat4", "ImageFloat8" -> imageInit(type, name, "Float");
             case "VectorInt", "VectorInt2", "VectorInt3", "VectorInt4", "VectorInt8", "VectorInt16" -> vectorInit(name, type, "Int");
@@ -126,16 +131,29 @@ public class VariableInit {
         return builder.toString();
     }
 
-    private static String matrix2DInit(String type, String name){
+    private static String matrix1DInit(String type, String name, String primitive){
+        return " = new " + type + "();" +
+                "for (int i = 0; i <" + name + ".size()" + "; i++) { " +
+                name + ".set(i, " + generateValueByType(primitive) + ");" +
+                "}";
+    }
+
+    private static String matrix2DInit(String type, String name, String primitive){
         return " = new " + type + "(" + parameterSize + "," + parameterSize + ");" +
                 "for (int i = 0; i <" + parameterSize + "; i++) { " +
                 "for (int j = 0; j < " + parameterSize + "; j++) {" + "\n" +
-                name + ".set(i, j, " + generateValueByType(type.split("Matrix2D")[1]) + ");" +
+                name + ".set(i, j, " + generateValueByType(primitive) + ");" +
                 "}" +
                 "}";
     }
 
     private static String matrix3DInit(String type, String name, String primitive){
+        if (primitive.equals("Short")){
+            String castedType = primitive.toLowerCase();
+            String emittedCastedOperation = ".fill((" + castedType + ")";
+            return " = new " + type + "(" + parameterSize + "," + parameterSize + "," + parameterSize + ");" + "\n" +
+                    name + emittedCastedOperation  + generateValueByType(primitive) + ");";
+        }
         return " = new " + type + "(" + parameterSize + "," + parameterSize + "," + parameterSize + ");" + "\n" +
                 name  + ".fill(" + generateValueByType(primitive) + ");";
     }
