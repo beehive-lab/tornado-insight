@@ -1,18 +1,18 @@
 /*
  * Copyright (c) 2023, APT Group, Department of Computer Science,
- *  The University of Manchester.
+ * The University of Manchester.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
@@ -75,7 +75,8 @@ public class CodeGenerator {
         executionEngine.run();
     }
 
-    private static File createFile(PsiMethod method, ArrayList<PsiMethod> others, Map<String, Object> fields, String importCodeBlock, List<TornadoTWTask.TaskGraphTransfer> transfers, String filename, File dir) {
+    private static File createFile(PsiMethod method, ArrayList<PsiMethod> others, Map<String, Object> fields, String importCodeBlock, List<TornadoTWTask.TaskGraphTransfer> transfers, String filename,
+            File dir) {
         File javaFile;
         try {
             javaFile = FileUtilRt.createTempFile(dir, filename, ".java", true);
@@ -84,14 +85,14 @@ public class CodeGenerator {
         }
 
         String importCode = """
-            import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
-            import uk.ac.manchester.tornado.api.TaskGraph;
-            import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
-            import uk.ac.manchester.tornado.api.annotations.Parallel;
-            import uk.ac.manchester.tornado.api.annotations.Reduce;
-            import uk.ac.manchester.tornado.api.enums.DataTransferMode;
-            import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
-            """;
+                import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
+                import uk.ac.manchester.tornado.api.TaskGraph;
+                import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
+                import uk.ac.manchester.tornado.api.annotations.Parallel;
+                import uk.ac.manchester.tornado.api.annotations.Reduce;
+                import uk.ac.manchester.tornado.api.enums.DataTransferMode;
+                import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
+                """;
 
         String methodWithClass = filename + "::" + method.getName();
 
@@ -132,15 +133,15 @@ public class CodeGenerator {
 
         if (isChainComplete) {
             mainCode = """
-            \n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {
-            %s
-            %s
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {
-                executionPlan.withWarmUp().execute();
-            }
-            }
-            """.formatted(variableInit, maybeOriginalTaskGraph.get());
+                    \n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {
+                    %s
+                    %s
+                    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+                    try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {
+                        executionPlan.execute();
+                    }
+                    }
+                    """.formatted(variableInit, maybeOriginalTaskGraph.get());
         } else {
             // Fallback: Dynamically build TaskGraph from method parameters
             StringBuilder taskParameters = new StringBuilder();
@@ -161,7 +162,7 @@ public class CodeGenerator {
                     ".transferToHost(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ");\n" + //
                     "ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" + //
                     "try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {\n" + //
-                    "executionPlan.withWarmUp().execute();\n" + //
+                    "executionPlan.execute();\n" + //
                     "        }\n" + //
                     "    }"; //
         }
