@@ -36,18 +36,44 @@ public class BytecodeAnalyzerAction extends AnAction {
 
     private static Process streamlitProcess;
 
+    /**
+     * Check if Streamlit is installed and available.
+     *
+     * @return true if Streamlit is available, false otherwise
+     */
+    private boolean isStreamlitAvailable() {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("python3", "-m", "streamlit", "--version");
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            int exitCode = process.waitFor();
+            return exitCode == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     @Override
     public void actionPerformed(AnActionEvent e) {
         Project project = e.getProject();
 
         if (!TornadoSettingState.getInstance().bytecodeVisualizerEnabled) {
-            Messages.showInfoMessage(project, MessageBundle.message("ui.settings.group.visualizer.disabled"), "Warning");
+            Messages.showInfoMessage(project,
+                    MessageBundle.message("ui.settings.group.visualizer.disabled"),
+                    "Warning");
             return;
         }
 
         try {
+            if (!isStreamlitAvailable()) {
+                Messages.showErrorDialog(project,MessageBundle.message("ui.settings.group.visualizer.not.found"),
+                        "Streamlit Not Found");
+                return;
+            }
+
             if (streamlitProcess == null || !streamlitProcess.isAlive()) {
-                InputStream scriptStream = getClass().getResourceAsStream("/lib/tornadovm-bytecode-analyzer/tornado-visualizer-fixed.py");
+                InputStream scriptStream = getClass().getResourceAsStream(
+                        "/lib/tornadovm-bytecode-analyzer/tornado-visualizer-fixed.py");
                 if (scriptStream == null) {
                     throw new FileNotFoundException("The TornadoVM Visualizer Python script not found in plugin resources.");
                 }
@@ -62,7 +88,6 @@ public class BytecodeAnalyzerAction extends AnAction {
                 );
 
                 pb.redirectErrorStream(true);
-
                 streamlitProcess = pb.start();
 
                 // Wait a few seconds to let Streamlit start (better: check port availability)
@@ -80,7 +105,9 @@ public class BytecodeAnalyzerAction extends AnAction {
             frame.setVisible(true);
 
         } catch (Exception ex) {
-            Messages.showErrorDialog(project, "Failed to run analysis:\n" + ex.getMessage(), "Error");
+            Messages.showErrorDialog(project,
+                    "Failed to run analysis:\n" + ex.getMessage(),
+                    "Error");
         }
     }
 }
