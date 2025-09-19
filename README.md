@@ -64,7 +64,7 @@ The output of this folder is as follows:
      |-main
        |-java (plugin sources)
        |-resources (plugin resources - the plugin.xml file lives here)
-       |-lib
+         |-lib
            |-tornadovm-bytecode-analyzer
    |-build (where build files are stored)
        |-distributions (where the plugin zip file is generated)   
