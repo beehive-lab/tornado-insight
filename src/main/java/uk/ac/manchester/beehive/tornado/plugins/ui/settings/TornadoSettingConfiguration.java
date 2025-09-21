@@ -73,7 +73,6 @@ public class TornadoSettingConfiguration implements Configurable {
             settings.isValid = false;
             throw new ConfigurationException(error);
         }
-//        settings.isValid = true;
         settings.TornadoRoot = mySettingsComponent.getTornadoEnvPath();
         settings.JdkPath = mySettingsComponent.getJdk();
         settings.bytecodeVisualizerEnabled = mySettingsComponent.isBytecodeVisualizerEnabled();
