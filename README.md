@@ -48,6 +48,12 @@ is displayed in the bottom right corner.
 ## How to use TornadoInsight?
 This section covers the initial steps that are required in order to correctly setup the plugin project inside the IntelliJ IDE.
 
+### Clone the repository with submodules
+
+```bash
+git clone --recurse-submodules https://github.com/beehive-lab/tornado-insight.git
+```
+
 ### Folder layout
 
 The output of this folder is as follows:
@@ -58,6 +64,8 @@ The output of this folder is as follows:
      |-main
        |-java (plugin sources)
        |-resources (plugin resources - the plugin.xml file lives here)
+         |-lib
+           |-tornadovm-bytecode-analyzer
    |-build (where build files are stored)
        |-distributions (where the plugin zip file is generated)   
    |-build.gradle (the gradle build file)

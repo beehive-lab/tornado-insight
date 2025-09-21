@@ -145,6 +145,10 @@ Enjoy and share your feedback!
                     icon="AllIcons.Actions.Refresh"/>
             <action id="tornado.runInspection" class="uk.ac.manchester.beehive.tornado.plugins.service.RunInspectionAction"
                     text="Run Dynamic Inspection" description="Run dynamic inspection" icon="AllIcons.Actions.Execute"/>
+            <action id="RunPythonAnalysis"
+                    class="uk.ac.manchester.beehive.tornado.plugins.service.BytecodeAnalyzerAction"
+                    text="Analyze TornadoVM Bytecodes"
+                    description="Runs bytecode analysis via external Python script" icon="AllIcons.Actions.DependencyAnalyzer"/>
             <separator/>
             <action id="tornado.settings" class="uk.ac.manchester.beehive.tornado.plugins.service.SettingsAction"
                     text="Settings" description="Settings" icon="AllIcons.General.GearPlain"/>

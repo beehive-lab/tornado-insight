@@ -38,12 +38,14 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
     // File path for the TornadoVM environment variable file.
     public String TornadoRoot;
     @OptionTag(converter = JdkConverter.class)
-    public Sdk JdkPath;
+    public Sdk JdkPath = null;
+    public boolean bytecodeVisualizerEnabled;
     public int parameterSize;
     public String tensorShapeDimensions;
     public boolean isValid;
     public boolean saveFileEnabled;
-    public String fileSaveLocation;
+    public String debugFileSaveLocation;
+    public String bytecodesFileSaveLocation;
 
     /**
      * Retrieves the singleton instance of the TornadoSetting.

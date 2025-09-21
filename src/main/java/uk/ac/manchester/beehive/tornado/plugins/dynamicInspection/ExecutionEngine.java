@@ -223,7 +223,7 @@ public class ExecutionEngine {
     }
 
     @NotNull
-    private static GeneralCommandLine getGeneralCommandLine(String jarPath) {
+    private GeneralCommandLine getGeneralCommandLine(String jarPath) {
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.setExePath("/bin/sh");
         commandLine.addParameter("-c");
@@ -231,8 +231,13 @@ public class ExecutionEngine {
                 + ";export PATH=" + EnvironmentVariable.getPath()
                 + ";export CMAKE_ROOT=" + EnvironmentVariable.getCmakeRoot()
                 + ";export TORNADO_SDK=" + EnvironmentVariable.getTornadoSdk()
-                + ";tornado --debug --printKernel -jar " + jarPath);
+                + ";tornado --printKernel" + emitPrintBytecode() + "-jar " + jarPath);
         return commandLine;
+    }
+
+    private String emitPrintBytecode() {
+        boolean bytecodeVisualizerEnabled = TornadoSettingState.getInstance().bytecodeVisualizerEnabled;
+        return (bytecodeVisualizerEnabled) ? (" --jvm=\"-Dtornado.dump.bytecodes.dir=" + TornadoSettingState.getInstance().bytecodesFileSaveLocation + "\" ") : (" ");
     }
 
     //Test results for each method
