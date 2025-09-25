@@ -45,8 +45,8 @@ import java.util.regex.Pattern;
 
 public class BytecodeAnalyzerAction extends AnAction {
 
-    private static volatile Process streamlitProcess;   // keep handle to kill on relaunch/close
-    private static volatile String lastUrl;             // debug: last discovered URL
+    private static volatile Process streamlitProcess;
+    private static volatile String lastUrl;
 
     @Override
     public void actionPerformed(AnActionEvent e) {
@@ -60,7 +60,7 @@ public class BytecodeAnalyzerAction extends AnAction {
         }
 
         try {
-            // 1) Sanity: streamlit available?
+            // 1) Check if streamlit is available
             if (!isStreamlitAvailable()) {
                 Messages.showErrorDialog(project,
                         MessageBundle.message("ui.settings.group.visualizer.not.found"),
