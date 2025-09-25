@@ -224,7 +224,9 @@ public class BytecodeAnalyzerAction extends AnAction {
         Files.walk(root)
                 .sorted((a, b) -> b.getNameCount() - a.getNameCount())
                 .forEach(p -> {
-                    try { Files.deleteIfExists(p); } catch (IOException ignored) {}
+                    try { Files.deleteIfExists(p); } catch (IOException ex) {
+                        System.err.println("[plugin] Failed to delete " + p + ": " + ex.getMessage());
+                    }
                 });
     }
 }
