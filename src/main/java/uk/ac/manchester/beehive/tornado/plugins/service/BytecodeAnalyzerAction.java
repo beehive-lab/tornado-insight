@@ -24,7 +24,9 @@ import com.intellij.ui.jcef.JBCefBrowser;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
-import javax.swing.*;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
