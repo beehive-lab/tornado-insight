@@ -127,7 +127,7 @@ public class BytecodeAnalyzerAction extends AnAction {
 
     private static void stopStreamlitIfRunning() {
         if (streamlitProcess != null && streamlitProcess.isAlive()) {
-            try { streamlitProcess.destroy(); } catch (Throwable ignored) {}
+            try { streamlitProcess.destroy(); } catch (SecurityException | IllegalStateException ignored) {}
         }
         streamlitProcess = null;
     }
