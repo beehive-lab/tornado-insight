@@ -96,7 +96,7 @@ public class BytecodeAnalyzerAction extends AnAction {
                                 String.join(", ", REQUIRED_MODULES) + "\n\n" +
                                 "Missing: " + String.join(", ", missing) + "\n\n" +
                                 "Do you want me to install the missing packages automatically?\n" +
-                                "I will do into:\n" + pythonExe + "\n\n" +
+                                "I will install into:\n" + pythonExe + "\n\n" +
                                 "(I will run: \n" + pythonExe + " -m pip install <packages>)",
                         "Install Required Python Packages?",
                         "Install", "Cancel", null
