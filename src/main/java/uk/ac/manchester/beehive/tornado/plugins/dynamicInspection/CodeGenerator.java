@@ -141,8 +141,8 @@ public class CodeGenerator {
         ArrayList<String> names = new ArrayList<>(params.size());
         ArrayList<String> types = new ArrayList<>(params.size());
         for (TornadoTWTask.TaskParametersInfo v : params) {
-            names.add(v.name);
-            types.add(v.type);
+            names.add(v.getName());
+            types.add(v.getType());
         }
         return VariableInit.variableInitHelper(names, types);
     }
