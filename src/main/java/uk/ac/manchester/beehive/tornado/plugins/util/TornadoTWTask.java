@@ -469,9 +469,11 @@ public class TornadoTWTask {
     }
 
     public static class TaskParametersInfo {
-        public final String name;
-        public final String type;
+        private final String name;
+        private final String type;
         public TaskParametersInfo(String name, String type) { this.name = name; this.type = type; }
+        public String getName() { return name; }
+        public String getType() { return type; }
         @Override public String toString() { return type + " " + name; }
     }
 
