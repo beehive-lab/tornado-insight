@@ -418,4 +418,105 @@ public class TornadoTWTask {
         }
         return Optional.empty();
     }
+
+    public static Optional<List<TaskParametersInfo>> extractTasksParameters(PsiFile psiFile, String methodName) {
+        Collection<PsiDeclarationStatement> declarations =
+                PsiTreeUtil.findChildrenOfType(psiFile, PsiDeclarationStatement.class);
+
+        for (PsiDeclarationStatement declaration : declarations) {
+            for (PsiElement element : declaration.getDeclaredElements()) {
+                if (!(element instanceof PsiLocalVariable variable)) continue;
+
+                PsiType type = variable.getType();
+                if (type == null || !type.getCanonicalText().contains("TaskGraph")) continue;
+
+                // Look for .task(...) calls inside this declaration
+                Collection<PsiMethodCallExpression> calls =
+                        PsiTreeUtil.findChildrenOfType(declaration, PsiMethodCallExpression.class);
+
+                for (PsiMethodCallExpression call : calls) {
+                    PsiReferenceExpression methodExpr = call.getMethodExpression();
+                    if (!"task".equals(methodExpr.getReferenceName())) continue;
+
+                    PsiExpression[] args = call.getArgumentList().getExpressions();
+                    if (args.length < 2) continue; // need at least task name + method ref
+
+                    // 2nd arg must be a method reference to methodName
+                    PsiExpression second = args[1];
+                    boolean matches;
+                    if (second instanceof PsiMethodReferenceExpression mref) {
+                        matches = methodName.equals(mref.getReferenceName());
+                    } else {
+                        String txt = second.getText();
+                        matches = txt != null && txt.contains("::" + methodName);
+                    }
+                    if (!matches) continue;
+
+                    List<TaskParametersInfo> vars = new ArrayList<>();
+                    for (int i = 2; i < args.length; i++) {
+                        PsiExpression expr = unwrap(args[i]);
+                        String name = extractName(expr);
+                        String typeText = extractTypeText(expr);
+                        if (name == null || name.isEmpty()) name = expr.getText();
+                        if (typeText == null || typeText.isEmpty()) typeText = "<unknown>";
+                        vars.add(new TaskParametersInfo(name, typeText));
+                    }
+                    return Optional.of(vars);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    public static class TaskParametersInfo {
+        private final String name;
+        private final String type;
+        public TaskParametersInfo(String name, String type) { this.name = name; this.type = type; }
+        public String getName() { return name; }
+        public String getType() { return type; }
+        @Override public String toString() { return type + " " + name; }
+    }
+
+    // Strip parentheses and casts:  ((float[]) (a))
+    private static PsiExpression unwrap(PsiExpression e) {
+        PsiExpression cur = e;
+        while (true) {
+            if (cur instanceof PsiParenthesizedExpression p && p.getExpression() != null) {
+                cur = p.getExpression(); continue;
+            }
+            if (cur instanceof PsiTypeCastExpression c && c.getOperand() != null) {
+                cur = c.getOperand(); continue;
+            }
+            break;
+        }
+        return cur;
+    }
+
+    private static String extractName(PsiExpression e) {
+        if (e instanceof PsiArrayAccessExpression arr) {
+            return extractName(arr.getArrayExpression());
+        }
+        if (e instanceof PsiReferenceExpression ref) {
+            String simple = ref.getReferenceName();
+            return simple != null ? simple : ref.getText();
+        }
+        return e.getText();
+    }
+
+    //   Prefer declared types of fields/locals/params when resolvable,
+    //   else fall back to expression.getType().presentableText
+    private static String extractTypeText(PsiExpression e) {
+        if (e instanceof PsiReferenceExpression ref) {
+            PsiElement target = ref.resolve();
+            if (target instanceof PsiField f) return f.getType().getPresentableText();
+            if (target instanceof PsiLocalVariable lv) return lv.getType().getPresentableText();
+            if (target instanceof PsiParameter p) return p.getType().getPresentableText();
+        }
+        if (e instanceof PsiArrayAccessExpression arr) {
+            PsiType t = arr.getType();
+            if (t != null) return t.getPresentableText();
+        }
+        PsiType t = e.getType();
+        return t != null ? t.getPresentableText() : null;
+    }
 }

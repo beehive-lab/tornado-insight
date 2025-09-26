@@ -32,17 +32,25 @@ public class VariableInit {
     private static int[] tensorShapeDimensions;
 
     public static String variableInitHelper(@NotNull PsiMethod method) {
-        parameterSize = TornadoSettingState.getInstance().parameterSize;
-        tensorShapeDimension = TornadoSettingState.getInstance().tensorShapeDimensions;
-        tensorShapeDimensions = convertShapeStringToIntArray(tensorShapeDimension);
-
+        initializeSizes();
         ArrayList<String> parametersName = new ArrayList<>();
         ArrayList<String> parametersType = new ArrayList<>();
         for (PsiParameter parameter : method.getParameterList().getParameters()) {
             parametersType.add(parameter.getTypeElement().getText());
             parametersName.add(parameter.getName());
         }
-        return variableInit(parametersName,parametersType);
+        return variableInit(parametersName, parametersType);
+    }
+
+    public static String variableInitHelper(ArrayList<String> fieldNames, ArrayList<String> fieldTypes) {
+        initializeSizes();
+        return variableInit(fieldNames, fieldTypes);
+    }
+
+    private static void initializeSizes() {
+        parameterSize = TornadoSettingState.getInstance().parameterSize;
+        tensorShapeDimension = TornadoSettingState.getInstance().tensorShapeDimensions;
+        tensorShapeDimensions = convertShapeStringToIntArray(tensorShapeDimension);
     }
 
     private static String variableInit(@NotNull ArrayList<String> parametersName, ArrayList<String> parametersType){
