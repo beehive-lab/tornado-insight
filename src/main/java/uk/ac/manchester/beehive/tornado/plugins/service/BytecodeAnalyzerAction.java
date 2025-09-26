@@ -297,9 +297,15 @@ public class BytecodeAnalyzerAction extends AnAction {
                 if (System.nanoTime() > deadline) break;
             }
         }
-        p.waitFor(timeout.toSeconds(), TimeUnit.SECONDS);
-        Integer code = p.exitValue();
-        System.out.println("[pip] exit code: " + code);
+        boolean finished = p.waitFor(timeout.toSeconds(), TimeUnit.SECONDS);
+        Integer code;
+        if (finished) {
+            code = p.exitValue();
+        } else {
+            p.destroy();
+            System.out.println("[pip] Process timed out and was destroyed.");
+            code = -1;
+        }
         return code;
     }
 
