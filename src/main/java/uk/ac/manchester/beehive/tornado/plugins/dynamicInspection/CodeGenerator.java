@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2025, APT Group, Department of Computer Science,
  * The University of Manchester.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +32,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -92,13 +93,15 @@ public class CodeGenerator {
                 import uk.ac.manchester.tornado.api.annotations.Reduce;
                 import uk.ac.manchester.tornado.api.enums.DataTransferMode;
                 import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
+                import uk.ac.manchester.tornado.api.types.HalfFloat;
                 """;
 
         String methodWithClass = filename + "::" + method.getName();
 
-        String variableInit = VariableInit.variableInitHelper(method);
         Optional<String> maybeOriginalTaskGraph = TornadoTWTask.extractOriginalTaskGraphDeclaration(TornadoTWTask.getPsiFile(), method.getName(), methodWithClass);
-        String mainCode = getTaskGraphCode(method, maybeOriginalTaskGraph, variableInit, methodWithClass);
+        Optional<List<TornadoTWTask.TaskParametersInfo>> taskParametersInfos = TornadoTWTask.extractTasksParameters(TornadoTWTask.getPsiFile(), method.getName());
+        String taskParameters = getTaskParameters(method, taskParametersInfos);
+        String mainCode = getTaskGraphCode(method, maybeOriginalTaskGraph, taskParameters, methodWithClass);
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(javaFile))) {
             writer.write(importCode + importCodeBlock);
@@ -125,6 +128,23 @@ public class CodeGenerator {
             throw new RuntimeException(e);
         }
         return javaFile;
+    }
+
+    private static @NotNull String getTaskParameters(PsiMethod method, Optional<List<TornadoTWTask.TaskParametersInfo>> taskParametersInfos) {
+        List<TornadoTWTask.TaskParametersInfo> params = taskParametersInfos.orElse(Collections.emptyList());
+
+        if (params.isEmpty()) {
+            // Fallback: infer from the method signature when TaskGraphs are not declared
+            return VariableInit.variableInitHelper(method);
+        }
+
+        ArrayList<String> names = new ArrayList<>(params.size());
+        ArrayList<String> types = new ArrayList<>(params.size());
+        for (TornadoTWTask.TaskParametersInfo v : params) {
+            names.add(v.name);
+            types.add(v.type);
+        }
+        return VariableInit.variableInitHelper(names, types);
     }
 
     private static @NotNull String getTaskGraphCode(PsiMethod method, Optional<String> maybeOriginalTaskGraph, String variableInit, String methodWithClass) {
