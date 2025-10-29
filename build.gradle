@@ -1,0 +1,73 @@
+/*
+ * Copyright (c) 2024-2025, APT Group, Department of Computer Science,
+ *  The University of Manchester.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+plugins {
+  id 'java'
+  id 'org.jetbrains.kotlin.jvm' version '2.2.0'
+  id 'org.jetbrains.intellij.platform' version '2.9.0'
+}
+
+group = 'uk.ac.manchester.beehive.tornado.plugins'
+version = '1.3.0'
+
+// Repositories: keep them ONLY in settings (PREFER_SETTINGS)
+
+java {
+  toolchain { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+repositories {
+  // REQUIRED so 2.x can find the IDE + bundled modules
+  intellijPlatform { defaultRepositories() }
+  mavenCentral()
+}
+
+dependencies {
+  intellijPlatform {
+    intellijIdeaCommunity '2025.2.2'   // target IDE
+
+    // Bundled plugins you actually need on the classpath:
+    bundledPlugin 'com.intellij.java'
+
+    // If your code touches TOML PSI or APIs, add this (since your error mentioned TOML):
+    // bundledPlugin 'org.toml.lang'
+  }
+}
+
+repositories {
+  intellijPlatform { defaultRepositories() }  // <-- required so 2.x can find the IDE
+  mavenCentral()
+}
+
+// Kotlin 2.2 compilerOptions (JVM 17 bytecode is safe & works on JBR21)
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+  compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
+}
+
+// Java bytecode 17 as well
+tasks.withType(JavaCompile).configureEach {
+  sourceCompatibility = '17'
+  targetCompatibility = '17'
+}
+
+// plugin.xml compatibility
+tasks.named('patchPluginXml') {
+  it.sinceBuild.set('224')
+}
+
+// optional: not needed on modern IDEs
+tasks.named('buildSearchableOptions') { it.enabled = false }
