@@ -152,16 +152,21 @@ public class CodeGenerator {
         String mainCode;
 
         if (isChainComplete) {
+            // Extract the TaskGraph variable name from the declaration
+            String taskGraphVarName = maybeOriginalTaskGraph
+                    .flatMap(TornadoTWTask::extractTaskGraphVariableName)
+                    .orElse("taskGraph");
+
             mainCode = """
                     \n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {
                     %s
                     %s
-                    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+                    ImmutableTaskGraph immutableTaskGraph = %s.snapshot();
                     try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {
                         executionPlan.execute();
                     }
                     }
-                    """.formatted(variableInit, maybeOriginalTaskGraph.get());
+                    """.formatted(variableInit, maybeOriginalTaskGraph.get(), taskGraphVarName);
         } else {
             // Fallback: Dynamically build TaskGraph from method parameters
             StringBuilder taskParameters = new StringBuilder();
