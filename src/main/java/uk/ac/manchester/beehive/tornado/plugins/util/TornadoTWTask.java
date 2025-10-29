@@ -418,4 +418,21 @@ public class TornadoTWTask {
         }
         return Optional.empty();
     }
+
+    /**
+     * Extracts the TaskGraph variable name from a declaration statement.
+     * For example, from "TaskGraph taskGraphA = new TaskGraph("A")..." it extracts "taskGraphA"
+     *
+     * @param declaration the TaskGraph declaration string
+     * @return an Optional containing the variable name if found
+     */
+    public static Optional<String> extractTaskGraphVariableName(String declaration) {
+        // Pattern: TaskGraph <variableName> = ...
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("TaskGraph\\s+(\\w+)\\s*=");
+        java.util.regex.Matcher matcher = pattern.matcher(declaration);
+        if (matcher.find()) {
+            return Optional.of(matcher.group(1));
+        }
+        return Optional.empty();
+    }
 }
