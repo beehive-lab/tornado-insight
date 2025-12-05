@@ -164,11 +164,12 @@ public class ExecutionEngine {
         String sourceFile = TornadoSettingState.getInstance().setVarsPath();
         commandLine.setExePath("/bin/sh");
         commandLine.addParameter("-c");
-        commandLine.addParameter("export JAVA_HOME=" + EnvironmentVariable.getJavaHome()
-                + ";export PATH=" + EnvironmentVariable.getPath()
-                + ";export CMAKE_ROOT=" + EnvironmentVariable.getCmakeRoot()
-                + ";export TORNADO_SDK=" + EnvironmentVariable.getTornadoSdk()
-                + ";tornado --device");
+
+        StringBuilder command = new StringBuilder();
+        retrieveEnvironmentVariablesCommand(command);
+        command.append("tornado --device");
+
+        commandLine.addParameter(command.toString());
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
             ProcessOutput output = handler.runProcess();
@@ -227,17 +228,35 @@ public class ExecutionEngine {
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.setExePath("/bin/sh");
         commandLine.addParameter("-c");
-        commandLine.addParameter("export JAVA_HOME=" + EnvironmentVariable.getJavaHome()
-                + ";export PATH=" + EnvironmentVariable.getPath()
-                + ";export CMAKE_ROOT=" + EnvironmentVariable.getCmakeRoot()
-                + ";export TORNADO_SDK=" + EnvironmentVariable.getTornadoSdk()
-                + ";tornado --printKernel" + emitPrintBytecode() + "-jar " + jarPath);
+
+        StringBuilder command = new StringBuilder();
+        retrieveEnvironmentVariablesCommand(command);
+        command.append("tornado --printKernel").append(emitPrintBytecode()).append("-jar ").append(jarPath);
+
+        commandLine.addParameter(command.toString());
         return commandLine;
     }
 
     private String emitPrintBytecode() {
         boolean bytecodeVisualizerEnabled = TornadoSettingState.getInstance().bytecodeVisualizerEnabled;
         return (bytecodeVisualizerEnabled) ? (" --jvm=\"-Dtornado.dump.bytecodes.dir=" + TornadoSettingState.getInstance().bytecodesFileSaveLocation + "\" ") : (" ");
+    }
+
+    private void retrieveEnvironmentVariablesCommand(StringBuilder command) {
+        if (EnvironmentVariable.getJavaHome() != null) {
+            command.append("export JAVA_HOME=").append(EnvironmentVariable.getJavaHome()).append(";");
+        }
+        if (EnvironmentVariable.getTornadoSdk() != null) {
+            command.append("export TORNADO_SDK=").append(EnvironmentVariable.getTornadoSdk()).append(";");
+        }
+        if (EnvironmentVariable.getTornadoSdk() != null) {
+            command.append("export PATH=").append(EnvironmentVariable.getTornadoSdk()).append("/bin:$PATH;");
+        } else if (EnvironmentVariable.getPath() != null) {
+            command.append("export PATH=").append(EnvironmentVariable.getPath()).append(";");
+        }
+        if (EnvironmentVariable.getCmakeRoot() != null) {
+            command.append("export CMAKE_ROOT=").append(EnvironmentVariable.getCmakeRoot()).append(";");
+        }
     }
 
     //Test results for each method
