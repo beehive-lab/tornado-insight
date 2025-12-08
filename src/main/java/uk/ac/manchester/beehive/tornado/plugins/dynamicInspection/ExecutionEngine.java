@@ -31,6 +31,10 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.projectRoots.JavaSdkVersion;
+import com.intellij.openapi.projectRoots.Sdk;
+import com.intellij.openapi.roots.ProjectRootManager;
+import com.intellij.openapi.roots.ui.configuration.ProjectSettingsService;
 import com.intellij.psi.PsiMethod;
 import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
@@ -73,6 +77,12 @@ public class ExecutionEngine {
         // Performing UI related operations on a non-EDT is not allowed.
         MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
                 MessageBundle.message("dynamic.info.start"));
+
+        // Validate JDK before starting
+        if (!validateProjectJdk()) {
+            return;
+        }
+
         long startTime = System.currentTimeMillis();
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
             ArrayList<String> files = new ArrayList<>(fileMethodMap.keySet());
@@ -91,11 +101,60 @@ public class ExecutionEngine {
         });
     }
 
+    private boolean validateProjectJdk() {
+        Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
+
+        if (projectSdk == null) {
+            Notification notification = new Notification(
+                "Print",
+                "No Project JDK Configured",
+                "Please configure a JDK 21+ in Project Structure (File > Project Structure > Project Settings > Project)",
+                NotificationType.ERROR
+            );
+            notification.addAction(new NotificationAction("Open Project Structure") {
+                @Override
+                public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
+                    ProjectSettingsService.getInstance(project).openProjectSettings();
+                }
+            });
+            Notifications.Bus.notify(notification, project);
+            return false;
+        }
+
+        JavaSdkVersion sdkVersion = JavaSdkVersion.fromVersionString(projectSdk.getVersionString());
+        if (sdkVersion == null || sdkVersion.compareTo(JavaSdkVersion.JDK_21) < 0) {
+            Notification notification = new Notification(
+                "Print",
+                "Incompatible JDK Version",
+                "TornadoVM requires JDK 21 or higher. Current project JDK: " +
+                    (sdkVersion != null ? sdkVersion.getDescription() : projectSdk.getVersionString()) +
+                    ". Please update your project JDK in Project Structure.",
+                NotificationType.ERROR
+            );
+            notification.addAction(new NotificationAction("Open Project Structure") {
+                @Override
+                public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
+                    ProjectSettingsService.getInstance(project).openProjectSettings();
+                }
+            });
+            Notifications.Bus.notify(notification, project);
+            return false;
+        }
+
+        return true;
+    }
+
     private void compile(String outputDir, ArrayList<String> javaFiles) {
         MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
                 MessageBundle.message("dynamic.info.compile"));
+
+        Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
+        if (projectSdk == null) {
+            throw new UnsupportedOperationException("No project JDK configured");
+        }
+
         GeneralCommandLine commandLine = new GeneralCommandLine();
-        commandLine.setExePath(TornadoSettingState.getInstance().getJavaHome() + "/bin/javac");
+        commandLine.setExePath(projectSdk.getHomePath() + "/bin/javac");
         commandLine.addParameter("--release");
         commandLine.addParameter("21");
         commandLine.addParameter("--enable-preview");
@@ -243,19 +302,29 @@ public class ExecutionEngine {
     }
 
     private void retrieveEnvironmentVariablesCommand(StringBuilder command) {
-        if (EnvironmentVariable.getJavaHome() != null) {
-            command.append("export JAVA_HOME=").append(EnvironmentVariable.getJavaHome()).append(";");
+        Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
+        String javaHome = projectSdk != null ? projectSdk.getHomePath() : null;
+        if (javaHome != null) {
+            command.append("export JAVA_HOME=").append(javaHome).append(";");
         }
-        if (EnvironmentVariable.getTornadoSdk() != null) {
-            command.append("export TORNADO_SDK=").append(EnvironmentVariable.getTornadoSdk()).append(";");
+
+        String tornadoSdk = EnvironmentVariable.getTornadoSdk();
+        if (tornadoSdk != null) {
+            command.append("export TORNADO_SDK=").append(tornadoSdk).append(";");
         }
-        if (EnvironmentVariable.getTornadoSdk() != null) {
-            command.append("export PATH=").append(EnvironmentVariable.getTornadoSdk()).append("/bin:$PATH;");
-        } else if (EnvironmentVariable.getPath() != null) {
-            command.append("export PATH=").append(EnvironmentVariable.getPath()).append(";");
+
+        if (tornadoSdk != null) {
+            command.append("export PATH=").append(tornadoSdk).append("/bin:$PATH;");
+        } else {
+            String envPath = EnvironmentVariable.getPath();
+            if (envPath != null) {
+                command.append("export PATH=").append(envPath).append(";");
+            }
         }
-        if (EnvironmentVariable.getCmakeRoot() != null) {
-            command.append("export CMAKE_ROOT=").append(EnvironmentVariable.getCmakeRoot()).append(";");
+
+        String cmakeRoot = EnvironmentVariable.getCmakeRoot();
+        if (cmakeRoot != null) {
+            command.append("export CMAKE_ROOT=").append(cmakeRoot).append(";");
         }
     }
 

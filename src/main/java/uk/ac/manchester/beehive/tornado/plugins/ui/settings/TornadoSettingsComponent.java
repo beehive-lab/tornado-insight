@@ -23,12 +23,6 @@ import com.intellij.execution.process.ProcessOutput;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.progress.ProgressManager;
-import com.intellij.openapi.project.ProjectManager;
-import com.intellij.openapi.projectRoots.JavaSdk;
-import com.intellij.openapi.projectRoots.Sdk;
-import com.intellij.openapi.roots.ui.configuration.JdkComboBox;
-import com.intellij.openapi.roots.ui.configuration.ProjectStructureConfigurable;
-import com.intellij.openapi.roots.ui.configuration.projectRoot.ProjectSdksModel;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.ui.IdeBorderFactory;
@@ -61,17 +55,10 @@ public class TornadoSettingsComponent {
 
     private final TextFieldWithBrowseButton bytecodesFileSaveLocationField = new TextFieldWithBrowseButton();
 
-    private ProjectSdksModel jdkModel;
-
-    private JdkComboBox myJdk;
-
     private final JBTextField myMaxArraySize = new JBTextField(4);
     private final JBTextField tensorShapeDimensions = new JBTextField();
 
     public TornadoSettingsComponent() {
-        jdkModel = ProjectStructureConfigurable.getInstance(ProjectManager.getInstance().getDefaultProject()).getProjectJdksModel();
-        myJdk = new JdkComboBox(null, jdkModel, sdkTypeId -> JavaSdk.getInstance() == sdkTypeId, null, null, null);
-
         attachFolderChooser(myTornadoEnv, "TornadoVM Root Folder", "Choose the .sh file");
         attachFolderChooser(debugFileSaveLocationField, "Save Location for Generated Code", "Choose the folder you want generated codes to be saved");
         attachFolderChooser(bytecodesFileSaveLocationField, "Save Location for TornadoVM Bytecodes", "Choose the folder you want the TornadoVM Bytecodes to be saved");
@@ -81,8 +68,10 @@ public class TornadoSettingsComponent {
 
         String innerComment = MessageBundle.message("ui.settings.comment.env");
 
-        JPanel innerGrid = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel("TornadoVM Root:"), myTornadoEnv).addLabeledComponent(new JBLabel("Java SDK:"), myJdk)
-                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + innerComment + "</div></html>")).addVerticalGap(10).getPanel();
+        JPanel innerGrid = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel("TornadoVM Root:"), myTornadoEnv)
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + innerComment + "</div></html>"))
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>The JDK is automatically configured from Project Structure (File > Project Structure > Project). TornadoVM requires JDK 21+.</div></html>"))
+                .addVerticalGap(10).getPanel();
 
 
         JPanel bytecodesVisualizerPanel = FormBuilder.createFormBuilder().addComponent(bytecodeVisualizerCheckbox)
@@ -131,14 +120,6 @@ public class TornadoSettingsComponent {
 
     public void setTornadoEnvPath(String path) {
         myTornadoEnv.setText(path);
-    }
-
-    public Sdk getJdk() {
-        return myJdk.getSelectedJdk();
-    }
-
-    public void setMyJdk(Sdk sdk) {
-        myJdk.setSelectedJdk(sdk);
     }
 
     public boolean isBytecodeVisualizerEnabled() {
@@ -236,9 +217,6 @@ public class TornadoSettingsComponent {
             if (StringUtil.isEmpty(path)) {
                 return MessageBundle.message("ui.settings.validation.emptyTornadovm");
             }
-            if (myJdk.getSelectedJdk() == null) {
-                return MessageBundle.message("ui.settings.validation.emptyJava");
-            }
             String saveLocation = debugFileSaveLocationField.getText();
             if (saveLocation.isEmpty()) {
                 return MessageBundle.message("ui.settings.validation.emptySave");
@@ -246,18 +224,6 @@ public class TornadoSettingsComponent {
             File saveDir = new File(saveLocation);
             if (!saveDir.exists() || !saveDir.isDirectory() || !saveDir.canWrite()) {
                 return MessageBundle.message("ui.settings.validation.invalidSave");
-            }
-        }
-        String versionString = myJdk.getSelectedJdk().getVersionString();
-        String regEx = "(?:version\\s+)?(\\d+\\.\\d+\\.\\d+)";
-        Pattern compile = Pattern.compile(regEx);
-        Matcher matcher = compile.matcher(versionString);
-        if (matcher.find()) {
-            String version = matcher.group(1);
-            String[] split = version.split("\\.");
-            int majorVersion = Integer.parseInt(split[0]);
-            if (majorVersion < 21) {
-                return MessageBundle.message("ui.settings.validation.javaVersion");
             }
         }
 
