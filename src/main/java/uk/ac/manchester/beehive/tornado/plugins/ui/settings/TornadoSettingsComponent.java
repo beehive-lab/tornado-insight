@@ -206,7 +206,7 @@ public class TornadoSettingsComponent {
     }
 
     public String isValidPath() {
-        String path = myTornadoEnv.getText() + "/setvars.sh";
+        String tornadoRoot = myTornadoEnv.getText();
         String parameterSize = myMaxArraySize.getText();
         AtomicReference<String> stringAtomicReference = new AtomicReference<>();
         stringAtomicReference.set("");
@@ -214,7 +214,7 @@ public class TornadoSettingsComponent {
             return evaluateConditionsOfUserDefinedShape(tensorShapeDimensions.getText());
         }
         if (isSaveFileEnabled()) {
-            if (StringUtil.isEmpty(path)) {
+            if (StringUtil.isEmpty(tornadoRoot)) {
                 return MessageBundle.message("ui.settings.validation.emptyTornadovm");
             }
             String saveLocation = debugFileSaveLocationField.getText();
@@ -238,29 +238,44 @@ public class TornadoSettingsComponent {
         } catch (NumberFormatException e) {
             return MessageBundle.message("ui.settings.validation.invalidSize");
         }
-        try {
-            EnvironmentVariable.parseFile(path);
-        } catch (IOException e) {
-            stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
-        }
-        ProgressManager.getInstance().runProcessWithProgressSynchronously(() -> {
-            GeneralCommandLine commandLine = new GeneralCommandLine();
-            commandLine.setExePath("/bin/sh");
-            commandLine.addParameter("-c");
-            commandLine.addParameter(
-                    "export JAVA_HOME=" + EnvironmentVariable.getJavaHome() + ";export PATH=" + EnvironmentVariable.getPath() + ";export CMAKE_ROOT=" + EnvironmentVariable.getCmakeRoot() + ";export TORNADO_SDK=" + EnvironmentVariable.getTornadoSdk() + ";tornado --device");
+
+        // Only validate TornadoVM path if it's provided
+        if (!StringUtil.isEmpty(tornadoRoot)) {
+            String path = tornadoRoot + "/setvars.sh";
             try {
-                CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
-                System.out.println(commandLine.getCommandLineString());
-                ProcessOutput output = handler.runProcess();
-                System.out.println(output);
-                if (output.getExitCode() != 0) {
+                EnvironmentVariable.parseFile(path);
+            } catch (IOException e) {
+                stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
+                return stringAtomicReference.get();
+            }
+
+            // Validate that TORNADO_SDK is defined and tornado --version works
+            String tornadoSdk = EnvironmentVariable.getTornadoSdk();
+            if (StringUtil.isEmpty(tornadoSdk)) {
+                stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
+                return stringAtomicReference.get();
+            }
+
+            ProgressManager.getInstance().runProcessWithProgressSynchronously(() -> {
+                GeneralCommandLine commandLine = new GeneralCommandLine();
+                commandLine.setExePath("/bin/sh");
+                commandLine.addParameter("-c");
+                commandLine.addParameter(
+                        "export TORNADO_SDK=" + tornadoSdk + ";" +
+                        tornadoSdk + "/bin/tornado --version");
+                try {
+                    CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
+                    System.out.println(commandLine.getCommandLineString());
+                    ProcessOutput output = handler.runProcess();
+                    System.out.println(output);
+                    if (output.getExitCode() != 0) {
+                        stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
+                    }
+                } catch (Exception e) {
                     stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
                 }
-            } catch (Exception e) {
-                stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
-            }
-        }, MessageBundle.message("ui.settings.validation.progress"), true, null);
+            }, MessageBundle.message("ui.settings.validation.progress"), true, null);
+        }
         return stringAtomicReference.get();
     }
 }
