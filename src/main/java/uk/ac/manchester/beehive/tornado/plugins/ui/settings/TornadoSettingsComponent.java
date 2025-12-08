@@ -23,12 +23,6 @@ import com.intellij.execution.process.ProcessOutput;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.progress.ProgressManager;
-import com.intellij.openapi.project.ProjectManager;
-import com.intellij.openapi.projectRoots.JavaSdk;
-import com.intellij.openapi.projectRoots.Sdk;
-import com.intellij.openapi.roots.ui.configuration.JdkComboBox;
-import com.intellij.openapi.roots.ui.configuration.ProjectStructureConfigurable;
-import com.intellij.openapi.roots.ui.configuration.projectRoot.ProjectSdksModel;
 import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.ui.IdeBorderFactory;
@@ -61,17 +55,10 @@ public class TornadoSettingsComponent {
 
     private final TextFieldWithBrowseButton bytecodesFileSaveLocationField = new TextFieldWithBrowseButton();
 
-    private ProjectSdksModel jdkModel;
-
-    private JdkComboBox myJdk;
-
     private final JBTextField myMaxArraySize = new JBTextField(4);
     private final JBTextField tensorShapeDimensions = new JBTextField();
 
     public TornadoSettingsComponent() {
-        jdkModel = ProjectStructureConfigurable.getInstance(ProjectManager.getInstance().getDefaultProject()).getProjectJdksModel();
-        myJdk = new JdkComboBox(null, jdkModel, sdkTypeId -> JavaSdk.getInstance() == sdkTypeId, null, null, null);
-
         attachFolderChooser(myTornadoEnv, "TornadoVM Root Folder", "Choose the .sh file");
         attachFolderChooser(debugFileSaveLocationField, "Save Location for Generated Code", "Choose the folder you want generated codes to be saved");
         attachFolderChooser(bytecodesFileSaveLocationField, "Save Location for TornadoVM Bytecodes", "Choose the folder you want the TornadoVM Bytecodes to be saved");
@@ -81,8 +68,10 @@ public class TornadoSettingsComponent {
 
         String innerComment = MessageBundle.message("ui.settings.comment.env");
 
-        JPanel innerGrid = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel("TornadoVM Root:"), myTornadoEnv).addLabeledComponent(new JBLabel("Java SDK:"), myJdk)
-                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + innerComment + "</div></html>")).addVerticalGap(10).getPanel();
+        JPanel innerGrid = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel("TornadoVM Root:"), myTornadoEnv)
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + innerComment + "</div></html>"))
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>The JDK is automatically configured from Project Structure (File > Project Structure > Project). TornadoVM requires JDK 21+.</div></html>"))
+                .addVerticalGap(10).getPanel();
 
 
         JPanel bytecodesVisualizerPanel = FormBuilder.createFormBuilder().addComponent(bytecodeVisualizerCheckbox)
@@ -131,14 +120,6 @@ public class TornadoSettingsComponent {
 
     public void setTornadoEnvPath(String path) {
         myTornadoEnv.setText(path);
-    }
-
-    public Sdk getJdk() {
-        return myJdk.getSelectedJdk();
-    }
-
-    public void setMyJdk(Sdk sdk) {
-        myJdk.setSelectedJdk(sdk);
     }
 
     public boolean isBytecodeVisualizerEnabled() {
@@ -225,7 +206,7 @@ public class TornadoSettingsComponent {
     }
 
     public String isValidPath() {
-        String path = myTornadoEnv.getText() + "/setvars.sh";
+        String tornadoRoot = myTornadoEnv.getText();
         String parameterSize = myMaxArraySize.getText();
         AtomicReference<String> stringAtomicReference = new AtomicReference<>();
         stringAtomicReference.set("");
@@ -233,11 +214,8 @@ public class TornadoSettingsComponent {
             return evaluateConditionsOfUserDefinedShape(tensorShapeDimensions.getText());
         }
         if (isSaveFileEnabled()) {
-            if (StringUtil.isEmpty(path)) {
+            if (StringUtil.isEmpty(tornadoRoot)) {
                 return MessageBundle.message("ui.settings.validation.emptyTornadovm");
-            }
-            if (myJdk.getSelectedJdk() == null) {
-                return MessageBundle.message("ui.settings.validation.emptyJava");
             }
             String saveLocation = debugFileSaveLocationField.getText();
             if (saveLocation.isEmpty()) {
@@ -246,18 +224,6 @@ public class TornadoSettingsComponent {
             File saveDir = new File(saveLocation);
             if (!saveDir.exists() || !saveDir.isDirectory() || !saveDir.canWrite()) {
                 return MessageBundle.message("ui.settings.validation.invalidSave");
-            }
-        }
-        String versionString = myJdk.getSelectedJdk().getVersionString();
-        String regEx = "(?:version\\s+)?(\\d+\\.\\d+\\.\\d+)";
-        Pattern compile = Pattern.compile(regEx);
-        Matcher matcher = compile.matcher(versionString);
-        if (matcher.find()) {
-            String version = matcher.group(1);
-            String[] split = version.split("\\.");
-            int majorVersion = Integer.parseInt(split[0]);
-            if (majorVersion < 21) {
-                return MessageBundle.message("ui.settings.validation.javaVersion");
             }
         }
 
@@ -272,29 +238,44 @@ public class TornadoSettingsComponent {
         } catch (NumberFormatException e) {
             return MessageBundle.message("ui.settings.validation.invalidSize");
         }
-        try {
-            EnvironmentVariable.parseFile(path);
-        } catch (IOException e) {
-            stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
-        }
-        ProgressManager.getInstance().runProcessWithProgressSynchronously(() -> {
-            GeneralCommandLine commandLine = new GeneralCommandLine();
-            commandLine.setExePath("/bin/sh");
-            commandLine.addParameter("-c");
-            commandLine.addParameter(
-                    "export JAVA_HOME=" + EnvironmentVariable.getJavaHome() + ";export PATH=" + EnvironmentVariable.getPath() + ";export CMAKE_ROOT=" + EnvironmentVariable.getCmakeRoot() + ";export TORNADO_SDK=" + EnvironmentVariable.getTornadoSdk() + ";tornado --device");
+
+        // Only validate TornadoVM path if it's provided
+        if (!StringUtil.isEmpty(tornadoRoot)) {
+            String path = tornadoRoot + "/setvars.sh";
             try {
-                CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
-                System.out.println(commandLine.getCommandLineString());
-                ProcessOutput output = handler.runProcess();
-                System.out.println(output);
-                if (output.getExitCode() != 0) {
+                EnvironmentVariable.parseFile(path);
+            } catch (IOException e) {
+                stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
+                return stringAtomicReference.get();
+            }
+
+            // Validate that TORNADO_SDK is defined and tornado --version works
+            String tornadoSdk = EnvironmentVariable.getTornadoSdk();
+            if (StringUtil.isEmpty(tornadoSdk)) {
+                stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
+                return stringAtomicReference.get();
+            }
+
+            ProgressManager.getInstance().runProcessWithProgressSynchronously(() -> {
+                GeneralCommandLine commandLine = new GeneralCommandLine();
+                commandLine.setExePath("/bin/sh");
+                commandLine.addParameter("-c");
+                commandLine.addParameter(
+                        "export TORNADO_SDK=" + tornadoSdk + ";" +
+                        tornadoSdk + "/bin/tornado --version");
+                try {
+                    CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
+                    System.out.println(commandLine.getCommandLineString());
+                    ProcessOutput output = handler.runProcess();
+                    System.out.println(output);
+                    if (output.getExitCode() != 0) {
+                        stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
+                    }
+                } catch (Exception e) {
                     stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
                 }
-            } catch (Exception e) {
-                stringAtomicReference.set(MessageBundle.message("ui.settings.validation.invalidTornadovm"));
-            }
-        }, MessageBundle.message("ui.settings.validation.progress"), true, null);
+            }, MessageBundle.message("ui.settings.validation.progress"), true, null);
+        }
         return stringAtomicReference.get();
     }
 }

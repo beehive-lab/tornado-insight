@@ -21,9 +21,7 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
-import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.util.xmlb.XmlSerializerUtil;
-import com.intellij.util.xmlb.annotations.OptionTag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,8 +35,6 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
 
     // File path for the TornadoVM environment variable file.
     public String TornadoRoot;
-    @OptionTag(converter = JdkConverter.class)
-    public Sdk JdkPath;
     public boolean bytecodeVisualizerEnabled;
     public int parameterSize;
     public String tensorShapeDimensions;
@@ -94,6 +90,4 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
     public String getUnitTestPath(){
         return TornadoRoot + "/tornado-unittests/target/classes";
     }
-
-    public String getJavaHome(){return JdkPath.getHomePath();}
 }
