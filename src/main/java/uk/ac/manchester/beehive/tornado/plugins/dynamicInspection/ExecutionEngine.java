@@ -311,9 +311,6 @@ public class ExecutionEngine {
         String tornadoSdk = EnvironmentVariable.getTornadoSdk();
         if (tornadoSdk != null) {
             command.append("export TORNADO_SDK=").append(tornadoSdk).append(";");
-        }
-
-        if (tornadoSdk != null) {
             command.append("export PATH=").append(tornadoSdk).append("/bin:$PATH;");
         } else {
             String envPath = EnvironmentVariable.getPath();
