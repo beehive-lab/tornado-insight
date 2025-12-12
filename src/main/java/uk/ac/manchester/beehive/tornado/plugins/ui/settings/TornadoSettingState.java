@@ -24,6 +24,10 @@ import com.intellij.openapi.components.Storage;
 import com.intellij.util.xmlb.XmlSerializerUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
+
+import java.io.File;
+import java.io.FilenameFilter;
 
 /**
  * Represents the settings associated with the TornadoVM plugin, allowing
@@ -33,8 +37,6 @@ import org.jetbrains.annotations.Nullable;
 @State(name = "TornadoVMSettingsState", storages = {@Storage(value = "TornadoSettings.xml")})
 public class TornadoSettingState implements PersistentStateComponent<TornadoSettingState> {
 
-    // File path for the TornadoVM environment variable file.
-    public String TornadoRoot;
     public boolean bytecodeVisualizerEnabled;
     public int parameterSize;
     public String tensorShapeDimensions;
@@ -75,19 +77,67 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
         XmlSerializerUtil.copyBean(state,this);
     }
 
+    /**
+     * Derives the TornadoVM root directory from TORNADO_SDK environment variable.
+     * TORNADO_SDK typically points to {TORNADO_ROOT}/bin/sdk
+     */
+    private String getTornadoRoot() {
+        String tornadoSdk = EnvironmentVariable.getTornadoSdk();
+        if (tornadoSdk == null) {
+            return null;
+        }
+        // TORNADO_SDK is typically {TORNADO_ROOT}/bin/sdk
+        // So we need to go up two levels
+        return tornadoSdk.replaceAll("/bin/sdk/?$", "");
+    }
+
     public String setVarsPath(){
-        return TornadoRoot + "/setvars.sh";
+        String root = getTornadoRoot();
+        return root != null ? root + "/setvars.sh" : null;
+    }
+
+    /**
+     * Finds a JAR file in the TORNADO_SDK directory that matches the given prefix.
+     * Returns the first matching JAR file path, or null if not found.
+     */
+    private String findTornadoJar(String jarPrefix) {
+        String tornadoSdk = EnvironmentVariable.getTornadoSdk();
+        if (tornadoSdk == null || tornadoSdk.isEmpty()) {
+            return null;
+        }
+
+        // Resolve the absolute path in case TORNADO_SDK is relative
+        File tornadoSdkFile = new File(tornadoSdk);
+        if (!tornadoSdkFile.isAbsolute()) {
+            // Try to resolve it relative to user home
+            String userHome = System.getProperty("user.home");
+            tornadoSdkFile = new File(userHome, tornadoSdk);
+        }
+
+        File tornadoJarDir = new File(tornadoSdkFile, "share/java/tornado");
+
+        if (!tornadoJarDir.exists() || !tornadoJarDir.isDirectory()) {
+            return null;
+        }
+
+        File[] matchingFiles = tornadoJarDir.listFiles((dir, name) -> name.startsWith(jarPrefix) && name.endsWith(".jar"));
+
+        if (matchingFiles != null && matchingFiles.length > 0) {
+            return matchingFiles[0].getAbsolutePath();
+        }
+
+        return null;
     }
 
     public String getMatricesPath(){
-        return TornadoRoot + "/tornado-matrices/target/classes";
+        return findTornadoJar("tornado-matrices");
     }
 
     public String getApiPath(){
-        return TornadoRoot + "/tornado-api/target/classes";
+        return findTornadoJar("tornado-api");
     }
 
     public String getUnitTestPath(){
-        return TornadoRoot + "/tornado-unittests/target/classes";
+        return findTornadoJar("tornado-unittests");
     }
 }

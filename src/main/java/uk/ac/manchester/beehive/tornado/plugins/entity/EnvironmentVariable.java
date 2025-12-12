@@ -82,6 +82,10 @@ public class EnvironmentVariable {
     }
 
     public static String getTornadoSdk() {
-        return tornadoSdk;
+        // Prefer the parsed value from setvars.sh, but fall back to system environment
+        if (tornadoSdk != null && !tornadoSdk.isEmpty()) {
+            return tornadoSdk;
+        }
+        return System.getenv("TORNADO_SDK");
     }
 }

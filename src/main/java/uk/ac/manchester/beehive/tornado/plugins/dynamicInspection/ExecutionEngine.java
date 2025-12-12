@@ -83,6 +83,11 @@ public class ExecutionEngine {
             return;
         }
 
+        // Validate TornadoVM SDK before starting
+        if (!validateTornadoSdk()) {
+            return;
+        }
+
         long startTime = System.currentTimeMillis();
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
             ArrayList<String> files = new ArrayList<>(fileMethodMap.keySet());
@@ -144,6 +149,27 @@ public class ExecutionEngine {
         return true;
     }
 
+    private boolean validateTornadoSdk() {
+        String tornadoSdk = System.getenv("TORNADO_SDK");
+
+        if (tornadoSdk == null || tornadoSdk.isEmpty()) {
+            Notification notification = new Notification(
+                "Print",
+                "TornadoVM SDK Not Configured",
+                "<html>TORNADO_SDK environment variable is not set.<br><br>" +
+                    "Please:<br>" +
+                    "1. Download and install TornadoVM from <a href='https://www.tornadovm.org/downloads'>tornadovm.org/downloads</a><br>" +
+                    "2. Set the TORNADO_SDK environment variable<br>" +
+                    "3. Restart your IntelliJ session</html>",
+                NotificationType.ERROR
+            );
+            Notifications.Bus.notify(notification, project);
+            return false;
+        }
+
+        return true;
+    }
+
     private void compile(String outputDir, ArrayList<String> javaFiles) {
         MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
                 MessageBundle.message("dynamic.info.compile"));
@@ -153,6 +179,32 @@ public class ExecutionEngine {
             throw new UnsupportedOperationException("No project JDK configured");
         }
 
+        // Build classpath with null checks
+        TornadoSettingState settings = TornadoSettingState.getInstance();
+
+        String apiPath = settings.getApiPath();
+        String matricesPath = settings.getMatricesPath();
+        String unitTestPath = settings.getUnitTestPath();
+
+        if (apiPath == null || matricesPath == null || unitTestPath == null) {
+            String missingJars = "";
+            if (apiPath == null) missingJars += "tornado-api.jar ";
+            if (matricesPath == null) missingJars += "tornado-matrices.jar ";
+            if (unitTestPath == null) missingJars += "tornado-unittests.jar ";
+
+            String errorMsg = "Could not find required TornadoVM JARs in $TORNADO_SDK/share/java/tornado/\n" +
+                "Missing: " + missingJars + "\n\n" +
+                "Please check that:\n" +
+                "1. TORNADO_SDK environment variable points to the correct TornadoVM SDK directory\n" +
+                "2. The directory contains share/java/tornado/ with the required JAR files\n\n" +
+                "For installation instructions, visit: https://www.tornadovm.org/downloads";
+
+            MessageUtils.getInstance(project).showErrorMsg("TornadoVM JARs Not Found", errorMsg);
+            throw new UnsupportedOperationException("TornadoVM JARs not found");
+        }
+
+        String classpath = apiPath + File.pathSeparator + matricesPath + File.pathSeparator + unitTestPath;
+
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.setExePath(projectSdk.getHomePath() + "/bin/javac");
         commandLine.addParameter("--release");
@@ -160,9 +212,7 @@ public class ExecutionEngine {
         commandLine.addParameter("--enable-preview");
         commandLine.addParameter("-g");
         commandLine.addParameter("-classpath");
-        commandLine.addParameter(TornadoSettingState.getInstance().getApiPath()+
-                File.pathSeparator + TornadoSettingState.getInstance().getMatricesPath()+
-                File.pathSeparator + TornadoSettingState.getInstance().getUnitTestPath());
+        commandLine.addParameter(classpath);
         commandLine.addParameter("-d");
         commandLine.addParameter(outputDir);
         commandLine.addParameters(javaFiles);  // Adds each Java file to the command line
