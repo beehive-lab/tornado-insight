@@ -43,22 +43,28 @@ public class TornadoSettingListener implements ProjectActivity {
     public @NotNull CompletableFuture<Void> execute(@NotNull Project project, @NotNull Continuation<? super kotlin.Unit> continuation) {
         TornadoSettingState settingState = TornadoSettingState.getInstance();
 
-        if (settingState.TornadoRoot == null) {
+        // Check if TORNADO_SDK environment variable is set
+        String tornadoSdk = System.getenv("TORNADO_SDK");
+
+        if (tornadoSdk == null || tornadoSdk.isEmpty()) {
+            // Show warning notification when TORNADO_SDK is not set
             settingState.isValid = false;
+
             Notification notification = new Notification(
-                    "Print", "TornadoVM",
-                    "Please configure the TornadoVM environment variable file",
-                    NotificationType.INFORMATION
+                "Print",
+                "TornadoVM SDK Not Configured",
+                "<html>TORNADO_SDK environment variable is not set.<br><br>" +
+                    "Please:<br>" +
+                    "1. Download and install TornadoVM from <a href='https://www.tornadovm.org/downloads'>tornadovm.org/downloads</a><br>" +
+                    "2. Set the TORNADO_SDK environment variable<br>" +
+                    "3. Restart your IntelliJ session</html>",
+                NotificationType.WARNING
             );
-            notification.addAction(new OpenTornadoSettingAction());
+
+            notification.addAction(new OpenTornadoDownloadsAction());
             Notifications.Bus.notify(notification, project);
         } else {
             settingState.isValid = true;
-            try {
-                EnvironmentVariable.parseFile(settingState.TornadoRoot + "/setvars.sh");
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to load TornadoVM environment variables", e);
-            }
         }
 
         return CompletableFuture.completedFuture(null);
@@ -75,6 +81,21 @@ public class TornadoSettingListener implements ProjectActivity {
         @Override
         public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
             ShowSettingsUtil.getInstance().showSettingsDialog(e.getProject(), "TornadoVM");
+            notification.expire();
+        }
+    }
+
+    /**
+     * Action to open TornadoVM downloads page in browser.
+     */
+    static class OpenTornadoDownloadsAction extends NotificationAction {
+        public OpenTornadoDownloadsAction() {
+            super("View Installation Instructions");
+        }
+
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
+            com.intellij.ide.BrowserUtil.browse("https://www.tornadovm.org/downloads");
             notification.expire();
         }
     }
