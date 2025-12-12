@@ -53,8 +53,7 @@ public class TornadoSettingConfiguration implements Configurable {
     @Override
     public boolean isModified() {
         TornadoSettingState settings = TornadoSettingState.getInstance();
-        boolean modified = !mySettingsComponent.getTornadoEnvPath().equals(settings.TornadoRoot);
-        modified |= mySettingsComponent.isBytecodeVisualizerEnabled() != settings.bytecodeVisualizerEnabled;
+        boolean modified = mySettingsComponent.isBytecodeVisualizerEnabled() != settings.bytecodeVisualizerEnabled;
         modified |= mySettingsComponent.getMaxArraySize() != settings.parameterSize;
         modified |= mySettingsComponent.getTensorShapeDimensions() != settings.tensorShapeDimensions;
         modified |= mySettingsComponent.isSaveFileEnabled() != settings.saveFileEnabled;
@@ -71,7 +70,6 @@ public class TornadoSettingConfiguration implements Configurable {
             settings.isValid = false;
             throw new ConfigurationException(error);
         }
-        settings.TornadoRoot = mySettingsComponent.getTornadoEnvPath();
         settings.bytecodeVisualizerEnabled = mySettingsComponent.isBytecodeVisualizerEnabled();
         settings.parameterSize = mySettingsComponent.getMaxArraySize();
         settings.tensorShapeDimensions = mySettingsComponent.getTensorShapeDimensions();
@@ -84,7 +82,6 @@ public class TornadoSettingConfiguration implements Configurable {
     @Override
     public void reset() {
         TornadoSettingState settings = TornadoSettingState.getInstance();
-        mySettingsComponent.setTornadoEnvPath(settings.TornadoRoot);
         mySettingsComponent.setBytecodeVisualizerEnabled(settings.bytecodeVisualizerEnabled);
         mySettingsComponent.setMaxArraySize(settings.parameterSize);
         mySettingsComponent.setTensorShapeDimensions(settings.tensorShapeDimensions);
