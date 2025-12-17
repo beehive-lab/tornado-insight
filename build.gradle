@@ -22,7 +22,7 @@ plugins {
 }
 
 group = 'uk.ac.manchester.beehive.tornado.plugins'
-version = '1.4.1'
+version = '1.4.2'
 
 // Repositories: keep them ONLY in settings (PREFER_SETTINGS)
 
