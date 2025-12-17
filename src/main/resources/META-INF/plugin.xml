@@ -40,8 +40,10 @@
         debugging and testing.</li>
 </ul>
 <br/>
-<h2>What's New in 1.4.0+</h2>
-<b>TornadoInsight 1.4.0+ is compatible with TornadoVM 2.0+</b> and features automatic SDK detection. The plugin can now
+<h2>What's New in 1.4.2</h2>
+<b>Important:</b> Starting with version 1.4.2, the required environment variable has been renamed from <code>TORNADO_SDK</code> to <code>TORNADOVM_HOME</code> to align with TornadoVM's updated naming conventions. Please update your environment configuration before upgrading.
+<br/><br/>
+<b>TornadoInsight 1.4.2 is compatible with TornadoVM 2.2.0 (onwards)</b> and features automatic SDK detection. The plugin can now
 detect your installed TornadoVM SDK automatically without requiring a custom build from source. This streamlined setup makes it
 easier than ever to get started with TornadoVM development.
 <br/>
@@ -52,21 +54,28 @@ TornadoInsight is available for versions 2023.1.7 and higher of compatible JetBr
 It invokes Java and TornadoVM at runtime on the computer where the plugin is installed, and therefore,
 developers must have installed Java and TornadoVM prior to using the plugin:
 <ul>
-    <li><a href="https://github.com/beehive-lab/TornadoVM">TornadoVM</a> >= v2.0 (for TornadoInsight 1.4.0+)</li>
+    <li><a href="https://github.com/beehive-lab/TornadoVM">TornadoVM</a> >= v2.2.0 (for TornadoInsight 1.4.2+)</li>
     <li>JDK >= 21</li>
 </ul>
 
-<h3>Environment Variable Configuration (v1.4.0+)</h3>
-Since version v1.4.0, TornadoInsight requires the <b>TORNADO_SDK</b> environment variable to be defined and visible to the IntelliJ IDEA process.
+<h3>Install TornadoVM SDK</h3>
+You can use SDKMAN! to install TornadoVM. The default version is OpenCL, but you can install any supported backend for your platform:
+<pre>sdk install tornadovm</pre>
+
+<h3>Environment Variable Configuration (v1.4.2+)</h3>
+Since version v1.4.2, TornadoInsight requires the <b>TORNADOVM_HOME</b> environment variable to be defined and visible to the IntelliJ IDEA process.
 <br/><br/>
-On modern operating systems, GUI applications (such as IntelliJ started from JetBrains Toolbox, the Dock, or an application launcher) do not always inherit shell variables defined in files like <code>~/.bashrc</code> or <code>~/.zshrc</code>. For this reason, <b>TORNADO_SDK</b> must be configured using OS-appropriate mechanisms:
+On modern operating systems, GUI applications (such as IntelliJ started from JetBrains Toolbox, the Dock, or an application launcher) do not always inherit shell variables defined in files like <code>~/.bashrc</code> or <code>~/.zshrc</code>. For this reason, <b>TORNADOVM_HOME</b> must be configured using OS-appropriate mechanisms, as described below.
+To find the path for your TornadoVM SDK, run:
 <br/><br/>
+<pre>which tornado</pre>
+
 <b>Required Variable:</b>
-<pre>TORNADO_SDK=/absolute/path/to/tornado-sdk</pre>
+<pre>TORNADOVM_HOME=/absolute/path/to/tornado-sdk</pre>
 
 <b>macOS:</b>
 <ul>
-    <li>Run in terminal: <code>launchctl setenv TORNADO_SDK /path/to/tornado-sdk</code></li>
+    <li>Run in terminal: <code>launchctl setenv TORNADOVM_HOME /absolute/path/to/tornado-sdk</code></li>
     <li>Fully quit IntelliJ IDEA (Cmd + Q) and relaunch it</li>
 </ul>
 
@@ -74,14 +83,14 @@ On modern operating systems, GUI applications (such as IntelliJ started from Jet
 <ul>
     <li>Create directory: <code>mkdir -p ~/.config/environment.d</code></li>
     <li>Create file: <code>~/.config/environment.d/tornado.conf</code></li>
-    <li>Add line: <code>TORNADO_SDK=/absolute/path/to/tornado-sdk</code></li>
+    <li>Add line: <code>TORNADOVM_HOME=/absolute/path/to/tornado-sdk</code></li>
     <li>Log out and log back in, then start IntelliJ IDEA</li>
 </ul>
 
 <b>Windows:</b>
 <ul>
     <li>Open System Properties → Environment Variables</li>
-    <li>Add User variable: <code>TORNADO_SDK=C:\path\to\tornado-sdk</code></li>
+    <li>Add User variable: <code>TORNADOVM_HOME=C:\path\to\tornado-sdk</code></li>
     <li>Restart IntelliJ IDEA</li>
 </ul>
 
@@ -89,7 +98,7 @@ On modern operating systems, GUI applications (such as IntelliJ started from Jet
 The dynamic inspection feature of TornadoInsight is configured after the installation of the plugin, as follows:
 <ul>
     <li>Navigate to "Settings" and select "TornadoInsight" from the menu.</li>
-    <li>With TornadoInsight 1.4.0+, the plugin automatically detects your installed TornadoVM SDK and uses the Java SDK from your Project Settings. You only need to
+    <li>With TornadoInsight 1.4.2+, the plugin automatically detects your installed TornadoVM SDK and uses the Java SDK from your Project Settings. You only need to
         indicate a tentative "array size" that can be used by TornadoInsight
         to set the size of the input and output arrays of a TornadoVM task.</li>
 </ul>
@@ -102,6 +111,11 @@ Enjoy and share your feedback!
     <!-- Change notes displayed in the plugin manager when users view updates.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#change-notes -->
     <change-notes><![CDATA[
+<h3>Version 1.4.2</h3>
+<ul>
+    <li><b>Environment Variable Update:</b> The required environment variable has been renamed from <code>TORNADO_SDK</code> to <code>TORNADOVM_HOME</code> to align with TornadoVM's updated naming conventions. Please update your environment configuration accordingly.</li>
+</ul>
+
 <h3>Version 1.4.0</h3>
 <ul>
     <li><b>TornadoVM 2.0+ Support:</b> Full compatibility with TornadoVM 2.0 and later versions</li>

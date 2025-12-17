@@ -150,16 +150,16 @@ public class ExecutionEngine {
     }
 
     private boolean validateTornadoSdk() {
-        String tornadoSdk = System.getenv("TORNADO_SDK");
+        String tornadoSdk = System.getenv("TORNADOVM_HOME");
 
         if (tornadoSdk == null || tornadoSdk.isEmpty()) {
             Notification notification = new Notification(
                 "Print",
                 "TornadoVM SDK Not Configured",
-                "<html>TORNADO_SDK environment variable is not set.<br><br>" +
+                "<html>TORNADOVM_HOME environment variable is not set.<br><br>" +
                     "Please:<br>" +
                     "1. Download and install TornadoVM from <a href='https://www.tornadovm.org/downloads'>tornadovm.org/downloads</a><br>" +
-                    "2. Set the TORNADO_SDK environment variable<br>" +
+                    "2. Set the TORNADOVM_HOME environment variable<br>" +
                     "3. Restart your IntelliJ session</html>",
                 NotificationType.ERROR
             );
@@ -192,10 +192,10 @@ public class ExecutionEngine {
             if (matricesPath == null) missingJars += "tornado-matrices.jar ";
             if (unitTestPath == null) missingJars += "tornado-unittests.jar ";
 
-            String errorMsg = "Could not find required TornadoVM JARs in $TORNADO_SDK/share/java/tornado/\n" +
+            String errorMsg = "Could not find required TornadoVM JARs in $TORNADOVM_HOME/share/java/tornado/\n" +
                 "Missing: " + missingJars + "\n\n" +
                 "Please check that:\n" +
-                "1. TORNADO_SDK environment variable points to the correct TornadoVM SDK directory\n" +
+                "1. TORNADOVM_HOME environment variable points to the correct TornadoVM SDK directory\n" +
                 "2. The directory contains share/java/tornado/ with the required JAR files\n\n" +
                 "For installation instructions, visit: https://www.tornadovm.org/downloads";
 
@@ -358,10 +358,10 @@ public class ExecutionEngine {
             command.append("export JAVA_HOME=").append(javaHome).append(";");
         }
 
-        String tornadoSdk = EnvironmentVariable.getTornadoSdk();
-        if (tornadoSdk != null) {
-            command.append("export TORNADO_SDK=").append(tornadoSdk).append(";");
-            command.append("export PATH=").append(tornadoSdk).append("/bin:$PATH;");
+        String tornadoVmHome = EnvironmentVariable.getTornadoSdk();
+        if (tornadoVmHome != null) {
+            command.append("export TORNADOVM_HOME=").append(tornadoVmHome).append(";");
+            command.append("export PATH=").append(tornadoVmHome).append("/bin:$PATH;");
         } else {
             String envPath = EnvironmentVariable.getPath();
             if (envPath != null) {

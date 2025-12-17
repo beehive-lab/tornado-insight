@@ -58,10 +58,10 @@ public class TornadoSettingsComponent {
         bytecodeVisualizerCheckbox.setSelected(false);
         saveFileCheckbox.setSelected(false);
 
-        // Create warning banner if TORNADO_SDK is not set
+        // Create warning banner if TORNADOVM_HOME is not set
         FormBuilder formBuilder = FormBuilder.createFormBuilder();
-        String tornadoSdk = System.getenv("TORNADO_SDK");
-        if (tornadoSdk == null || tornadoSdk.isEmpty()) {
+        String tornadoVmHome = System.getenv("TORNADOVM_HOME");
+        if (tornadoVmHome == null || tornadoVmHome.isEmpty()) {
             JPanel warningPanel = createWarningPanel();
             formBuilder.addComponent(warningPanel);
         }
@@ -98,10 +98,10 @@ public class TornadoSettingsComponent {
         JPanel messagePanel = new JPanel();
         messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
 
-        JLabel titleLabel = new JLabel("<html><b>TORNADO_SDK environment variable is not set</b></html>");
+        JLabel titleLabel = new JLabel("<html><b>TORNADOVM_HOME environment variable is not set</b></html>");
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel instructionLabel = new JLabel("Please set the TORNADO_SDK environment variable and restart IntelliJ IDEA.");
+        JLabel instructionLabel = new JLabel("Please set the TORNADOVM_HOME environment variable and restart IntelliJ IDEA.");
         instructionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JPanel linkPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));

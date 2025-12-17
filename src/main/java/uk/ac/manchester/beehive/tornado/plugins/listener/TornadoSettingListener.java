@@ -43,20 +43,20 @@ public class TornadoSettingListener implements ProjectActivity {
     public @NotNull CompletableFuture<Void> execute(@NotNull Project project, @NotNull Continuation<? super kotlin.Unit> continuation) {
         TornadoSettingState settingState = TornadoSettingState.getInstance();
 
-        // Check if TORNADO_SDK environment variable is set
-        String tornadoSdk = System.getenv("TORNADO_SDK");
+        // Check if TORNADOVM_HOME environment variable is set
+        String tornadoVmHome = System.getenv("TORNADOVM_HOME");
 
-        if (tornadoSdk == null || tornadoSdk.isEmpty()) {
-            // Show warning notification when TORNADO_SDK is not set
+        if (tornadoVmHome == null || tornadoVmHome.isEmpty()) {
+            // Show warning notification when TORNADOVM_HOME is not set
             settingState.isValid = false;
 
             Notification notification = new Notification(
                 "Print",
                 "TornadoVM SDK Not Configured",
-                "<html>TORNADO_SDK environment variable is not set.<br><br>" +
+                "<html>TORNADOVM_HOME environment variable is not set.<br><br>" +
                     "Please:<br>" +
                     "1. Download and install TornadoVM from <a href='https://www.tornadovm.org/downloads'>tornadovm.org/downloads</a><br>" +
-                    "2. Set the TORNADO_SDK environment variable<br>" +
+                    "2. Set the TORNADOVM_HOME environment variable<br>" +
                     "3. Restart your IntelliJ session</html>",
                 NotificationType.WARNING
             );

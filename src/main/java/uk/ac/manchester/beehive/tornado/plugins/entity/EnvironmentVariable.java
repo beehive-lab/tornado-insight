@@ -27,7 +27,7 @@ public class EnvironmentVariable {
     private static String javaHome;
     private static String path;
     private static String cmakeRoot;
-    private static String tornadoSdk;
+    private static String tornadoVmHome;
 
     private EnvironmentVariable() {
     }
@@ -46,7 +46,7 @@ public class EnvironmentVariable {
         String javaHomePattern = "export\\s+JAVA_HOME=(\\S+)";
         String pathPattern = "export\\s+PATH=(\\S+)";
         String cmakeRootPattern = "export\\s+CMAKE_ROOT=(\\S+)";
-        String tornadoSdkPattern = "export\\s+TORNADO_SDK=(\\S+)";
+        String tornadoVmHomePattern = "export\\s+TORNADOVM_HOME=(\\S+)";
 
         if (matchPattern(line, javaHomePattern)) {
             javaHome = extractValue(line);
@@ -54,8 +54,8 @@ public class EnvironmentVariable {
             path = extractValue(line);
         } else if (matchPattern(line, cmakeRootPattern)) {
             cmakeRoot = extractValue(line);
-        } else if (matchPattern(line, tornadoSdkPattern)) {
-            tornadoSdk = extractValue(line);
+        } else if (matchPattern(line, tornadoVmHomePattern)) {
+            tornadoVmHome = extractValue(line);
         }
     }
 
@@ -83,9 +83,9 @@ public class EnvironmentVariable {
 
     public static String getTornadoSdk() {
         // Prefer the parsed value from setvars.sh, but fall back to system environment
-        if (tornadoSdk != null && !tornadoSdk.isEmpty()) {
-            return tornadoSdk;
+        if (tornadoVmHome != null && !tornadoVmHome.isEmpty()) {
+            return tornadoVmHome;
         }
-        return System.getenv("TORNADO_SDK");
+        return System.getenv("TORNADOVM_HOME");
     }
 }

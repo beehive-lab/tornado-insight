@@ -78,17 +78,17 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
     }
 
     /**
-     * Derives the TornadoVM root directory from TORNADO_SDK environment variable.
-     * TORNADO_SDK typically points to {TORNADO_ROOT}/bin/sdk
+     * Derives the TornadoVM root directory from TORNADOVM_HOME environment variable.
+     * TORNADOVM_HOME typically points to {TORNADO_ROOT}/bin/sdk
      */
     private String getTornadoRoot() {
-        String tornadoSdk = EnvironmentVariable.getTornadoSdk();
-        if (tornadoSdk == null) {
+        String tornadoVmHome = EnvironmentVariable.getTornadoSdk();
+        if (tornadoVmHome == null) {
             return null;
         }
-        // TORNADO_SDK is typically {TORNADO_ROOT}/bin/sdk
+        // TORNADOVM_HOME is typically {TORNADO_ROOT}/bin/sdk
         // So we need to go up two levels
-        return tornadoSdk.replaceAll("/bin/sdk/?$", "");
+        return tornadoVmHome.replaceAll("/bin/sdk/?$", "");
     }
 
     public String setVarsPath(){
@@ -97,24 +97,24 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
     }
 
     /**
-     * Finds a JAR file in the TORNADO_SDK directory that matches the given prefix.
+     * Finds a JAR file in the TORNADOVM_HOME directory that matches the given prefix.
      * Returns the first matching JAR file path, or null if not found.
      */
     private String findTornadoJar(String jarPrefix) {
-        String tornadoSdk = EnvironmentVariable.getTornadoSdk();
-        if (tornadoSdk == null || tornadoSdk.isEmpty()) {
+        String tornadoVmHome = EnvironmentVariable.getTornadoSdk();
+        if (tornadoVmHome == null || tornadoVmHome.isEmpty()) {
             return null;
         }
 
-        // Resolve the absolute path in case TORNADO_SDK is relative
-        File tornadoSdkFile = new File(tornadoSdk);
-        if (!tornadoSdkFile.isAbsolute()) {
+        // Resolve the absolute path in case TORNADOVM_HOME is relative
+        File tornadoVmHomeFile = new File(tornadoVmHome);
+        if (!tornadoVmHomeFile.isAbsolute()) {
             // Try to resolve it relative to user home
             String userHome = System.getProperty("user.home");
-            tornadoSdkFile = new File(userHome, tornadoSdk);
+            tornadoVmHomeFile = new File(userHome, tornadoVmHome);
         }
 
-        File tornadoJarDir = new File(tornadoSdkFile, "share/java/tornado");
+        File tornadoJarDir = new File(tornadoVmHomeFile, "share/java/tornado");
 
         if (!tornadoJarDir.exists() || !tornadoJarDir.isDirectory()) {
             return null;
