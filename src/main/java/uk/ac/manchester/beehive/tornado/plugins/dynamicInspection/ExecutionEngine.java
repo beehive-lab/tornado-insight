@@ -29,6 +29,7 @@ import com.intellij.notification.NotificationType;
 import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.projectRoots.JavaSdkVersion;
@@ -51,12 +52,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
 public class ExecutionEngine {
+
+    private static final Logger LOG = Logger.getInstance(ExecutionEngine.class);
 
     private final String tempFolderPath;
 
@@ -71,6 +75,10 @@ public class ExecutionEngine {
         this.tempFolderPath = tempFolderPath;
         this.fileMethodMap = fileMethodMap;
         this.success = false;
+    }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name").toLowerCase().contains("win");
     }
 
     public void run(){
@@ -152,7 +160,12 @@ public class ExecutionEngine {
     private boolean validateTornadoSdk() {
         String tornadoSdk = System.getenv("TORNADOVM_HOME");
 
+        // Show TORNADOVM_HOME detection info
+        MessageUtils.getInstance(project).showInfoMsg("Info",
+                "TORNADOVM_HOME detected: " + (tornadoSdk != null ? tornadoSdk : "NOT SET"));
+
         if (tornadoSdk == null || tornadoSdk.isEmpty()) {
+            LOG.warn("TORNADOVM_HOME is not set or empty");
             Notification notification = new Notification(
                 "Print",
                 "TornadoVM SDK Not Configured",
@@ -206,7 +219,11 @@ public class ExecutionEngine {
         String classpath = apiPath + File.pathSeparator + matricesPath + File.pathSeparator + unitTestPath;
 
         GeneralCommandLine commandLine = new GeneralCommandLine();
-        commandLine.setExePath(projectSdk.getHomePath() + "/bin/javac");
+        String javacPath = projectSdk.getHomePath() + File.separator + "bin" + File.separator + "javac";
+        if (isWindows()) {
+            javacPath += ".exe";
+        }
+        commandLine.setExePath(javacPath);
         commandLine.addParameter("--release");
         commandLine.addParameter("21");
         commandLine.addParameter("--enable-preview");
@@ -270,15 +287,13 @@ public class ExecutionEngine {
                 MessageBundle.message("dynamic.info.execution"));
         GeneralCommandLine commandLine = new GeneralCommandLine();
         //Detecting if the user has correctly installed TornadoVM
-        String sourceFile = TornadoSettingState.getInstance().setVarsPath();
-        commandLine.setExePath("/bin/sh");
-        commandLine.addParameter("-c");
+        commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
+        // On Windows, explicitly use tornado.exe to avoid trying to execute the Unix shell script
+        String tornadoExe = isWindows() ? "tornado.exe" : "tornado";
+        commandLine.setExePath(tornadoExe);
+        configureEnvironmentVariables(commandLine);
+        commandLine.addParameter("--device");
 
-        StringBuilder command = new StringBuilder();
-        retrieveEnvironmentVariablesCommand(command);
-        command.append("tornado --device");
-
-        commandLine.addParameter(command.toString());
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
             ProcessOutput output = handler.runProcess();
@@ -295,9 +310,10 @@ public class ExecutionEngine {
                 Notifications.Bus.notify(notification);
                 return;
             }
-        } catch (ExecutionException ignored) {
+        } catch (ExecutionException e) {
             MessageUtils.getInstance(project).showErrorMsg(MessageBundle.message("dynamic.info.title"),
-                    "TornadoVM environment variable file is not set correctly.");
+                    "TornadoVM is not properly installed or configured.\n\n" +
+                    "Error: " + e.getMessage());
 
             return;
         }
@@ -335,14 +351,22 @@ public class ExecutionEngine {
     @NotNull
     private GeneralCommandLine getGeneralCommandLine(String jarPath) {
         GeneralCommandLine commandLine = new GeneralCommandLine();
-        commandLine.setExePath("/bin/sh");
-        commandLine.addParameter("-c");
+        commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
+        // On Windows, explicitly use tornado.exe to avoid trying to execute the Unix shell script
+        String tornadoExe = isWindows() ? "tornado.exe" : "tornado";
+        commandLine.setExePath(tornadoExe);
+        configureEnvironmentVariables(commandLine);
+        commandLine.addParameter("--printKernel");
 
-        StringBuilder command = new StringBuilder();
-        retrieveEnvironmentVariablesCommand(command);
-        command.append("tornado --printKernel").append(emitPrintBytecode()).append("-jar ").append(jarPath);
+        // Add bytecode dump flag if enabled
+        if (TornadoSettingState.getInstance().bytecodeVisualizerEnabled) {
+            String bytecodeDir = TornadoSettingState.getInstance().bytecodesFileSaveLocation;
+            commandLine.addParameter("--jvm=-Dtornado.dump.bytecodes.dir=" + bytecodeDir);
+        }
 
-        commandLine.addParameter(command.toString());
+        commandLine.addParameter("-jar");
+        commandLine.addParameter(jarPath);
+
         return commandLine;
     }
 
@@ -351,27 +375,44 @@ public class ExecutionEngine {
         return (bytecodeVisualizerEnabled) ? (" --jvm=\"-Dtornado.dump.bytecodes.dir=" + TornadoSettingState.getInstance().bytecodesFileSaveLocation + "\" ") : (" ");
     }
 
-    private void retrieveEnvironmentVariablesCommand(StringBuilder command) {
+    private void configureEnvironmentVariables(GeneralCommandLine commandLine) {
+        Map<String, String> environment = commandLine.getEnvironment();
+
+        // Set JAVA_HOME
         Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
         String javaHome = projectSdk != null ? projectSdk.getHomePath() : null;
         if (javaHome != null) {
-            command.append("export JAVA_HOME=").append(javaHome).append(";");
+            environment.put("JAVA_HOME", javaHome);
         }
 
+        // Set TORNADOVM_HOME and update PATH
         String tornadoVmHome = EnvironmentVariable.getTornadoSdk();
+
         if (tornadoVmHome != null) {
-            command.append("export TORNADOVM_HOME=").append(tornadoVmHome).append(";");
-            command.append("export PATH=").append(tornadoVmHome).append("/bin:$PATH;");
+            environment.put("TORNADOVM_HOME", tornadoVmHome);
+
+            // Add tornado/bin to PATH
+            String existingPath = environment.get("PATH");
+            if (existingPath == null) {
+                existingPath = System.getenv("PATH");
+            }
+
+            String tornadoBinPath = tornadoVmHome + File.separator + "bin";
+            String pathSeparator = File.pathSeparator;
+            String newPath = tornadoBinPath + pathSeparator + existingPath;
+            environment.put("PATH", newPath);
         } else {
+            // Fallback: use parsed PATH from setvars.sh (Unix only)
             String envPath = EnvironmentVariable.getPath();
             if (envPath != null) {
-                command.append("export PATH=").append(envPath).append(";");
+                environment.put("PATH", envPath);
             }
         }
 
+        // Set CMAKE_ROOT if available
         String cmakeRoot = EnvironmentVariable.getCmakeRoot();
         if (cmakeRoot != null) {
-            command.append("export CMAKE_ROOT=").append(cmakeRoot).append(";");
+            environment.put("CMAKE_ROOT", cmakeRoot);
         }
     }
 
