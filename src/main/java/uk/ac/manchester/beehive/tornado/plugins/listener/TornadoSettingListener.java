@@ -27,10 +27,8 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.startup.ProjectActivity;
 import kotlin.coroutines.Continuation;
 import org.jetbrains.annotations.NotNull;
-import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 
-import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 /**

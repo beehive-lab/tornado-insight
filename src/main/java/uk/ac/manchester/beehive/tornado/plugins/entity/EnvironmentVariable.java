@@ -86,6 +86,7 @@ public class EnvironmentVariable {
         if (tornadoVmHome != null && !tornadoVmHome.isEmpty()) {
             return tornadoVmHome;
         }
-        return System.getenv("TORNADOVM_HOME");
+        String envValue = System.getenv("TORNADOVM_HOME");
+        return envValue;
     }
 }
