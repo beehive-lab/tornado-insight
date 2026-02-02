@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -260,6 +260,9 @@ public class TornadoTWTask {
         PsiElement[] errorElements = PsiTreeUtil.collectElements(method,
                 element -> element instanceof PsiErrorElement);
         if (errorElements.length != 0) return false;
+        // Kernel entry points registered via .task() must return void
+        PsiType returnType = method.getReturnType();
+        if (returnType != null && !PsiTypes.voidType().equals(returnType)) return false;
         return !ProblemMethods.getInstance().getMethodSet().contains(method.getText());
     }
 
