@@ -163,7 +163,7 @@ public class CodeGenerator {
                     %s
                     ImmutableTaskGraph immutableTaskGraph = %s.snapshot();
                     try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {
-                        executionPlan.execute();
+                        executionPlan.withPreCompilation();
                     }
                     }
                     """.formatted(variableInit, maybeOriginalTaskGraph.get(), taskGraphVarName);
@@ -187,7 +187,7 @@ public class CodeGenerator {
                     ".transferToHost(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ");\n" + //
                     "ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" + //
                     "try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {\n" + //
-                    "executionPlan.execute();\n" + //
+                    "executionPlan.withPreCompilation();\n" + //
                     "        }\n" + //
                     "    }"; //
         }

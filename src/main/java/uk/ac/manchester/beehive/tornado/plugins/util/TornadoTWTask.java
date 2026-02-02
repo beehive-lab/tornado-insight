@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,7 @@ import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -142,19 +143,55 @@ public class TornadoTWTask {
 
         for (PsiMethodCallExpression call : allMethodCalls) {
             PsiMethod method = call.resolveMethod();
-            if (method != null && !methodCalls.contains(method)) {
-                PsiClass containingClass = method.getContainingClass();
-                if (containingClass != null && getOtherMethods(methods).contains(method)) {
-                    methodCalls.add(method);
-                    ArrayList<PsiMethod> newMethods = new ArrayList<>();
-                    newMethods.add(method);
-                    collectCalledMethods(newMethods, methodCalls);
-                }
+            if (method != null && !methodCalls.contains(method) && isCollectableHelper(method)) {
+                methodCalls.add(method);
+                ArrayList<PsiMethod> newMethods = new ArrayList<>();
+                newMethods.add(method);
+                collectCalledMethods(newMethods, methodCalls);
             }
         }
     }
 
+    /**
+     * Determines whether a resolved method should be collected as a kernel helper
+     * for code generation. Unlike the previous file-scoped filter, this method
+     * accepts helpers defined in any class within the project's source roots.
+     *
+     * @param method the resolved method to check
+     * @return true if the method should be included as a helper in generated code
+     */
+    private static boolean isCollectableHelper(PsiMethod method) {
+        // Must have a body (source available)
+        if (method.getBody() == null) return false;
 
+        // Must be in project sources (not an external library)
+        PsiFile file = method.getContainingFile();
+        if (file == null) return false;
+        VirtualFile vFile = file.getVirtualFile();
+        if (vFile == null) return false;
+        Project project = method.getProject();
+        if (!ProjectRootManager.getInstance(project).getFileIndex().isInSourceContent(vFile)) {
+            return false;
+        }
+
+        // Exclude main, constructors, TaskGraph builders
+        if ("main".equals(method.getName())) return false;
+        if (method.isConstructor()) return false;
+        if (method.getText().contains("TaskGraph")) return false;
+
+        for (PsiAnnotation annotation : method.getAnnotations()) {
+            String qName = annotation.getQualifiedName();
+            if ("java.lang.Override".equals(qName)) return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns non-kernel methods defined in the current file, excluding main,
+     * constructors, TaskGraph-related, and @Override methods.
+     * Retained for backward compatibility with code that needs file-local helpers.
+     */
     public static ArrayList<PsiMethod> getOtherMethods(ArrayList<PsiMethod> methods) {
         Collection<PsiMethod> allMethods = PsiTreeUtil.findChildrenOfType(psiFile, PsiMethod.class);
         ArrayList<PsiMethod> allMethodsList = new ArrayList<>(allMethods);
