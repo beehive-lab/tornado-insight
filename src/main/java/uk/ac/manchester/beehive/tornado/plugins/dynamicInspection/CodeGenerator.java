@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.security.SecureRandom;
 import java.util.Optional;
+import java.util.Set;
 
 public class CodeGenerator {
 
@@ -131,11 +132,12 @@ public class CodeGenerator {
     }
 
     private static @NotNull String getTaskParameters(PsiMethod method, Optional<List<TornadoTWTask.TaskParametersInfo>> taskParametersInfos) {
+        Set<String> localMemoryParams = LocalMemoryParameterAnalyzer.findLocalMemoryParameters(method);
         List<TornadoTWTask.TaskParametersInfo> params = taskParametersInfos.orElse(Collections.emptyList());
 
         if (params.isEmpty()) {
             // Fallback: infer from the method signature when TaskGraphs are not declared
-            return VariableInit.variableInitHelper(method);
+            return VariableInit.variableInitHelper(method, localMemoryParams);
         }
 
         ArrayList<String> names = new ArrayList<>(params.size());
@@ -144,7 +146,7 @@ public class CodeGenerator {
             names.add(v.getName());
             types.add(v.getType());
         }
-        return VariableInit.variableInitHelper(names, types);
+        return VariableInit.variableInitHelper(names, types, localMemoryParams);
     }
 
     private static @NotNull String getTaskGraphCode(PsiMethod method, Optional<String> maybeOriginalTaskGraph, String variableInit, String methodWithClass) {

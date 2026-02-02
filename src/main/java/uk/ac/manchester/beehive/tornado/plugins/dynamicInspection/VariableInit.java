@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,15 +23,23 @@ import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Random;
+import java.util.Set;
 
 public class VariableInit {
+
+    private static final int LOCAL_MEMORY_PARAM_MAX = 16;
 
     private static int parameterSize;
     private static String tensorShapeDimension;
     private static int[] tensorShapeDimensions;
 
     public static String variableInitHelper(@NotNull PsiMethod method) {
+        return variableInitHelper(method, Collections.emptySet());
+    }
+
+    public static String variableInitHelper(@NotNull PsiMethod method, @NotNull Set<String> localMemoryParams) {
         initializeSizes();
         ArrayList<String> parametersName = new ArrayList<>();
         ArrayList<String> parametersType = new ArrayList<>();
@@ -39,12 +47,17 @@ public class VariableInit {
             parametersType.add(parameter.getTypeElement().getText());
             parametersName.add(parameter.getName());
         }
-        return variableInit(parametersName, parametersType);
+        return variableInit(parametersName, parametersType, localMemoryParams);
     }
 
     public static String variableInitHelper(ArrayList<String> fieldNames, ArrayList<String> fieldTypes) {
+        return variableInitHelper(fieldNames, fieldTypes, Collections.emptySet());
+    }
+
+    public static String variableInitHelper(ArrayList<String> fieldNames, ArrayList<String> fieldTypes,
+                                            @NotNull Set<String> localMemoryParams) {
         initializeSizes();
-        return variableInit(fieldNames, fieldTypes);
+        return variableInit(fieldNames, fieldTypes, localMemoryParams);
     }
 
     private static void initializeSizes() {
@@ -54,12 +67,20 @@ public class VariableInit {
     }
 
     private static String variableInit(@NotNull ArrayList<String> parametersName, ArrayList<String> parametersType){
+        return variableInit(parametersName, parametersType, Collections.emptySet());
+    }
+
+    private static String variableInit(@NotNull ArrayList<String> parametersName, ArrayList<String> parametersType,
+                                       @NotNull Set<String> localMemoryParams){
         StringBuilder returnString = new StringBuilder();
         int size = parametersName.size();
         for (int i = 0; i < size; i++) {
             returnString.append("\t\t");
-            returnString.append(parametersType.get(i)).append(" ").append(parametersName.get(i));
-            String value = lookupBoxedTypes(parametersType.get(i), parametersName.get(i), parameterSize);
+            String name = parametersName.get(i);
+            String type = parametersType.get(i);
+            returnString.append(type).append(" ").append(name);
+            boolean constrain = localMemoryParams.contains(name);
+            String value = lookupBoxedTypes(type, name, parameterSize, constrain);
             returnString.append(value);
             returnString.append("\n");
         }
@@ -67,8 +88,12 @@ public class VariableInit {
     }
 
     private static String lookupBoxedTypes(String type, String name, int size){
+        return lookupBoxedTypes(type, name, size, false);
+    }
+
+    private static String lookupBoxedTypes(String type, String name, int size, boolean constrainForLocalMemory){
         return switch (type) {
-            case "int" -> "=" + generateValueByType("Int") + ";";
+            case "int" -> "=" + (constrainForLocalMemory ? generateConstrainedInt() : generateValueByType("Int")) + ";";
             case "float" -> "=" + generateValueByType("Float") + ";";
             case "double" -> "=" + generateValueByType("Double") + ";";
             case "HalfFloat" -> "= new HalfFloat(" + generateValueByType("HalfFloat") + ");";
@@ -220,5 +245,9 @@ public class VariableInit {
         };
     }
 
+    private static String generateConstrainedInt() {
+        Random r = new Random();
+        return "" + (r.nextInt(LOCAL_MEMORY_PARAM_MAX) + 1);
+    }
 
 }
