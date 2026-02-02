@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,7 +69,7 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
 
                 for (PsiParameter parameter : method.getParameterList().getParameters()) {
                     PsiType type = parameter.getType();
-                    if (type.getCanonicalText().equals("KernelContext")) {
+                    if (type.getCanonicalText().endsWith("KernelContext")) {
                         checkThrow(method);
                         break;
                     }
