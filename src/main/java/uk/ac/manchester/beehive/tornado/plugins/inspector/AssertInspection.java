@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.inspector;
 
-
 import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
@@ -27,14 +26,15 @@ import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Objects;
-
 /**
  * This inspection tool identifies and highlights the usage of the 'assert' keyword
  * within methods that are annotated with either "@Parallel" or "@Reduce".
  *
  * <p>Methods that have either of these annotations are expected not to use assertions,
  * and any such use will be highlighted as an error in the IDE.</p>
+ *
+ * <p>The inspection follows method calls across class boundaries, analyzing all
+ * helper methods that TornadoVM would inline at runtime.</p>
  */
 public class AssertInspection extends AbstractBaseJavaLocalInspectionTool {
 
@@ -52,25 +52,33 @@ public class AssertInspection extends AbstractBaseJavaLocalInspectionTool {
             @Override
             public void visitAnnotation(PsiAnnotation annotation) {
                 super.visitAnnotation(annotation);
-                // Check if the annotation is of type 'Parallel' or 'Reduce'
-                if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
-                        annotation.getQualifiedName().endsWith("Reduce")) {
-                    // Retrieve the method which has the annotation
-                    PsiMethod parent = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
-                    if (parent == null) return;
-                    // Visit all elements inside the method to check for assert statements
-                    parent.accept(new JavaRecursiveElementVisitor() {
+                if (!KernelCallGraphAnalyzer.isKernelAnnotation(annotation)) return;
+
+                PsiMethod kernelMethod = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
+                if (kernelMethod == null) return;
+
+                KernelCallGraphAnalyzer.AnalysisScope scope =
+                        KernelCallGraphAnalyzer.resolve(kernelMethod);
+
+                for (PsiMethod method : scope.getAnalyzableMethods()) {
+                    String context = KernelCallGraphAnalyzer.helperContext(method, kernelMethod);
+                    method.accept(new JavaRecursiveElementVisitor() {
                         @Override
                         public void visitAssertStatement(PsiAssertStatement statement) {
                             super.visitAssertStatement(statement);
-                            // Add the parent method to a list of problematic methods
-                            ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), parent);
-                            //register the assert statement as an error
+                            ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
                             holder.registerProblem(statement,
-                                    MessageBundle.message("inspection.assert"),
+                                    MessageBundle.message("inspection.assert") + context,
                                     ProblemHighlightType.ERROR);
                         }
                     });
+                }
+
+                for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
+                    holder.registerProblem(entry.getKey(),
+                            MessageBundle.message("inspection.helper.unresolvable")
+                                    + ": " + entry.getValue(),
+                            ProblemHighlightType.WEAK_WARNING);
                 }
             }
         };

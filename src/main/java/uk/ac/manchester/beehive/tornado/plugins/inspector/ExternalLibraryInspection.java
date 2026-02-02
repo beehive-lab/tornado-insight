@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +35,9 @@ import java.util.Objects;
  * <p>Methods annotated with these annotations are expected to avoid external
  * library calls unless they are specifically whitelisted. Any detected
  * usage of unsupported libraries will be highlighted as a warning in the IDE.</p>
+ *
+ * <p>The inspection follows method calls across class boundaries, analyzing all
+ * helper methods that TornadoVM would inline at runtime.</p>
  */
 public class ExternalLibraryInspection extends AbstractBaseJavaLocalInspectionTool {
 
@@ -52,36 +55,43 @@ public class ExternalLibraryInspection extends AbstractBaseJavaLocalInspectionTo
             @Override
             public void visitAnnotation(PsiAnnotation annotation) {
                 super.visitAnnotation(annotation);
-                // Check if the annotation is of type 'Parallel' or 'Reduce'
-                if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
-                        annotation.getQualifiedName().endsWith("Reduce")) {
-                    PsiMethod method = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
-                    if (method == null) return;
-                    // Visit all elements inside the method to check for external library method calls
+                if (!KernelCallGraphAnalyzer.isKernelAnnotation(annotation)) return;
+
+                PsiMethod kernelMethod = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
+                if (kernelMethod == null) return;
+
+                KernelCallGraphAnalyzer.AnalysisScope scope =
+                        KernelCallGraphAnalyzer.resolve(kernelMethod);
+
+                for (PsiMethod method : scope.getAnalyzableMethods()) {
+                    String context = KernelCallGraphAnalyzer.helperContext(method, kernelMethod);
                     method.accept(new JavaRecursiveElementVisitor() {
                         @Override
                         public void visitMethodCallExpression(PsiMethodCallExpression expression) {
                             super.visitMethodCallExpression(expression);
                             if (expression.getMethodExpression().resolve() != null) {
                                 PsiMethod calledMethod = (PsiMethod) expression.getMethodExpression().resolve();
-                                // Check if the called method's qualified name does not belong to
-                                // whitelisted libraries/packages.
-                                if (calledMethod != null){
+                                if (calledMethod != null) {
                                     String qualifiedName = Objects.requireNonNull(calledMethod.getContainingClass()).getQualifiedName();
                                     if (qualifiedName != null && !qualifiedName.startsWith("java.") &&
-                                            !qualifiedName.startsWith("uk.ac.manchester.tornado")&&
-                                            !qualifiedName.startsWith("_Dummy_"))
-                                    {
-                                        ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), method);
+                                            !qualifiedName.startsWith("uk.ac.manchester.tornado") &&
+                                            !qualifiedName.startsWith("_Dummy_")) {
+                                        ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
                                         holder.registerProblem(expression,
-                                                MessageBundle.message("inspection.externalLibrary"),
+                                                MessageBundle.message("inspection.externalLibrary") + context,
                                                 ProblemHighlightType.WARNING);
                                     }
                                 }
                             }
                         }
                     });
+                }
 
+                for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
+                    holder.registerProblem(entry.getKey(),
+                            MessageBundle.message("inspection.helper.unresolvable")
+                                    + ": " + entry.getValue(),
+                            ProblemHighlightType.WEAK_WARNING);
                 }
             }
         };

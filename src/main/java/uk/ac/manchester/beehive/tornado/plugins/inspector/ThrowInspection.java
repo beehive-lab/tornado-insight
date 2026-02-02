@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +27,6 @@ import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
-import java.util.Objects;
 
 /**
  * A custom inspection tool to check for thrown exceptions within methods annotated with
@@ -37,6 +36,10 @@ import java.util.Objects;
  * - No exceptions are thrown within the method body.
  * - The method body does not contain any try/catch blocks.
  * - No exceptions are declared to be thrown in the method's signature.
+ * </p>
+ * <p>
+ * The inspection follows method calls across class boundaries, analyzing all helper methods
+ * that TornadoVM would inline at runtime.
  * </p>
  */
 public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
@@ -55,11 +58,23 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
             @Override
             public void visitAnnotation(PsiAnnotation annotation) {
                 super.visitAnnotation(annotation);
-                if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
-                        annotation.getQualifiedName().endsWith("Reduce")) {
-                    PsiMethod parent = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
-                    if (parent == null) return;
-                    checkThrow(parent);
+                if (!KernelCallGraphAnalyzer.isKernelAnnotation(annotation)) return;
+
+                PsiMethod kernelMethod = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
+                if (kernelMethod == null) return;
+
+                KernelCallGraphAnalyzer.AnalysisScope scope =
+                        KernelCallGraphAnalyzer.resolve(kernelMethod);
+
+                for (PsiMethod method : scope.getAnalyzableMethods()) {
+                    checkThrow(method, kernelMethod);
+                }
+
+                for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
+                    holder.registerProblem(entry.getKey(),
+                            MessageBundle.message("inspection.helper.unresolvable")
+                                    + ": " + entry.getValue(),
+                            ProblemHighlightType.WEAK_WARNING);
                 }
             }
 
@@ -70,22 +85,34 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
                 for (PsiParameter parameter : method.getParameterList().getParameters()) {
                     PsiType type = parameter.getType();
                     if (type.getCanonicalText().equals("KernelContext")) {
-                        checkThrow(method);
+                        KernelCallGraphAnalyzer.AnalysisScope scope =
+                                KernelCallGraphAnalyzer.resolve(method);
+
+                        for (PsiMethod m : scope.getAnalyzableMethods()) {
+                            checkThrow(m, method);
+                        }
+
+                        for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
+                            holder.registerProblem(entry.getKey(),
+                                    MessageBundle.message("inspection.helper.unresolvable")
+                                            + ": " + entry.getValue(),
+                                    ProblemHighlightType.WEAK_WARNING);
+                        }
                         break;
                     }
                 }
             }
 
-
-            private void checkThrow(PsiMethod method) {
+            private void checkThrow(PsiMethod method, PsiMethod kernelMethod) {
+                String context = KernelCallGraphAnalyzer.helperContext(method, kernelMethod);
                 method.accept(new JavaRecursiveElementVisitor() {
                     @Override
                     public void visitThrowStatement(PsiThrowStatement statement) {
                         super.visitThrowStatement(statement);
                         if (!reportedStatement.contains(statement)) {
-                            ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), method);
+                            ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
                             holder.registerProblem(statement,
-                                    MessageBundle.message("inspection.traps.throw"),
+                                    MessageBundle.message("inspection.traps.throw") + context,
                                     ProblemHighlightType.ERROR);
                             reportedStatement.add(statement);
                         }
@@ -93,21 +120,20 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
                     @Override
                     public void visitTryStatement(PsiTryStatement statement) {
                         super.visitTryStatement(statement);
-                        ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), method);
+                        ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
                         holder.registerProblem(statement,
-                                MessageBundle.message("inspection.traps.tryCatch"),
+                                MessageBundle.message("inspection.traps.tryCatch") + context,
                                 ProblemHighlightType.ERROR);
                     }
                 });
-
 
                 // Checking the method signature for thrown exceptions
                 if (!reportedMethod.contains(method)) {
                     for (PsiClassType exception : method.getThrowsList().getReferencedTypes()) {
                         holder.registerProblem(method.getThrowsList(),
-                                MessageBundle.message("inspection.traps.throws")+ "\n" + exception.getCanonicalText(),
+                                MessageBundle.message("inspection.traps.throws") + "\n" + exception.getCanonicalText() + context,
                                 ProblemHighlightType.ERROR);
-                        ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), method);
+                        ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
                     }
                     reportedMethod.add(method);
                 }
