@@ -39,7 +39,6 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
 
     public boolean bytecodeVisualizerEnabled;
     public int parameterSize;
-    public String tensorShapeDimensions;
     public boolean isValid;
     public boolean saveFileEnabled;
     public String debugFileSaveLocation;
