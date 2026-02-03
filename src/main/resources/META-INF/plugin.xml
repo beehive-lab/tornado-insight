@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2023, APT Group, Department of Computer Science,
+  ~ Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
   ~  The University of Manchester.
   ~
   ~  Licensed under the Apache License, Version 2.0 (the "License");
@@ -192,6 +192,14 @@ Enjoy and share your feedback!
                          enabledByDefault="true">
 
         </localInspection>
+        <localInspection language="JAVA"
+                         displayName="Non-void return type check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="NonVoidReturnInspection"
+                         level="WARNING"
+                         enabledByDefault="true"
+                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspector.NonVoidReturnInspection"/>
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoSideWindow" id="TornadoVM" anchor="right" icon="TornadoIcons.TornadoIcon" />
         <applicationConfigurable instance="uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration"
                                  displayName="TornadoInsight"/>
