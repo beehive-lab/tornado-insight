@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -210,10 +210,10 @@ public class VariableInit {
     private static String generateValueByType(String type){
         Random r = new Random();
         return switch (type) {
-            case "Int", "int", "Short", "short" -> "" + r.nextInt(1000);
-            case "Long", "long" -> "" + r.nextLong(1000);
-            case "Float", "float", "HalfFloat" -> r.nextFloat(1000) + "f";
-            case "Double","double" -> "" + r.nextDouble(1000);
+            case "Int", "int", "Short", "short" -> "" + r.nextInt(50);
+            case "Long", "long" -> "" + r.nextLong(50);
+            case "Float", "float", "HalfFloat" -> r.nextFloat(50) + "f";
+            case "Double","double" -> "" + r.nextDouble(50);
             case "Byte","byte" -> "(byte)" + r.nextInt(127);
             case "Char", "char" -> "'" + (char)(r.nextInt(26) + 'a') + "'";
             default -> "";

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,13 +68,15 @@ public class ExecutionEngine {
 
     private final Project project;
 
-    private boolean success;
+    private boolean completed;
+    private boolean hasRuntimeErrors;
 
     public ExecutionEngine(Project project, String tempFolderPath, HashMap<String, PsiMethod> fileMethodMap) {
         this.project = project;
         this.tempFolderPath = tempFolderPath;
         this.fileMethodMap = fileMethodMap;
-        this.success = false;
+        this.completed = false;
+        this.hasRuntimeErrors = false;
     }
 
     private static boolean isWindows() {
@@ -335,18 +337,57 @@ public class ExecutionEngine {
 
     private void runTornadoOnJar(String jarPath) {
         GeneralCommandLine commandLine = getGeneralCommandLine(jarPath);
-        //commandLine.addParameter("source " + sourceFile + ";tornado --debug --printKernel -jar " + jarPath);
         try {
             CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
             ProcessOutput output = handler.runProcess();
-            //Cannot use the exit code to determine if TornadoVM is running with an error or not.
-            // Under normal circumstances Tornado output will also have error output For example:
-            // " WARNING: Using incubator modules: jdk.incubator.foreign, jdk.incubator.vector "
-            printResults(jarPath, output.toString().contains("Exception"), output);
+            // Cannot use the exit code alone to determine if TornadoVM hit an error.
+            // Under normal circumstances TornadoVM output includes warnings like:
+            // "WARNING: Using incubator modules: jdk.incubator.foreign, jdk.incubator.vector"
+            // We must check for both Java exceptions and OpenCL/SPIR-V/PTX runtime errors.
+            boolean hasError = detectRuntimeError(output);
+            printResults(jarPath, hasError, output);
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Detects whether the TornadoVM process output contains runtime errors.
+     * Checks for Java exceptions as well as OpenCL/SPIR-V/PTX JNI-level errors
+     * that do not manifest as Java exceptions.
+     */
+    private static boolean detectRuntimeError(ProcessOutput output) {
+        String combined = output.getStdout() + "\n" + output.getStderr();
+        for (String pattern : ERROR_PATTERNS) {
+            if (combined.contains(pattern)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Patterns that indicate a TornadoVM runtime error in the process output.
+     * These cover Java exceptions, OpenCL JNI errors, SPIR-V errors, and PTX/CUDA errors.
+     */
+    private static final String[] ERROR_PATTERNS = {
+            "Exception",
+            "[TornadoVM-OCL-JNI] ERROR",
+            "[TornadoVM-SPIRV-JNI] ERROR",
+            "[TornadoVM-PTX-JNI] ERROR",
+            "CL_INVALID_KERNEL",
+            "CL_BUILD_PROGRAM_FAILURE",
+            "CL_OUT_OF_RESOURCES",
+            "CL_MEM_OBJECT_ALLOCATION_FAILURE",
+            "CL_INVALID_PROGRAM",
+            "CL_INVALID_WORK_GROUP_SIZE",
+            "OpenCL Error",
+            "CUDA_ERROR",
+            "TornadoInternalError",
+            "TornadoBailoutRuntimeException",
+            "TornadoDeviceFP16NotSupported",
+            "TornadoMemoryException",
+    };
 
     @NotNull
     private GeneralCommandLine getGeneralCommandLine(String jarPath) {
@@ -417,28 +458,96 @@ public class ExecutionEngine {
     }
 
     //Test results for each method
-    private void printResults(String jarPath, boolean hasException, ProcessOutput output) {
+    private void printResults(String jarPath, boolean hasError, ProcessOutput output) {
         String javaPath = jarPath.substring(0, jarPath.lastIndexOf(".jar")) + ".java";
         ApplicationManager.getApplication().runReadAction(() -> {
             String methodName = TornadoTWTask.psiMethodFormat(fileMethodMap.get(javaPath));
-            if (hasException) {
+            if (hasError) {
+                hasRuntimeErrors = true;
                 MessageUtils consoleInstance = MessageUtils.getInstance(project);
-                consoleInstance.showErrorMsg(MessageBundle.message("dynamic.info.title"),methodName + ": " + output.getStderr());
-                consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.title"),MessageBundle.message("dynamic.info.documentation"));
-                consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.title"),MessageBundle.message("dynamic.info.bug"));
+
+                // Collect all error lines from both stdout and stderr
+                String errorSummary = extractErrorLines(output);
+                String stderr = output.getStderr();
+                String errorDetail = errorSummary.isEmpty() ? stderr : errorSummary;
+                consoleInstance.showErrorMsg(MessageBundle.message("dynamic.info.title"),
+                        methodName + ": " + errorDetail);
+
+                // Show the generated kernel with error lines stripped out (for debugging)
+                String cleanKernel = stripErrorLines(output.getStdout());
+                if (!cleanKernel.isBlank()) {
+                    consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.opencl"), cleanKernel);
+                }
+
+                consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.title"),
+                        MessageBundle.message("dynamic.info.documentation"));
+                consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.title"),
+                        MessageBundle.message("dynamic.info.bug"));
             } else {
                 MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
                         methodName + ": " + MessageBundle.message("dynamic.info.noException") );
                 MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.opencl"), output.getStdout());
             }
-            success = true;
+            completed = true;
         });
     }
 
+    /**
+     * Extracts error-relevant lines from the process output, filtering out
+     * noise like normal kernel output or incubator warnings.
+     * Returns a consolidated error summary string.
+     */
+    private static String extractErrorLines(ProcessOutput output) {
+        StringBuilder errors = new StringBuilder();
+        String combined = output.getStdout() + "\n" + output.getStderr();
+        for (String line : combined.split("\n")) {
+            for (String pattern : ERROR_PATTERNS) {
+                if (line.contains(pattern)) {
+                    errors.append(line.trim()).append("\n");
+                    break;
+                }
+            }
+        }
+        return errors.toString().trim();
+    }
+
+    /**
+     * Removes error/diagnostic lines from stdout so the kernel code section
+     * only contains the actual generated kernel, not the JNI error messages
+     * that TornadoVM may intermix with kernel output.
+     */
+    private static String stripErrorLines(String stdout) {
+        if (stdout == null) return "";
+        StringBuilder clean = new StringBuilder();
+        for (String line : stdout.split("\n")) {
+            boolean isErrorLine = false;
+            for (String pattern : ERROR_PATTERNS) {
+                if (line.contains(pattern)) {
+                    isErrorLine = true;
+                    break;
+                }
+            }
+            // Also strip JNI notify lines that precede the actual error
+            if (!isErrorLine && !line.contains("[JNI] uk.ac.manchester.tornado.drivers.")) {
+                clean.append(line).append("\n");
+            }
+        }
+        return clean.toString().trim();
+    }
+
     private void showStatDialog(long runningTime){
-        if (success){
-            Notification notification = new Notification("Print", MessageBundle.message("dynamic.info.statistics.title"),
-                    MessageBundle.message("dynamic.info.statistics.body") + " " + runningTime + "ms", NotificationType.INFORMATION);
+        if (completed) {
+            String title;
+            NotificationType type;
+            if (hasRuntimeErrors) {
+                title = MessageBundle.message("dynamic.info.statistics.title.error");
+                type = NotificationType.WARNING;
+            } else {
+                title = MessageBundle.message("dynamic.info.statistics.title");
+                type = NotificationType.INFORMATION;
+            }
+            Notification notification = new Notification("Print", title,
+                    MessageBundle.message("dynamic.info.statistics.body") + " " + runningTime + "ms", type);
             notification.addAction(new ChangeParameterSize());
             ApplicationManager.getApplication().invokeLater(() -> Notifications.Bus.notify(notification, project));
         }
