@@ -164,13 +164,27 @@ public class TornadoTWTask {
         // Must have a body (source available)
         if (method.getBody() == null) return false;
 
+        // Exclude TornadoVM API methods by checking the containing class's package
+        PsiClass containingClass = method.getContainingClass();
+        if (containingClass != null) {
+            String qualifiedName = containingClass.getQualifiedName();
+            if (qualifiedName != null && qualifiedName.startsWith("uk.ac.manchester.tornado.api")) {
+                return false;
+            }
+        }
+
         // Must be in project sources (not an external library)
         PsiFile file = method.getContainingFile();
         if (file == null) return false;
         VirtualFile vFile = file.getVirtualFile();
         if (vFile == null) return false;
         Project project = method.getProject();
-        if (!ProjectRootManager.getInstance(project).getFileIndex().isInSourceContent(vFile)) {
+        var fileIndex = ProjectRootManager.getInstance(project).getFileIndex();
+        // Exclude library sources (e.g., TornadoVM API with attached sources)
+        if (fileIndex.isInLibrarySource(vFile) || fileIndex.isInLibraryClasses(vFile)) {
+            return false;
+        }
+        if (!fileIndex.isInSourceContent(vFile)) {
             return false;
         }
 
