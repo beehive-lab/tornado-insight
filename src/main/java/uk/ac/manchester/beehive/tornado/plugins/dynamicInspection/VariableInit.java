@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,15 +23,21 @@ import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Random;
+import java.util.Set;
 
 public class VariableInit {
 
+    private static final int LOCAL_MEMORY_PARAM_MAX = 16;
+
     private static int parameterSize;
-    private static String tensorShapeDimension;
-    private static int[] tensorShapeDimensions;
 
     public static String variableInitHelper(@NotNull PsiMethod method) {
+        return variableInitHelper(method, Collections.emptySet());
+    }
+
+    public static String variableInitHelper(@NotNull PsiMethod method, @NotNull Set<String> localMemoryParams) {
         initializeSizes();
         ArrayList<String> parametersName = new ArrayList<>();
         ArrayList<String> parametersType = new ArrayList<>();
@@ -39,27 +45,38 @@ public class VariableInit {
             parametersType.add(parameter.getTypeElement().getText());
             parametersName.add(parameter.getName());
         }
-        return variableInit(parametersName, parametersType);
+        return variableInit(parametersName, parametersType, localMemoryParams);
     }
 
     public static String variableInitHelper(ArrayList<String> fieldNames, ArrayList<String> fieldTypes) {
+        return variableInitHelper(fieldNames, fieldTypes, Collections.emptySet());
+    }
+
+    public static String variableInitHelper(ArrayList<String> fieldNames, ArrayList<String> fieldTypes,
+                                            @NotNull Set<String> localMemoryParams) {
         initializeSizes();
-        return variableInit(fieldNames, fieldTypes);
+        return variableInit(fieldNames, fieldTypes, localMemoryParams);
     }
 
     private static void initializeSizes() {
         parameterSize = TornadoSettingState.getInstance().parameterSize;
-        tensorShapeDimension = TornadoSettingState.getInstance().tensorShapeDimensions;
-        tensorShapeDimensions = convertShapeStringToIntArray(tensorShapeDimension);
     }
 
     private static String variableInit(@NotNull ArrayList<String> parametersName, ArrayList<String> parametersType){
+        return variableInit(parametersName, parametersType, Collections.emptySet());
+    }
+
+    private static String variableInit(@NotNull ArrayList<String> parametersName, ArrayList<String> parametersType,
+                                       @NotNull Set<String> localMemoryParams){
         StringBuilder returnString = new StringBuilder();
         int size = parametersName.size();
         for (int i = 0; i < size; i++) {
             returnString.append("\t\t");
-            returnString.append(parametersType.get(i)).append(" ").append(parametersName.get(i));
-            String value = lookupBoxedTypes(parametersType.get(i), parametersName.get(i), parameterSize);
+            String name = parametersName.get(i);
+            String type = parametersType.get(i);
+            returnString.append(type).append(" ").append(name);
+            boolean constrain = localMemoryParams.contains(name);
+            String value = lookupBoxedTypes(type, name, parameterSize, constrain);
             returnString.append(value);
             returnString.append("\n");
         }
@@ -67,8 +84,12 @@ public class VariableInit {
     }
 
     private static String lookupBoxedTypes(String type, String name, int size){
+        return lookupBoxedTypes(type, name, size, false);
+    }
+
+    private static String lookupBoxedTypes(String type, String name, int size, boolean constrainForLocalMemory){
         return switch (type) {
-            case "int" -> "=" + generateValueByType("Int") + ";";
+            case "int" -> "=" + (constrainForLocalMemory ? generateConstrainedInt() : generateValueByType("Int")) + ";";
             case "float" -> "=" + generateValueByType("Float") + ";";
             case "double" -> "=" + generateValueByType("Double") + ";";
             case "HalfFloat" -> "= new HalfFloat(" + generateValueByType("HalfFloat") + ");";
@@ -107,7 +128,6 @@ public class VariableInit {
             case "VectorDouble", "VectorDouble2", "VectorDouble3", "VectorDouble4", "VectorDouble8", "VectorDouble16" -> vectorInit(name, type, "Double");
             case "VectorHalf", "VectorHalf2", "VectorHalf3", "VectorHalf4", "VectorHalf8", "VectorHalf16" -> vectorHalfInit(name, type);
             case "KernelContext" -> " = new KernelContext();";
-            case "TensorByte", "TensorFP16", "TensorFP32", "TensorFP64", "TensorInt16", "TensorInt32", "TensorInt64" -> tensorInit(type);
             default -> "";
         };
     }
@@ -181,44 +201,22 @@ public class VariableInit {
                 name + ".fill(new HalfFloat(" + generateValueByType("HalfFloat") + "));";
     }
 
-    private static String tensorInit(String type){
-        StringBuilder builder = new StringBuilder();
-        builder.append(" = new ").append(type).append("(").append("new Shape(");
-
-        for (int i = 0; i < tensorShapeDimensions.length; i++){
-            builder.append(tensorShapeDimensions[i]);
-            if (i < tensorShapeDimensions.length - 1){
-                builder.append(", ");
-            }
-        }
-        builder.append("));").append("\n");
-        return builder.toString();
-    }
-
-    private static int[] convertShapeStringToIntArray(String shapeString){
-        String[] stringArray = shapeString.split(",");
-        int[] numbers = new int[stringArray.length];
-
-        for (int i = 0; i < stringArray.length; i++) {
-            if (!stringArray[i].trim().isEmpty()) {
-                numbers[i] = Integer.parseInt(stringArray[i].trim());
-            }
-        }
-        return numbers;
-    }
-
     private static String generateValueByType(String type){
         Random r = new Random();
         return switch (type) {
-            case "Int", "int", "Short", "short" -> "" + r.nextInt(1000);
-            case "Long", "long" -> "" + r.nextLong(1000);
-            case "Float", "float", "HalfFloat" -> r.nextFloat(1000) + "f";
-            case "Double","double" -> "" + r.nextDouble(1000);
+            case "Int", "int", "Short", "short" -> "" + r.nextInt(50);
+            case "Long", "long" -> "" + r.nextLong(50);
+            case "Float", "float", "HalfFloat" -> r.nextFloat(50) + "f";
+            case "Double","double" -> "" + r.nextDouble(50);
             case "Byte","byte" -> "(byte)" + r.nextInt(127);
             case "Char", "char" -> "'" + (char)(r.nextInt(26) + 'a') + "'";
             default -> "";
         };
     }
 
+    private static String generateConstrainedInt() {
+        Random r = new Random();
+        return "" + (r.nextInt(LOCAL_MEMORY_PARAM_MAX) + 1);
+    }
 
 }

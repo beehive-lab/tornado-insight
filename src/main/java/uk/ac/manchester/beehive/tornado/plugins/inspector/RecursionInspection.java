@@ -27,7 +27,6 @@ import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -36,6 +35,9 @@ import java.util.Set;
  *
  * <p>Methods annotated with these annotations are expected to avoid recursive
  * calls. Any detected recursive call will be highlighted as an error in the IDE.</p>
+ *
+ * <p>The inspection follows method calls across class boundaries, analyzing all
+ * helper methods that TornadoVM would inline at runtime.</p>
  */
 public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
 
@@ -54,12 +56,23 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
             public void visitAnnotation(PsiAnnotation annotation) {
                 super.visitAnnotation(annotation);
 
-                // Check if the annotation is of type 'Parallel' or 'Reduce'
-                if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
-                        annotation.getQualifiedName().endsWith("Reduce")) {
-                    PsiMethod parent = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
-                    if (parent == null) return;
-                    checkRecursion(parent);
+                if (!KernelCallGraphAnalyzer.isKernelAnnotation(annotation)) return;
+
+                PsiMethod kernelMethod = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
+                if (kernelMethod == null) return;
+
+                KernelCallGraphAnalyzer.AnalysisScope scope =
+                        KernelCallGraphAnalyzer.resolve(kernelMethod);
+
+                for (PsiMethod method : scope.getAnalyzableMethods()) {
+                    checkRecursion(method, kernelMethod);
+                }
+
+                for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
+                    holder.registerProblem(entry.getKey(),
+                            MessageBundle.message("inspection.helper.unresolvable")
+                                    + ": " + entry.getValue(),
+                            ProblemHighlightType.WEAK_WARNING);
                 }
             }
 
@@ -70,31 +83,43 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                 for (PsiParameter parameter : method.getParameterList().getParameters()) {
                     PsiType type = parameter.getType();
                     if (type.getCanonicalText().endsWith("KernelContext")) {
-                        checkRecursion(method);
+                        KernelCallGraphAnalyzer.AnalysisScope scope =
+                                KernelCallGraphAnalyzer.resolve(method);
+
+                        for (PsiMethod m : scope.getAnalyzableMethods()) {
+                            checkRecursion(m, method);
+                        }
+
+                        for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
+                            holder.registerProblem(entry.getKey(),
+                                    MessageBundle.message("inspection.helper.unresolvable")
+                                            + ": " + entry.getValue(),
+                                    ProblemHighlightType.WEAK_WARNING);
+                        }
                         break;
                     }
                 }
             }
 
-            private void checkRecursion(PsiMethod method) {
-                    // Visit all elements inside the method to check for recursive calls
-                    method.accept(new JavaRecursiveElementVisitor() {
-                        @Override
-                        public void visitCallExpression(PsiCallExpression callExpression) {
-                            super.visitCallExpression(callExpression);
-                            PsiMethod calledMethod = callExpression.resolveMethod();
-                            Set<PsiMethod> visited = new HashSet<>();
-                            if (isRecursive(calledMethod, visited)) {
-                                if (calledMethod == null) return;
-                                ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), calledMethod);
-                                holder.registerProblem(
-                                        calledMethod,
-                                        MessageBundle.message("inspection.recursion"),
-                                        ProblemHighlightType.ERROR);
-                            }
+            private void checkRecursion(PsiMethod method, PsiMethod kernelMethod) {
+                String context = KernelCallGraphAnalyzer.helperContext(method, kernelMethod);
+                method.accept(new JavaRecursiveElementVisitor() {
+                    @Override
+                    public void visitCallExpression(PsiCallExpression callExpression) {
+                        super.visitCallExpression(callExpression);
+                        PsiMethod calledMethod = callExpression.resolveMethod();
+                        Set<PsiMethod> visited = new HashSet<>();
+                        if (isRecursive(calledMethod, visited)) {
+                            if (calledMethod == null) return;
+                            ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
+                            holder.registerProblem(
+                                    calledMethod,
+                                    MessageBundle.message("inspection.recursion") + context,
+                                    ProblemHighlightType.ERROR);
                         }
-                    });
-                }
+                    }
+                });
+            }
         };
     }
 

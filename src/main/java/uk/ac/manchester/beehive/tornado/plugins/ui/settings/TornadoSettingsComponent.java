@@ -49,7 +49,6 @@ public class TornadoSettingsComponent {
     private final TextFieldWithBrowseButton bytecodesFileSaveLocationField = new TextFieldWithBrowseButton();
 
     private final JBTextField myMaxArraySize = new JBTextField(4);
-    private final JBTextField tensorShapeDimensions = new JBTextField();
 
     public TornadoSettingsComponent() {
         attachFolderChooser(debugFileSaveLocationField, "Save Location for Generated Code", "Choose the folder you want generated codes to be saved");
@@ -73,8 +72,6 @@ public class TornadoSettingsComponent {
 
         JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.max.array.size") + "</div></html>"))
-                .addLabeledComponent("Tensor shape dimensions:", tensorShapeDimensions)
-                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.tensor.shape.dimensions.doc") + "</div></html>"))
                 .getPanel();
 
         dynamicInspectionPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
@@ -162,21 +159,6 @@ public class TornadoSettingsComponent {
         myMaxArraySize.setText(String.valueOf(size));
     }
 
-    public String getTensorShapeDimensions() {
-        if (tensorShapeDimensions.getText().isEmpty() || Objects.equals(tensorShapeDimensions.getText(), "0")) {
-            return "";
-        }
-        return tensorShapeDimensions.getText();
-    }
-
-    public void setTensorShapeDimensions(String size) {
-        tensorShapeDimensions.setText(size);
-    }
-
-    public boolean isTensorShapeConfigured() {
-        return !tensorShapeDimensions.getText().isEmpty();
-    }
-
     public boolean isSaveFileEnabled() {
         return saveFileCheckbox.isSelected();
     }
@@ -201,36 +183,8 @@ public class TornadoSettingsComponent {
         bytecodesFileSaveLocationField.setText(path);
     }
 
-    private static String evaluateConditionsOfUserDefinedShape(String shapeString) {
-        String[] stringArray = shapeString.split(",");
-        int[] numbers = new int[stringArray.length];
-
-        for (int i = 0; i < stringArray.length; i++) {
-            String trimmedValue = stringArray[i].trim();
-            try {
-                numbers[i] = Integer.parseInt(trimmedValue);
-                // in case the input is negative
-                if (numbers[i] < 0) {
-                    return MessageBundle.message("ui.settings.validation.shape.dimensions.negative");
-                }
-            } catch (NumberFormatException e) {
-                // in case the input is not even a number
-                System.out.println("Invalid input: " + trimmedValue + " is not a number.");
-                return MessageBundle.message("ui.settings.validation.shape.dimensions");
-            } catch (IllegalArgumentException e) {
-                // in case the input is a float or double
-                System.out.println("Invalid input: " + trimmedValue + " is a float or double number.");
-                return MessageBundle.message("ui.settings.validation.shape.dimensions.float");
-            }
-        }
-        return "";
-    }
-
     public String isValidPath() {
         String parameterSize = myMaxArraySize.getText();
-        if (isTensorShapeConfigured()) {
-            return evaluateConditionsOfUserDefinedShape(tensorShapeDimensions.getText());
-        }
         if (isSaveFileEnabled()) {
             String saveLocation = debugFileSaveLocationField.getText();
             if (saveLocation.isEmpty()) {
