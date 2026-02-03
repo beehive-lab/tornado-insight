@@ -55,7 +55,6 @@ public class TornadoSettingConfiguration implements Configurable {
         TornadoSettingState settings = TornadoSettingState.getInstance();
         boolean modified = mySettingsComponent.isBytecodeVisualizerEnabled() != settings.bytecodeVisualizerEnabled;
         modified |= mySettingsComponent.getMaxArraySize() != settings.parameterSize;
-        modified |= mySettingsComponent.getTensorShapeDimensions() != settings.tensorShapeDimensions;
         modified |= mySettingsComponent.isSaveFileEnabled() != settings.saveFileEnabled;
         modified |= !mySettingsComponent.getDebugFileSaveLocation().equals(settings.debugFileSaveLocation);
         modified |= !mySettingsComponent.getBytecodesFileSaveLocation().equals(settings.bytecodesFileSaveLocation);
@@ -72,7 +71,6 @@ public class TornadoSettingConfiguration implements Configurable {
         }
         settings.bytecodeVisualizerEnabled = mySettingsComponent.isBytecodeVisualizerEnabled();
         settings.parameterSize = mySettingsComponent.getMaxArraySize();
-        settings.tensorShapeDimensions = mySettingsComponent.getTensorShapeDimensions();
         settings.saveFileEnabled = mySettingsComponent.isSaveFileEnabled();
         settings.debugFileSaveLocation = mySettingsComponent.getDebugFileSaveLocation();
         settings.bytecodesFileSaveLocation = mySettingsComponent.getBytecodesFileSaveLocation();
@@ -84,7 +82,6 @@ public class TornadoSettingConfiguration implements Configurable {
         TornadoSettingState settings = TornadoSettingState.getInstance();
         mySettingsComponent.setBytecodeVisualizerEnabled(settings.bytecodeVisualizerEnabled);
         mySettingsComponent.setMaxArraySize(settings.parameterSize);
-        mySettingsComponent.setTensorShapeDimensions(settings.tensorShapeDimensions);
         mySettingsComponent.setSaveFileEnabled(settings.saveFileEnabled);
         mySettingsComponent.setDebugFileSaveLocation(settings.debugFileSaveLocation);
         mySettingsComponent.setBytecodesFileSaveLocation(settings.bytecodesFileSaveLocation);
