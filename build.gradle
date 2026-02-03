@@ -22,7 +22,7 @@ plugins {
 }
 
 group = 'uk.ac.manchester.beehive.tornado.plugins'
-version = '1.4.2-windows-patch'
+version = '1.5.0'
 
 // Repositories: keep them ONLY in settings (PREFER_SETTINGS)
 
@@ -46,11 +46,6 @@ dependencies {
     // If your code touches TOML PSI or APIs, add this (since your error mentioned TOML):
     // bundledPlugin 'org.toml.lang'
   }
-}
-
-repositories {
-  intellijPlatform { defaultRepositories() }  // <-- required so 2.x can find the IDE
-  mavenCentral()
 }
 
 // Kotlin 2.2 compilerOptions (JVM 17 bytecode is safe & works on JBR21)
