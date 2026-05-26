@@ -150,7 +150,7 @@ public class TornadoSettingsComponent {
 
     public int getMaxArraySize() {
         if (myMaxArraySize.getText().isEmpty() || Objects.equals(myMaxArraySize.getText(), "0")) {
-            return 32;
+            return 128;
         }
         return Integer.parseInt(myMaxArraySize.getText());
     }
@@ -196,12 +196,14 @@ public class TornadoSettingsComponent {
             }
         }
 
-        if (StringUtil.isEmpty(parameterSize)) {
-            return MessageBundle.message("ui.settings.validation.emptySize");
+        // Empty or "0" mean "use the default" - getMaxArraySize() substitutes 128 in
+        // both cases, so the user can blank the field instead of typing a number.
+        if (StringUtil.isEmpty(parameterSize) || Objects.equals(parameterSize, "0")) {
+            return "";
         }
         try {
             int size = Integer.parseInt(parameterSize);
-            if (size >= 16384 || size <= 0) {
+            if (size < 0 || size >= 16384) {
                 return MessageBundle.message("ui.settings.validation.invalidSize");
             }
         } catch (NumberFormatException e) {
