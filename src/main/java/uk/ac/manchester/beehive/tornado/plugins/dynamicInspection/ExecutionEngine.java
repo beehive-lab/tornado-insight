@@ -220,6 +220,14 @@ public class ExecutionEngine {
 
         String classpath = apiPath + File.pathSeparator + matricesPath + File.pathSeparator + unitTestPath;
 
+        // Derive --release from the project SDK so it stays in sync with the JDK
+        // actually used to compile (and so that --enable-preview, which requires
+        // --release to match the current JDK, remains valid).
+        JavaSdkVersion projectSdkVersion = JavaSdkVersion.fromVersionString(projectSdk.getVersionString());
+        int releaseVersion = projectSdkVersion != null
+                ? projectSdkVersion.getMaxLanguageLevel().toJavaVersion().feature
+                : 21; // Fallback to the minimum supported release
+
         GeneralCommandLine commandLine = new GeneralCommandLine();
         String javacPath = projectSdk.getHomePath() + File.separator + "bin" + File.separator + "javac";
         if (isWindows()) {
@@ -227,7 +235,7 @@ public class ExecutionEngine {
         }
         commandLine.setExePath(javacPath);
         commandLine.addParameter("--release");
-        commandLine.addParameter("21");
+        commandLine.addParameter(String.valueOf(releaseVersion));
         commandLine.addParameter("--enable-preview");
         commandLine.addParameter("-g");
         commandLine.addParameter("-classpath");
@@ -241,7 +249,7 @@ public class ExecutionEngine {
             ProcessOutput output = ExecUtil.execAndGetOutput(commandLine);
             int exitCode = output.getExitCode();
             String stderr = output.getStderr();
-            if (exitCode == 1) {
+            if (exitCode != 0) {
                 MessageUtils.getInstance(project).showErrorMsg("Internal error when running generated code", "Exit code: " + exitCode + "\n" + stderr);
                 throw new UnsupportedOperationException("Compilation failed with exit code " + exitCode);
             }
