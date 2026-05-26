@@ -74,6 +74,12 @@ public class TornadoSettingConfiguration implements Configurable {
         settings.saveFileEnabled = mySettingsComponent.isSaveFileEnabled();
         settings.debugFileSaveLocation = mySettingsComponent.getDebugFileSaveLocation();
         settings.bytecodesFileSaveLocation = mySettingsComponent.getBytecodesFileSaveLocation();
+
+        // Re-enable the dynamic-inspection action once the settings panel validates again.
+        // 'isValid' is also gated on TORNADOVM_HOME (set by TornadoSettingListener at
+        // project open), so honour that here rather than blindly flipping to true.
+        String tornadoVmHome = System.getenv("TORNADOVM_HOME");
+        settings.isValid = tornadoVmHome != null && !tornadoVmHome.isEmpty();
     }
 
     //The method is invoked immediately after createComponent().
