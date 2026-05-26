@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2023, APT Group, Department of Computer Science,
+  ~ Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
   ~  The University of Manchester.
   ~
   ~  Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,23 +18,40 @@
 <html>
 <body>
 <p>
-  TornadoVM currently supports Java primitive types, primitive arrays <br>
-  as well as some object types such as VectorFloat, VectorFloat4 and <br>
-  all variations with types as well as matrices types.
+  Flags variables, fields and parameters declared with a type that the TornadoVM
+  compiler cannot translate to OpenCL, PTX or SPIR-V. The inspection runs on
+  any kernel method (annotated with <code>@Parallel</code> or <code>@Reduce</code>)
+  and on every helper method that TornadoVM would inline at runtime.
+</p>
+
+<p><b>Supported types:</b></p>
+<ul>
+  <li>Java primitives: <code>boolean</code>, <code>byte</code>, <code>short</code>,
+      <code>char</code>, <code>int</code>, <code>long</code>, <code>float</code>,
+      <code>double</code>.</li>
+  <li>Primitive arrays of the above (e.g. <code>int[]</code>, <code>float[]</code>).</li>
+  <li>TornadoVM API types under <code>uk.ac.manchester.tornado.api.*</code>:
+      Panama-backed arrays such as <code>IntArray</code> and <code>FloatArray</code>,
+      vector types such as <code>VectorFloat4</code>, and matrix types such as
+      <code>Matrix2DFloat</code>.</li>
+</ul>
+
+<p>
+  TornadoVM knows the memory layout of these types and can generate specialised
+  device code for them. For example, <code>VectorFloat4</code> lowers to the
+  OpenCL <code>float4</code> vector type, which lets the compiler emit SIMD
+  instructions on AVX-capable CPUs or vector lanes on GPUs.
 </p>
 
 <p>
-  The full list of data structures supported is in this
-  <a href="https://github.com/beehive-lab/TornadoVM/tree/master/
-  tornado-api/src/main/java/uk/ac/manchester/tornado/api/collections/types">link</a>
+  The full list of TornadoVM data structures lives in the
+  <a href="https://github.com/beehive-lab/TornadoVM/tree/master/tornado-api/src/main/java/uk/ac/manchester/tornado/api/types">tornado-api</a>
+  module.
 </p>
 
 <p>
-  Those are the objects that TornadoVM knows their memory layout. TornadoVM generates <br>
-  specialized OpenCL, PTX and SPIR-V code for those data structures. For example, VectorFloat4 <br>
-  is compiled in OpenCL to utilize the OpenCL vector data types (e.g., float4, int4, etc.). <br>
-  This might speed up user code if the target device contains explicit vector units,<br>
-  such as AVX on Intel CPUs or vector registers on AMD GPUs.
+  <b>How to fix:</b> replace the flagged type with one of the supported types
+  above, or move the work that uses it out of the kernel into host code.
 </p>
 </body>
 </html>

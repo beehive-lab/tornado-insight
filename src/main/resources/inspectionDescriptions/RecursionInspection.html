@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2023, APT Group, Department of Computer Science,
+  ~ Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
   ~  The University of Manchester.
   ~
   ~  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,20 @@
 
 <html>
 <body>
-TornadoVM does not support recursion. This is also a current limitation of OpenCL, CUDA and SPIR-V.
+<p>
+  Flags direct or indirect recursive calls reachable from a TornadoVM kernel
+  (a method annotated with <code>@Parallel</code> / <code>@Reduce</code> or one
+  that takes a <code>KernelContext</code> parameter). The check follows callees
+  across class boundaries.
+</p>
+<p>
+  Device backends used by TornadoVM &mdash; OpenCL, CUDA/PTX and SPIR-V &mdash;
+  do not allow recursion: kernels run on hardware that has no managed call
+  stack, so each call site must be statically inlinable.
+</p>
+<p>
+  <b>How to fix:</b> rewrite the algorithm iteratively (e.g. with an explicit
+  loop or an explicit stack/queue backed by a TornadoVM array type).
+</p>
 </body>
 </html>

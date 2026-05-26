@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2023, APT Group, Department of Computer Science,
+  ~ Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
   ~  The University of Manchester.
   ~
   ~  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +17,27 @@
 
 <html>
 <body>
-<h1>External library</h1>
-<p>External library is used in the project, which may not supported by TornadoVM</p>
+<p>
+  Flags method calls made from a TornadoVM kernel (or an inlined helper) into a
+  class that is neither part of the JDK (<code>java.*</code>) nor of the
+  TornadoVM API (<code>uk.ac.manchester.tornado.*</code>).
+</p>
 
+<p>
+  The TornadoVM JIT compiler can lower a curated subset of the JDK and the
+  TornadoVM API to device code. Third-party libraries are out of scope:
+  TornadoInsight cannot statically verify what they do, and at runtime TornadoVM
+  will likely refuse to compile the kernel.
+</p>
+
+<p>
+  <b>How to fix:</b>
+</p>
+<ul>
+  <li>Inline the required functionality directly in the kernel using primitives
+      and TornadoVM API types.</li>
+  <li>If the call has no equivalent on the device, move that work to host code
+      that runs before or after the TaskGraph executes.</li>
+</ul>
 </body>
 </html>

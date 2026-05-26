@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2023, APT Group, Department of Computer Science,
+  ~ Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
   ~  The University of Manchester.
   ~
   ~  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +17,27 @@
 
 <html>
 <body>
-The tasks need to be able to execute on devices other than <br>
-the one hosting the OS. This means that the TornadoVM <br>
-do not support the method call to the OS oe internally <br>
-to the JVM or externally to a native library. <br>
+<p>
+  Flags two kinds of unsupported calls inside a TornadoVM kernel or any helper
+  method that TornadoVM would inline:
+</p>
+<ul>
+  <li>Calls to <code>native</code> methods (JNI).</li>
+  <li>Calls into JDK system / IO / reflection classes that are restricted in
+      kernel context (for example <code>System</code>, <code>Thread</code>,
+      <code>java.io.*</code>, <code>java.nio.*</code>, <code>java.lang.reflect.*</code>).</li>
+</ul>
+<p>
+  A TornadoVM task can be dispatched to a device that does not share the host
+  operating system or the JVM (a discrete GPU, an FPGA, an accelerator across
+  PCIe). Code generated for OpenCL, PTX or SPIR-V cannot perform system calls,
+  invoke JNI, or interact with JVM-managed resources.
+</p>
+<p>
+  <b>How to fix:</b> keep the call out of the kernel. Perform I/O, reflection
+  and other host-only work before or after <code>TaskGraph.execute()</code>,
+  and pass the resulting data into the kernel through TornadoVM array or vector
+  types.
+</p>
 </body>
 </html>

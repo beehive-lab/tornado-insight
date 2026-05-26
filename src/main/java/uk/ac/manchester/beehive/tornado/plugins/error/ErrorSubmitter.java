@@ -18,13 +18,11 @@
 package uk.ac.manchester.beehive.tornado.plugins.error;
 
 import com.intellij.ide.BrowserUtil;
-import com.intellij.ide.plugins.IdeaPluginDescriptor;
-import com.intellij.ide.plugins.PluginManagerCore;
 import com.intellij.openapi.application.ApplicationInfo;
 import com.intellij.openapi.diagnostic.ErrorReportSubmitter;
 import com.intellij.openapi.diagnostic.IdeaLoggingEvent;
 import com.intellij.openapi.diagnostic.SubmittedReportInfo;
-import com.intellij.openapi.extensions.PluginId;
+import com.intellij.openapi.extensions.PluginDescriptor;
 import com.intellij.openapi.util.NlsActions;
 import com.intellij.openapi.util.SystemInfo;
 import com.intellij.openapi.util.text.StringUtil;
@@ -41,7 +39,6 @@ import java.nio.charset.StandardCharsets;
 public class ErrorSubmitter extends ErrorReportSubmitter {
 
     private String url = "https://github.com/beehive-lab/tornado-insight/issues/new?";
-    private final String pluginId = "uk.ac.manchester.beehive.TornadoInsight";
     private final String label = "exception";
     private final int stackTraceLen = 6500;
     @Override
@@ -71,7 +68,7 @@ public class ErrorSubmitter extends ErrorReportSubmitter {
             }
         }
 
-        IdeaPluginDescriptor plugin = PluginManagerCore.getPlugin(PluginId.getId(pluginId));
+        PluginDescriptor plugin = getPluginDescriptor();
         String pluginVersion = (plugin != null) ? plugin.getVersion() : "";
         String ideaVersion = ApplicationInfo.getInstance().getBuild().asString();
         StringBuilder template = new StringBuilder();
