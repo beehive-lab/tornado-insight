@@ -24,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -34,10 +35,15 @@ public class VariableInit {
     private static int parameterSize;
 
     public static String variableInitHelper(@NotNull PsiMethod method) {
-        return variableInitHelper(method, Collections.emptySet());
+        return variableInitHelper(method, Collections.emptySet(), Collections.emptyMap());
     }
 
     public static String variableInitHelper(@NotNull PsiMethod method, @NotNull Set<String> localMemoryParams) {
+        return variableInitHelper(method, localMemoryParams, Collections.emptyMap());
+    }
+
+    public static String variableInitHelper(@NotNull PsiMethod method, @NotNull Set<String> localMemoryParams,
+                                            @NotNull Map<String, String> intParamOverrides) {
         initializeSizes();
         ArrayList<String> parametersName = new ArrayList<>();
         ArrayList<String> parametersType = new ArrayList<>();
@@ -45,29 +51,32 @@ public class VariableInit {
             parametersType.add(parameter.getTypeElement().getText());
             parametersName.add(parameter.getName());
         }
-        return variableInit(parametersName, parametersType, localMemoryParams);
+        return variableInit(parametersName, parametersType, localMemoryParams, intParamOverrides);
     }
 
     public static String variableInitHelper(ArrayList<String> fieldNames, ArrayList<String> fieldTypes) {
-        return variableInitHelper(fieldNames, fieldTypes, Collections.emptySet());
+        return variableInitHelper(fieldNames, fieldTypes, Collections.emptySet(), Collections.emptyMap());
     }
 
     public static String variableInitHelper(ArrayList<String> fieldNames, ArrayList<String> fieldTypes,
                                             @NotNull Set<String> localMemoryParams) {
+        return variableInitHelper(fieldNames, fieldTypes, localMemoryParams, Collections.emptyMap());
+    }
+
+    public static String variableInitHelper(ArrayList<String> fieldNames, ArrayList<String> fieldTypes,
+                                            @NotNull Set<String> localMemoryParams,
+                                            @NotNull Map<String, String> intParamOverrides) {
         initializeSizes();
-        return variableInit(fieldNames, fieldTypes, localMemoryParams);
+        return variableInit(fieldNames, fieldTypes, localMemoryParams, intParamOverrides);
     }
 
     private static void initializeSizes() {
         parameterSize = TornadoSettingState.getInstance().parameterSize;
     }
 
-    private static String variableInit(@NotNull ArrayList<String> parametersName, ArrayList<String> parametersType){
-        return variableInit(parametersName, parametersType, Collections.emptySet());
-    }
-
     private static String variableInit(@NotNull ArrayList<String> parametersName, ArrayList<String> parametersType,
-                                       @NotNull Set<String> localMemoryParams){
+                                       @NotNull Set<String> localMemoryParams,
+                                       @NotNull Map<String, String> intParamOverrides){
         StringBuilder returnString = new StringBuilder();
         int size = parametersName.size();
         for (int i = 0; i < size; i++) {
@@ -76,20 +85,26 @@ public class VariableInit {
             String type = parametersType.get(i);
             returnString.append(type).append(" ").append(name);
             boolean constrain = localMemoryParams.contains(name);
-            String value = lookupBoxedTypes(type, name, parameterSize, constrain);
+            String value = lookupBoxedTypes(type, name, parameterSize, constrain, intParamOverrides);
             returnString.append(value);
             returnString.append("\n");
         }
         return returnString.toString();
     }
 
-    private static String lookupBoxedTypes(String type, String name, int size){
-        return lookupBoxedTypes(type, name, size, false);
-    }
-
-    private static String lookupBoxedTypes(String type, String name, int size, boolean constrainForLocalMemory){
+    private static String lookupBoxedTypes(String type, String name, int size, boolean constrainForLocalMemory,
+                                           @NotNull Map<String, String> intParamOverrides){
         return switch (type) {
-            case "int" -> "=" + (constrainForLocalMemory ? generateConstrainedInt() : generateValueByType("Int")) + ";";
+            // Scalar int parameters either reuse a user-defined constant /
+            // field that matches the parameter name (resolved upstream by
+            // CodeGenerator, e.g. parameter 'size' picking up an existing
+            // 'SIZE' field), or fall back to the configured parameterSize so
+            // kernel loop bounds stay in sync with the array lengths the
+            // harness just allocated. Local-memory parameters keep their
+            // constrained-random initialisation.
+            case "int" -> "=" + (constrainForLocalMemory
+                    ? generateConstrainedInt()
+                    : intParamOverrides.getOrDefault(name, String.valueOf(parameterSize))) + ";";
             case "float" -> "=" + generateValueByType("Float") + ";";
             case "double" -> "=" + generateValueByType("Double") + ";";
             case "HalfFloat" -> "= new HalfFloat(" + generateValueByType("HalfFloat") + ");";
