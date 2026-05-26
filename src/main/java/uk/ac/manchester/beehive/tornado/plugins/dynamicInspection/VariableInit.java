@@ -101,6 +101,7 @@ public class VariableInit {
                     "Half2", "Half3", "Half4", "Half8", "Half16",
                     "Short2", "Short3" -> tupleInit(type);
             case "IntArray" -> "= new IntArray(" + size + ");" + name + ".init(" + generateValueByType("Int") + ");";
+            case "Int8Array" -> "= new Int8Array(" + size + ");" + name + ".init(" + generateValueByType("byte") + ");";
             case "ShortArray" -> "= new ShortArray(" + size + ");" + name + ".init((short)" + generateValueByType("Short") + ");";
             case "DoubleArray" ->
                     "= new DoubleArray(" + size + ");" + name + ".init(" + generateValueByType("Double") + ");";
