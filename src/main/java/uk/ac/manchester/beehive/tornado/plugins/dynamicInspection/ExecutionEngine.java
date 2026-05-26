@@ -57,6 +57,8 @@ import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ExecutionEngine {
 
@@ -98,8 +100,19 @@ public class ExecutionEngine {
             return;
         }
 
-        long startTime = System.currentTimeMillis();
+        // Make sure the configured test-data size will produce a meaningful run
+        if (!validateParameterSize()) {
+            return;
+        }
+
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            // 'tornado --version' is a blocking subprocess call, so it must
+            // run off the EDT (OSProcessHandler.waitFor refuses on the EDT).
+            if (!validateJdkCompatibility()) {
+                return;
+            }
+
+            long startTime = System.currentTimeMillis();
             ArrayList<String> files = new ArrayList<>(fileMethodMap.keySet());
             try {
                 compile(tempFolderPath, files);
@@ -123,7 +136,7 @@ public class ExecutionEngine {
             Notification notification = new Notification(
                 "Print",
                 "No Project JDK Configured",
-                "Please configure a JDK 21+ in Project Structure (File > Project Structure > Project Settings > Project)",
+                "Please configure JDK 21 or 25 in Project Structure (File > Project Structure > Project Settings > Project)",
                 NotificationType.ERROR
             );
             notification.addAction(new NotificationAction("Open Project Structure") {
@@ -141,7 +154,7 @@ public class ExecutionEngine {
             Notification notification = new Notification(
                 "Print",
                 "Incompatible JDK Version",
-                "TornadoVM requires JDK 21 or higher. Current project JDK: " +
+                "TornadoVM supports JDK 21 and JDK 25. Current project JDK: " +
                     (sdkVersion != null ? sdkVersion.getDescription() : projectSdk.getVersionString()) +
                     ". Please update your project JDK in Project Structure.",
                 NotificationType.ERROR
@@ -183,6 +196,162 @@ public class ExecutionEngine {
         }
 
         return true;
+    }
+
+    /**
+     * Refuses to launch dynamic inspection when the configured test-data size
+     * is non-positive (or absurdly large). {@code VariableInit} pipes this
+     * value into every synthetic allocator it emits (arrays, matrices, images,
+     * vectors), so a zero would generate empty inputs that compile and "run"
+     * cleanly without actually exercising the kernel - a misleading green
+     * tick. The Settings dialog validates this on Apply, but nothing else
+     * does, so a fresh install or a hand-edited state file can still leak a
+     * bad value through to the runtime path.
+     */
+    private boolean validateParameterSize() {
+        int size = TornadoSettingState.getInstance().parameterSize;
+        if (size > 0 && size < 65536) {
+            return true;
+        }
+
+        String detail = size <= 0
+                ? "Current value is " + size + ", which would generate empty inputs and produce a misleading green run."
+                : "Current value is " + size + ", which exceeds the supported maximum (65536).";
+        Notification notification = new Notification(
+                "Print",
+                "Invalid Max Array Size",
+                "Set 'Max array size' in TornadoInsight settings to a value between 1 and 65536 (recommended: 128). "
+                        + detail,
+                NotificationType.ERROR
+        );
+        notification.addAction(new ChangeParameterSize());
+        Notifications.Bus.notify(notification, project);
+        return false;
+    }
+
+    // Matches the JDK feature number in lines like "version=4.0.1-jdk21" emitted by
+    // 'tornado --version' on success.
+    private static final Pattern TORNADO_JDK_PATTERN =
+            Pattern.compile("(?im)^\\s*version\\s*=\\s*\\S*-jdk(\\d+)");
+
+    // When 'tornado --version' itself rejects the current JDK, its stderr names the
+    // JDK it was built against, e.g.
+    //   "[ERROR] TornadoVM is only compatible with JDK version 25"
+    //   "TornadoVM supports only JDK version 25"
+    private static final Pattern TORNADO_REQUIRED_JDK_PATTERN =
+            Pattern.compile("(?im)(?:compatible with|supports only)\\s+JDK\\s+version\\s+(\\d+)");
+
+    /**
+     * Cross-checks the JDK that TornadoVM was built against (reported by
+     * {@code tornado --version}) with the JDK currently configured for the
+     * project. Only the JDK feature version is compared &mdash; vendor
+     * (Temurin, GraalVM, Oracle, Zulu, ...) is intentionally ignored, since
+     * TornadoVM's compatibility is keyed on the language/runtime version.
+     * Mismatches typically manifest as runtime errors deep inside TornadoVM,
+     * so failing fast here gives a clearer diagnostic.
+     */
+    private boolean validateJdkCompatibility() {
+        Integer tornadoJdk = detectTornadoVmJdkVersion();
+        if (tornadoJdk == null) {
+            // detectTornadoVmJdkVersion already surfaced a notification with details
+            return false;
+        }
+
+        Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
+        // validateProjectJdk already guaranteed a non-null SDK >= 21
+        JavaSdkVersion projectVersion = JavaSdkVersion.fromVersionString(projectSdk.getVersionString());
+        int projectJdk = projectVersion != null
+                ? projectVersion.getMaxLanguageLevel().toJavaVersion().feature
+                : -1;
+
+        if (projectJdk != tornadoJdk) {
+            Notification notification = new Notification(
+                "Print",
+                "Incompatible JDK for default TornadoVM",
+                "Current project JDK " + projectJdk +
+                    " is not compatible with the default TornadoVM at " + System.getenv("TORNADOVM_HOME") +
+                    ", which requires JDK " + tornadoJdk + "." +
+                    " Either change the project JDK to " + tornadoJdk +
+                    " in Project Structure, or point TORNADOVM_HOME at a TornadoVM build that targets JDK " + projectJdk + ".",
+                NotificationType.ERROR
+            );
+            notification.addAction(new NotificationAction("Open Project Structure") {
+                @Override
+                public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
+                    ProjectSettingsService.getInstance(project).openProjectSettings();
+                }
+            });
+            Notifications.Bus.notify(notification, project);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Runs {@code tornado --version} and parses the JDK feature version from
+     * the {@code version=<x>-jdk<n>} line. Returns {@code null} (and surfaces
+     * a user-visible notification) if the subprocess cannot be launched, fails,
+     * or its output does not contain a recognisable JDK marker.
+     */
+    private Integer detectTornadoVmJdkVersion() {
+        GeneralCommandLine commandLine = new GeneralCommandLine();
+        commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
+        commandLine.setExePath(isWindows() ? "tornado.exe" : "tornado");
+        commandLine.addParameter("--version");
+
+        ProcessOutput output;
+        try {
+            output = ExecUtil.execAndGetOutput(commandLine);
+        } catch (ExecutionException e) {
+            notifyTornadoVersionFailure(
+                    "Failed to launch 'tornado --version': " + e.getMessage()
+                            + ". Verify that 'tornado' is on PATH and that TORNADOVM_HOME points at a valid installation.");
+            return null;
+        }
+
+        String combined = (output.getStdout() + "\n" + output.getStderr()).trim();
+
+        // Happy path: the version line is present.
+        Matcher matcher = TORNADO_JDK_PATTERN.matcher(combined);
+        if (matcher.find()) {
+            try {
+                return Integer.parseInt(matcher.group(1));
+            } catch (NumberFormatException ignore) {
+                // Fall through to the structured-failure handling below.
+            }
+        }
+
+        // Failure path: tornado itself rejected the current JDK and named the
+        // version it wants. Surface that as the target JDK so the upstream
+        // comparison can produce a precise mismatch message.
+        Matcher requiredJdk = TORNADO_REQUIRED_JDK_PATTERN.matcher(combined);
+        if (requiredJdk.find()) {
+            try {
+                return Integer.parseInt(requiredJdk.group(1));
+            } catch (NumberFormatException ignore) {
+                // Fall through.
+            }
+        }
+
+        // Neither pattern produced a usable version - report the raw output.
+        String prefix = output.getExitCode() != 0
+                ? "'tornado --version' exited with code " + output.getExitCode() + "."
+                : "'tornado --version' did not report a JDK target (expected a 'version=<x>-jdk<n>' line).";
+        notifyTornadoVersionFailure(prefix + "\nOutput:\n" + combined);
+        return null;
+    }
+
+    private void notifyTornadoVersionFailure(String detail) {
+        LOG.warn("tornado --version check failed: " + detail);
+        Notification notification = new Notification(
+                "Print",
+                "TornadoVM installation check failed",
+                "<html>Could not determine the JDK that TornadoVM was built against.<br><br>" +
+                        detail.replace("\n", "<br>") + "</html>",
+                NotificationType.ERROR
+        );
+        Notifications.Bus.notify(notification, project);
     }
 
     private void compile(String outputDir, ArrayList<String> javaFiles) {
