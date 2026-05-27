@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2023, APT Group, Department of Computer Science,
+  ~ Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
   ~  The University of Manchester.
   ~
   ~  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,21 +17,32 @@
 
 <html>
 <body>
-TornadoVM does not support Traps/Exceptions.
 <p>
-  On GPUs there is little support for exceptions. For example, on a <br />
-  division by 0 scenario, the CPU sets a flag in one of the special <br />
-  registers. Then the Operating System can query those special<br />
-  registers and pass that value to the application runtime (in this <br />
-  case, the Java runtime). Then the Java runtime handles the exception.
+  Flags exception-related constructs inside a TornadoVM kernel or any helper
+  method that TornadoVM would inline:
+</p>
+<ul>
+  <li><code>throw</code> statements.</li>
+  <li><code>try</code> / <code>catch</code> blocks &mdash; the <code>catch</code>
+      block is silently dropped and any failure in the <code>try</code> block
+      goes unhandled on the device.</li>
+  <li><code>throws</code> clauses declared on the kernel method or on a helper
+      reachable from it.</li>
+</ul>
+<p>
+  GPUs and other accelerators do not have a traps mechanism that maps to Java
+  exceptions. On a CPU, a fault such as integer division by zero sets a flag in
+  a special register that the OS forwards to the JVM, which then raises an
+  exception. GPUs have no such handoff
+  (<a href="https://docs.nvidia.com/cuda/floating-point/index.html#differences-from-x86">CUDA floating-point notes</a>),
+  so TornadoVM must guarantee that exceptional conditions never occur on the
+  device. Any thrown exception, caught exception or declared <code>throws</code>
+  would have nowhere to surface.
 </p>
 <p>
-  However, there is no such mechanism on GPUs <a href="https://docs.nvidia.com/cuda/floating-point/index.html#differences-from-x86">(link)</a><br />
-  which means that TornadoVM must insert extra control-flow to <br />
-  guarantee that those exceptions never happen. Currently, since <br />
-  TornadoVM compiles at runtime, many of those checks can be<br />
-  assured at runtime.
+  <b>How to fix:</b> validate the inputs in host code before calling
+  <code>TaskGraph.execute()</code>, and write the kernel body so that every
+  branch produces a defined result (e.g. clamp divisors, guard array indices).
 </p>
-
 </body>
 </html>

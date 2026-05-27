@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2023, APT Group, Department of Computer Science,
+  ~ Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
   ~  The University of Manchester.
   ~
   ~  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,20 @@
 
 <html>
 <body>
-TornadoVM does not support the assert statement.
+<p>
+  Flags Java <code>assert</code> statements that appear inside a TornadoVM kernel,
+  i.e. a method annotated with <code>@Parallel</code> or <code>@Reduce</code>, or
+  any helper method transitively inlined into one.
+</p>
+<p>
+  Assertions rely on the JVM to raise <code>AssertionError</code> and on the host
+  to handle it. Code generated for OpenCL, PTX or SPIR-V runs on an accelerator
+  that has no notion of Java exceptions, so the assertion would either be silently
+  dropped or fail compilation.
+</p>
+<p>
+  <b>How to fix:</b> remove the assertion, or move the precondition check into
+  host code that runs before <code>TaskGraph.execute()</code>.
+</p>
 </body>
 </html>

@@ -101,7 +101,7 @@ public class CodeGenerator {
 
         Optional<String> maybeOriginalTaskGraph = TornadoTWTask.extractOriginalTaskGraphDeclaration(TornadoTWTask.getPsiFile(), method.getName(), methodWithClass);
         Optional<List<TornadoTWTask.TaskParametersInfo>> taskParametersInfos = TornadoTWTask.extractTasksParameters(TornadoTWTask.getPsiFile(), method.getName());
-        String taskParameters = getTaskParameters(method, taskParametersInfos);
+        String taskParameters = getTaskParameters(method, taskParametersInfos, fields);
         String mainCode = getTaskGraphCode(method, maybeOriginalTaskGraph, taskParameters, methodWithClass);
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(javaFile))) {
@@ -131,13 +131,17 @@ public class CodeGenerator {
         return javaFile;
     }
 
-    private static @NotNull String getTaskParameters(PsiMethod method, Optional<List<TornadoTWTask.TaskParametersInfo>> taskParametersInfos) {
+    private static @NotNull String getTaskParameters(PsiMethod method,
+                                                     Optional<List<TornadoTWTask.TaskParametersInfo>> taskParametersInfos,
+                                                     Map<String, Object> fields) {
         Set<String> localMemoryParams = LocalMemoryParameterAnalyzer.findLocalMemoryParameters(method);
         List<TornadoTWTask.TaskParametersInfo> params = taskParametersInfos.orElse(Collections.emptyList());
 
         if (params.isEmpty()) {
             // Fallback: infer from the method signature when TaskGraphs are not declared
-            return VariableInit.variableInitHelper(method, localMemoryParams);
+            Map<String, String> intOverrides = collectIntParamOverrides(
+                    methodIntParameterNames(method), fields);
+            return VariableInit.variableInitHelper(method, localMemoryParams, intOverrides);
         }
 
         ArrayList<String> names = new ArrayList<>(params.size());
@@ -146,7 +150,69 @@ public class CodeGenerator {
             names.add(v.getName());
             types.add(v.getType());
         }
-        return VariableInit.variableInitHelper(names, types, localMemoryParams);
+        Map<String, String> intOverrides = collectIntParamOverrides(intParamNames(names, types), fields);
+        return VariableInit.variableInitHelper(names, types, localMemoryParams, intOverrides);
+    }
+
+    private static List<String> methodIntParameterNames(PsiMethod method) {
+        List<String> intNames = new ArrayList<>();
+        for (PsiParameter p : method.getParameterList().getParameters()) {
+            if ("int".equals(p.getTypeElement().getText())) {
+                intNames.add(p.getName());
+            }
+        }
+        return intNames;
+    }
+
+    private static List<String> intParamNames(List<String> names, List<String> types) {
+        List<String> intNames = new ArrayList<>();
+        for (int i = 0; i < names.size(); i++) {
+            if ("int".equals(types.get(i))) {
+                intNames.add(names.get(i));
+            }
+        }
+        return intNames;
+    }
+
+    /**
+     * For each int parameter of the kernel, look in the user's class fields
+     * for an existing int field whose name matches the parameter name
+     * (case-insensitive) - e.g. parameter 'size' picks up a user-defined
+     * 'SIZE' or 'Size' constant. Returned map values are the field names to
+     * reference; unmatched parameters are omitted so VariableInit falls back
+     * to the configured parameterSize literal.
+     */
+    private static Map<String, String> collectIntParamOverrides(List<String> intParamNames,
+                                                                Map<String, Object> fields) {
+        if (intParamNames.isEmpty() || fields.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, String> overrides = new HashMap<>();
+        for (String paramName : intParamNames) {
+            String matched = findMatchingIntField(fields, paramName);
+            if (matched != null) {
+                overrides.put(paramName, matched);
+            }
+        }
+        return overrides;
+    }
+
+    private static String findMatchingIntField(Map<String, Object> fields, String paramName) {
+        String target = paramName.toLowerCase();
+        for (String key : fields.keySet()) {
+            // Field keys are formatted "<modifiers> <type> <name>" by
+            // TornadoTWTask.getFields(); split on whitespace and inspect the
+            // last two tokens.
+            String[] parts = key.trim().split("\\s+");
+            if (parts.length < 2) continue;
+            String fieldName = parts[parts.length - 1];
+            String fieldType = parts[parts.length - 2];
+            if (!"int".equals(fieldType)) continue;
+            if (fieldName.toLowerCase().equals(target)) {
+                return fieldName;
+            }
+        }
+        return null;
     }
 
     private static @NotNull String getTaskGraphCode(PsiMethod method, Optional<String> maybeOriginalTaskGraph, String variableInit, String methodWithClass) {

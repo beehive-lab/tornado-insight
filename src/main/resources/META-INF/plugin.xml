@@ -55,7 +55,7 @@ It invokes Java and TornadoVM at runtime on the computer where the plugin is ins
 developers must have installed Java and TornadoVM prior to using the plugin:
 <ul>
     <li><a href="https://github.com/beehive-lab/TornadoVM">TornadoVM</a> >= v2.2.0 (for TornadoInsight 1.4.2+)</li>
-    <li>JDK >= 21</li>
+    <li>JDK 21 or JDK 25</li>
 </ul>
 
 <h3>Install TornadoVM SDK</h3>

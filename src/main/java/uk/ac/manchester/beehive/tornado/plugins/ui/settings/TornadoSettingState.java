@@ -38,7 +38,12 @@ import java.io.FilenameFilter;
 public class TornadoSettingState implements PersistentStateComponent<TornadoSettingState> {
 
     public boolean bytecodeVisualizerEnabled;
-    public int parameterSize;
+    // Default test-data size used by VariableInit when generating synthetic
+    // inputs for dynamic inspection. Picked to be large enough that kernels
+    // actually exercise real data, while staying within the Settings-dialog
+    // validator (>0 and <16384). Overridden when the user changes the value
+    // in Settings.
+    public int parameterSize = 128;
     public boolean isValid;
     public boolean saveFileEnabled;
     public String debugFileSaveLocation;

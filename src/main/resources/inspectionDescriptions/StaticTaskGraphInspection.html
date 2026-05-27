@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2023, APT Group, Department of Computer Science,
+  ~ Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
   ~  The University of Manchester.
   ~
   ~  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +17,23 @@
 
 <html>
 <body>
-TornadoVM currently does not support static <code>TaskGraph</code>> and Tasks.
-The reason for not supporting this is that a deadlock might occur
-between the user thread running class initialization and the Tornado
-compiler thread performing JIT compilation of the Task method.
+<p>
+  Flags references to a <code>static</code> field of type
+  <code>uk.ac.manchester.tornado.api.TaskGraph</code>, and calls to
+  <code>TaskGraph.task(...)</code> on such a static instance.
+</p>
+<p>
+  TornadoVM lazily JIT-compiles the methods registered through
+  <code>task(...)</code>. If a <code>TaskGraph</code> lives in a static field,
+  its initialization can run while the class is still being loaded; the
+  TornadoVM compiler thread then needs the same class to finish initialization
+  to compile the task, which can deadlock the user thread against the
+  TornadoVM compiler thread.
+</p>
+<p>
+  <b>How to fix:</b> declare the <code>TaskGraph</code> as an instance field or
+  a local variable, and create it after the surrounding class has finished
+  initialization (for example inside a method).
+</p>
 </body>
 </html>

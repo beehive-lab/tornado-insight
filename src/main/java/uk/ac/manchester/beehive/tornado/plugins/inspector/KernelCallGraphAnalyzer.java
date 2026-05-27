@@ -129,7 +129,8 @@ public final class KernelCallGraphAnalyzer {
             PsiMethod resolved = callExpr.resolveMethod();
             if (resolved == null) {
                 nonAnalyzable.put(callExpr,
-                        "Cannot resolve method '" + callExpr.getText() + "'");
+                        "could not resolve call '" + callExpr.getText()
+                                + "' to a method declaration");
                 continue;
             }
 
@@ -155,11 +156,12 @@ public final class KernelCallGraphAnalyzer {
      */
     static String checkEligibility(PsiMethod method) {
         if (method.getBody() == null) {
-            return "Method '" + method.getName() + "' has no source body available for analysis";
+            return "no source available for '" + method.getName()
+                    + "' (abstract, interface or compiled-only method)";
         }
 
         if (method.hasModifierProperty(PsiModifier.NATIVE)) {
-            return "Method '" + method.getName() + "' is native";
+            return "'" + method.getName() + "' is a native method";
         }
 
         PsiClass containingClass = method.getContainingClass();
