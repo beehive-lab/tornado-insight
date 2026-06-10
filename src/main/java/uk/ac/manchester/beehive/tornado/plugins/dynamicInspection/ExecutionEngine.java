@@ -337,7 +337,10 @@ public class ExecutionEngine {
         Matcher matcher = TORNADO_JDK_PATTERN.matcher(combined);
         if (matcher.find()) {
             try {
-                return Integer.parseInt(matcher.group(1));
+                int jdk = Integer.parseInt(matcher.group(1));
+                MessageUtils.getInstance(project).showInfoMsg("Info",
+                        "TornadoVM JDK version detected: " + jdk);
+                return jdk;
             } catch (NumberFormatException ignore) {
                 // Fall through to the structured-failure handling below.
             }
