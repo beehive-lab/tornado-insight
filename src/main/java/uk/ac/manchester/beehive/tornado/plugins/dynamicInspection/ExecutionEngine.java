@@ -318,6 +318,7 @@ public class ExecutionEngine {
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
         commandLine.setExePath(resolveTornadoExe());
+        configureEnvironmentVariables(commandLine);
         commandLine.addParameter("--version");
 
         ProcessOutput output;
