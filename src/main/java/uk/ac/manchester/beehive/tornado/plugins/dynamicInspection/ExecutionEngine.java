@@ -85,6 +85,26 @@ public class ExecutionEngine {
         return System.getProperty("os.name").toLowerCase().contains("win");
     }
 
+    /**
+     * Resolves the {@code tornado} executable. Prefers an absolute path under
+     * {@code TORNADOVM_HOME/bin} (so the plugin works regardless of how the IDE
+     * was launched, since the JVM resolves a bare command name against the
+     * launching process's PATH rather than any PATH we set on the command line),
+     * and falls back to the bare executable name for a PATH lookup when the home
+     * is unknown or the binary is missing.
+     */
+    private static String resolveTornadoExe() {
+        String exe = isWindows() ? "tornado.exe" : "tornado";
+        String home = EnvironmentVariable.getTornadoSdk();
+        if (home != null && !home.isEmpty()) {
+            File candidate = new File(home, "bin" + File.separator + exe);
+            if (candidate.isFile()) {
+                return candidate.getAbsolutePath();
+            }
+        }
+        return exe;
+    }
+
     public void run(){
         // Performing UI related operations on a non-EDT is not allowed.
         MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
@@ -297,7 +317,7 @@ public class ExecutionEngine {
     private Integer detectTornadoVmJdkVersion() {
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
-        commandLine.setExePath(isWindows() ? "tornado.exe" : "tornado");
+        commandLine.setExePath(resolveTornadoExe());
         commandLine.addParameter("--version");
 
         ProcessOutput output;
@@ -468,8 +488,7 @@ public class ExecutionEngine {
         //Detecting if the user has correctly installed TornadoVM
         commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
         // On Windows, explicitly use tornado.exe to avoid trying to execute the Unix shell script
-        String tornadoExe = isWindows() ? "tornado.exe" : "tornado";
-        commandLine.setExePath(tornadoExe);
+        commandLine.setExePath(resolveTornadoExe());
         configureEnvironmentVariables(commandLine);
         commandLine.addParameter("--device");
 
@@ -571,8 +590,7 @@ public class ExecutionEngine {
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
         // On Windows, explicitly use tornado.exe to avoid trying to execute the Unix shell script
-        String tornadoExe = isWindows() ? "tornado.exe" : "tornado";
-        commandLine.setExePath(tornadoExe);
+        commandLine.setExePath(resolveTornadoExe());
         configureEnvironmentVariables(commandLine);
         commandLine.addParameter("--printKernel");
 
