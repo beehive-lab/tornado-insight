@@ -106,7 +106,8 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
                         && !type.getCanonicalText().startsWith("double[]") && !type.getCanonicalText().startsWith("long[]")
                         && !type.getCanonicalText().startsWith("char[]") && !type.getCanonicalText().startsWith("float[]")
                         && !type.getCanonicalText().startsWith("byte[]") && !type.getCanonicalText().startsWith("short[]")
-                        && !type.equalsToText("Int3") && !type.getCanonicalText().startsWith("uk.ac.manchester.tornado.api.")) {
+                        && !type.equalsToText("Int3") && !type.getCanonicalText().startsWith("uk.ac.manchester.tornado.api.")
+                        && !type.getCanonicalText().startsWith("java.util.concurrent.atomic.AtomicInteger")) {
                     PsiMethod parentMethod = PsiTreeUtil.getParentOfType(variable, PsiMethod.class);
                     if (parentMethod != null) {
                         ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), parentMethod);
