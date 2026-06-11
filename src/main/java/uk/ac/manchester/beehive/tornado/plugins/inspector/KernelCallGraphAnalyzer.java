@@ -55,11 +55,14 @@ public final class KernelCallGraphAnalyzer {
     public static final class AnalysisScope {
         private final List<PsiMethod> analyzableMethods;
         private final Map<PsiMethodCallExpression, String> nonAnalyzableCallSites;
+        private final Map<PsiMethod, PsiMethodCallExpression> rootCallSites;
 
         AnalysisScope(List<PsiMethod> analyzableMethods,
-                      Map<PsiMethodCallExpression, String> nonAnalyzableCallSites) {
+                      Map<PsiMethodCallExpression, String> nonAnalyzableCallSites,
+                      Map<PsiMethod, PsiMethodCallExpression> rootCallSites) {
             this.analyzableMethods = Collections.unmodifiableList(analyzableMethods);
             this.nonAnalyzableCallSites = Collections.unmodifiableMap(nonAnalyzableCallSites);
+            this.rootCallSites = Collections.unmodifiableMap(rootCallSites);
         }
 
         /**
@@ -75,6 +78,25 @@ public final class KernelCallGraphAnalyzer {
          */
         public Map<PsiMethodCallExpression, String> getNonAnalyzableCallSites() {
             return nonAnalyzableCallSites;
+        }
+
+        /**
+         * Returns an element inside {@code inspectedFile} on which a problem found
+         * on {@code element} may be registered. ProblemsHolder rejects elements from
+         * other files, so findings inside a helper that lives in another file are
+         * anchored to the call expression (in the inspected file) that leads to that
+         * helper. Returns the element itself when it already belongs to the inspected
+         * file, or {@code null} when no in-file anchor exists.
+         *
+         * @param element          the element the problem was found on
+         * @param containingMethod the analyzable method whose body contains the element
+         * @param inspectedFile    the file the ProblemsHolder belongs to
+         */
+        public PsiElement anchorFor(PsiElement element, PsiMethod containingMethod, PsiFile inspectedFile) {
+            if (element != null && element.getContainingFile() == inspectedFile) {
+                return element;
+            }
+            return rootCallSites.get(containingMethod);
         }
     }
 
@@ -101,20 +123,25 @@ public final class KernelCallGraphAnalyzer {
     private static AnalysisScope doResolve(PsiMethod kernelMethod) {
         List<PsiMethod> analyzable = new ArrayList<>();
         Map<PsiMethodCallExpression, String> nonAnalyzable = new LinkedHashMap<>();
+        Map<PsiMethod, PsiMethodCallExpression> rootCallSites = new HashMap<>();
         Set<PsiMethod> visited = new HashSet<>();
 
         analyzable.add(kernelMethod);
         visited.add(kernelMethod);
-        collectTransitiveCallees(kernelMethod, visited, analyzable, nonAnalyzable, 0);
+        collectTransitiveCallees(kernelMethod, kernelMethod.getContainingFile(), null,
+                visited, analyzable, nonAnalyzable, rootCallSites, 0);
 
-        return new AnalysisScope(analyzable, nonAnalyzable);
+        return new AnalysisScope(analyzable, nonAnalyzable, rootCallSites);
     }
 
     private static void collectTransitiveCallees(
             PsiMethod method,
+            PsiFile kernelFile,
+            PsiMethodCallExpression rootSite,
             Set<PsiMethod> visited,
             List<PsiMethod> analyzable,
             Map<PsiMethodCallExpression, String> nonAnalyzable,
+            Map<PsiMethod, PsiMethodCallExpression> rootCallSites,
             int depth) {
 
         if (depth >= MAX_INLINE_DEPTH) return;
@@ -126,11 +153,19 @@ public final class KernelCallGraphAnalyzer {
                 PsiTreeUtil.findChildrenOfType(body, PsiMethodCallExpression.class);
 
         for (PsiMethodCallExpression callExpr : calls) {
+            // Diagnostics must be registered on elements of the kernel's file;
+            // for calls inside an out-of-file helper, fall back to the kernel-file
+            // call expression that leads into that helper.
+            PsiMethodCallExpression site =
+                    callExpr.getContainingFile() == kernelFile ? callExpr : rootSite;
+
             PsiMethod resolved = callExpr.resolveMethod();
             if (resolved == null) {
-                nonAnalyzable.put(callExpr,
-                        "could not resolve call '" + callExpr.getText()
-                                + "' to a method declaration");
+                if (site != null) {
+                    nonAnalyzable.putIfAbsent(site,
+                            "could not resolve call '" + callExpr.getText()
+                                    + "' to a method declaration");
+                }
                 continue;
             }
 
@@ -138,15 +173,17 @@ public final class KernelCallGraphAnalyzer {
 
             String ineligibilityReason = checkEligibility(resolved);
             if (ineligibilityReason != null) {
-                if (isUserProjectMethod(resolved)) {
-                    nonAnalyzable.put(callExpr, ineligibilityReason);
+                if (isUserProjectMethod(resolved) && site != null) {
+                    nonAnalyzable.putIfAbsent(site, ineligibilityReason);
                 }
                 continue;
             }
 
             visited.add(resolved);
             analyzable.add(resolved);
-            collectTransitiveCallees(resolved, visited, analyzable, nonAnalyzable, depth + 1);
+            rootCallSites.put(resolved, site);
+            collectTransitiveCallees(resolved, kernelFile, site,
+                    visited, analyzable, nonAnalyzable, rootCallSites, depth + 1);
         }
     }
 
@@ -168,19 +205,22 @@ public final class KernelCallGraphAnalyzer {
         if (containingClass != null) {
             String qName = containingClass.getQualifiedName();
             if (qName != null) {
-                // Restricted system classes — not an error, just not analyzed
+                // Restricted system classes — never inlined; SystemCallInspection
+                // reports the call site itself.
                 if (RestrictedClasses.isRestrictedClass(qName)) {
-                    return null;
+                    return "'" + qName + "' is a restricted system class";
                 }
-                // TornadoVM API intrinsics — handled by runtime
+                // TornadoVM API intrinsics — replaced by the runtime, so their
+                // Java bodies must not be analyzed as kernel code
                 if (qName.startsWith("uk.ac.manchester.tornado.api.")) {
-                    return null;
+                    return "'" + qName + "' is a TornadoVM API intrinsic";
                 }
             }
         }
 
+        // Library methods are not kernel code; only user sources are inlined
         if (!isUserProjectMethod(method)) {
-            return null;
+            return "'" + method.getName() + "' is a library method";
         }
 
         return null;

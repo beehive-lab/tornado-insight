@@ -67,7 +67,7 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
                         KernelCallGraphAnalyzer.resolve(kernelMethod);
 
                 for (PsiMethod method : scope.getAnalyzableMethods()) {
-                    checkThrow(method, kernelMethod);
+                    checkThrow(method, kernelMethod, scope);
                 }
 
                 for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
@@ -89,7 +89,7 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
                                 KernelCallGraphAnalyzer.resolve(method);
 
                         for (PsiMethod m : scope.getAnalyzableMethods()) {
-                            checkThrow(m, method);
+                            checkThrow(m, method, scope);
                         }
 
                         for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
@@ -103,15 +103,18 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
                 }
             }
 
-            private void checkThrow(PsiMethod method, PsiMethod kernelMethod) {
+            private void checkThrow(PsiMethod method, PsiMethod kernelMethod,
+                                    KernelCallGraphAnalyzer.AnalysisScope scope) {
                 String context = KernelCallGraphAnalyzer.helperContext(method, kernelMethod);
                 method.accept(new JavaRecursiveElementVisitor() {
                     @Override
                     public void visitThrowStatement(PsiThrowStatement statement) {
                         super.visitThrowStatement(statement);
                         if (!reportedStatement.contains(statement)) {
+                            PsiElement anchor = scope.anchorFor(statement, method, holder.getFile());
+                            if (anchor == null) return;
                             ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
-                            holder.registerProblem(statement,
+                            holder.registerProblem(anchor,
                                     MessageBundle.message("inspection.traps.throw") + context,
                                     ProblemHighlightType.ERROR);
                             reportedStatement.add(statement);
@@ -120,8 +123,10 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
                     @Override
                     public void visitTryStatement(PsiTryStatement statement) {
                         super.visitTryStatement(statement);
+                        PsiElement anchor = scope.anchorFor(statement, method, holder.getFile());
+                        if (anchor == null) return;
                         ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
-                        holder.registerProblem(statement,
+                        holder.registerProblem(anchor,
                                 MessageBundle.message("inspection.traps.tryCatch") + context,
                                 ProblemHighlightType.ERROR);
                     }
@@ -130,7 +135,9 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
                 // Checking the method signature for thrown exceptions
                 if (!reportedMethod.contains(method)) {
                     for (PsiClassType exception : method.getThrowsList().getReferencedTypes()) {
-                        holder.registerProblem(method.getThrowsList(),
+                        PsiElement anchor = scope.anchorFor(method.getThrowsList(), method, holder.getFile());
+                        if (anchor == null) continue;
+                        holder.registerProblem(anchor,
                                 MessageBundle.message("inspection.traps.throws") + "\n" + exception.getCanonicalText() + context,
                                 ProblemHighlightType.ERROR);
                         ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);

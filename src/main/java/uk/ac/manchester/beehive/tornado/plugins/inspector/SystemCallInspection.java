@@ -72,9 +72,11 @@ public class SystemCallInspection extends AbstractBaseJavaLocalInspectionTool {
                         public void visitMethodCallExpression(PsiMethodCallExpression expression) {
                             super.visitMethodCallExpression(expression);
                             PsiMethod calledMethod = expression.resolveMethod();
+                            PsiElement anchor = scope.anchorFor(expression, method, holder.getFile());
+                            if (anchor == null) return;
                             if (calledMethod != null && calledMethod.hasModifierProperty(PsiModifier.NATIVE)) {
                                 ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
-                                holder.registerProblem(expression,
+                                holder.registerProblem(anchor,
                                         MessageBundle.message("inspection.nativeCall") + context,
                                         ProblemHighlightType.ERROR);
                             }
@@ -84,7 +86,7 @@ public class SystemCallInspection extends AbstractBaseJavaLocalInspectionTool {
                             assert className != null;
                             if (RestrictedClasses.isRestrictedClass(className)) {
                                 ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
-                                holder.registerProblem(expression,
+                                holder.registerProblem(anchor,
                                         MessageBundle.message("inspection.external") + context,
                                         ProblemHighlightType.ERROR);
                             }

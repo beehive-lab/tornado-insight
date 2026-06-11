@@ -66,8 +66,10 @@ public class AssertInspection extends AbstractBaseJavaLocalInspectionTool {
                         @Override
                         public void visitAssertStatement(PsiAssertStatement statement) {
                             super.visitAssertStatement(statement);
+                            PsiElement anchor = scope.anchorFor(statement, method, holder.getFile());
+                            if (anchor == null) return;
                             ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
-                            holder.registerProblem(statement,
+                            holder.registerProblem(anchor,
                                     MessageBundle.message("inspection.assert") + context,
                                     ProblemHighlightType.ERROR);
                         }
