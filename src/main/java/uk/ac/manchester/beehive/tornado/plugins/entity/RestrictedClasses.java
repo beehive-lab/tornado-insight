@@ -41,7 +41,17 @@ public enum RestrictedClasses {
         return className;
     }
 
+    // Classes that TornadoVM supports inside kernels despite living in a restricted package.
+    private static final String[] ALLOWED_EXCEPTIONS = {
+            "java.util.concurrent.atomic.AtomicInteger"
+    };
+
     public static boolean isRestrictedClass(String className) {
+        for (String allowed : ALLOWED_EXCEPTIONS) {
+            if (className.equals(allowed)) {
+                return false;
+            }
+        }
         for (RestrictedClasses restrictedClass : values()) {
             if (className.startsWith(restrictedClass.getClassName())) {
                 return true;

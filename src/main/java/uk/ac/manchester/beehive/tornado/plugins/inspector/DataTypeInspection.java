@@ -67,17 +67,20 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
                     method.accept(new JavaRecursiveElementVisitor() {
                         @Override
                         public void visitLocalVariable(PsiLocalVariable variable) {
-                            checkVariable(variable.getType(), variable, context);
+                            checkVariable(variable.getType(), variable, context,
+                                    scope.anchorFor(variable, method, holder.getFile()));
                         }
 
                         @Override
                         public void visitField(PsiField field) {
-                            checkVariable(field.getType(), field, context);
+                            checkVariable(field.getType(), field, context,
+                                    scope.anchorFor(field, method, holder.getFile()));
                         }
 
                         @Override
                         public void visitParameter(PsiParameter parameter) {
-                            checkVariable(parameter.getType(), parameter, context);
+                            checkVariable(parameter.getType(), parameter, context,
+                                    scope.anchorFor(parameter, method, holder.getFile()));
                         }
                     });
                 }
@@ -97,8 +100,11 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
              * @param type     The type of the variable to be checked.
              * @param variable The variable itself.
              * @param context  Helper context string for diagnostics.
+             * @param anchor   In-file element to register the problem on; null when
+             *                 the finding cannot be anchored in the inspected file.
              */
-            private void checkVariable(PsiType type, PsiVariable variable, String context) {
+            private void checkVariable(PsiType type, PsiVariable variable, String context, PsiElement anchor) {
+                if (anchor == null) return;
                 if (!type.equalsToText("int") && !type.equalsToText("boolean") && !type.equalsToText("double")
                         && !type.equalsToText("long") && !type.equalsToText("char") && !type.equalsToText("float")
                         && !type.equalsToText("byte") && !type.equalsToText("short")
@@ -106,13 +112,14 @@ public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
                         && !type.getCanonicalText().startsWith("double[]") && !type.getCanonicalText().startsWith("long[]")
                         && !type.getCanonicalText().startsWith("char[]") && !type.getCanonicalText().startsWith("float[]")
                         && !type.getCanonicalText().startsWith("byte[]") && !type.getCanonicalText().startsWith("short[]")
-                        && !type.equalsToText("Int3") && !type.getCanonicalText().startsWith("uk.ac.manchester.tornado.api.")) {
-                    PsiMethod parentMethod = PsiTreeUtil.getParentOfType(variable, PsiMethod.class);
+                        && !type.equalsToText("Int3") && !type.getCanonicalText().startsWith("uk.ac.manchester.tornado.api.")
+                        && !type.getCanonicalText().startsWith("java.util.concurrent.atomic.AtomicInteger")) {
+                    PsiMethod parentMethod = PsiTreeUtil.getParentOfType(anchor, PsiMethod.class);
                     if (parentMethod != null) {
                         ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), parentMethod);
                     }
                     holder.registerProblem(
-                            variable,
+                            anchor,
                             MessageBundle.message("inspection.datatype") + context,
                             ProblemHighlightType.ERROR
                     );

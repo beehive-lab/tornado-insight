@@ -76,8 +76,10 @@ public class ExternalLibraryInspection extends AbstractBaseJavaLocalInspectionTo
                                     if (qualifiedName != null && !qualifiedName.startsWith("java.") &&
                                             !qualifiedName.startsWith("uk.ac.manchester.tornado") &&
                                             !qualifiedName.startsWith("_Dummy_")) {
+                                        PsiElement anchor = scope.anchorFor(expression, method, holder.getFile());
+                                        if (anchor == null) return;
                                         ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
-                                        holder.registerProblem(expression,
+                                        holder.registerProblem(anchor,
                                                 MessageBundle.message("inspection.externalLibrary") + context,
                                                 ProblemHighlightType.WARNING);
                                     }

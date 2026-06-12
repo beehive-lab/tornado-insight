@@ -454,23 +454,49 @@ public class TornadoTWTask {
      * @return an {@code Optional<String>} containing the updated TaskGraph declaration if found; otherwise, {@code Optional.empty()}
      */
     public static Optional<String> extractOriginalTaskGraphDeclaration(PsiFile psiFile, String methodName, String methodWithClass) {
+        return extractOriginalTaskGraphDeclaration(psiFile, methodName, methodWithClass, -1);
+    }
+
+    /**
+     * As {@link #extractOriginalTaskGraphDeclaration(PsiFile, String, String)},
+     * but disambiguates between several {@link TaskGraph} declarations that
+     * reference the same kernel name: when {@code expectedArgCount >= 0} it
+     * prefers the declaration whose {@code .task(...)} passes that many
+     * arguments (matching the kernel's parameter count), so a stale or unrelated
+     * TaskGraph for the same method name is not picked over the matching one.
+     */
+    public static Optional<String> extractOriginalTaskGraphDeclaration(PsiFile psiFile, String methodName,
+                                                                       String methodWithClass, int expectedArgCount) {
         Collection<PsiDeclarationStatement> declarations = PsiTreeUtil.findChildrenOfType(psiFile, PsiDeclarationStatement.class);
+        PsiDeclarationStatement fallback = null;
         for (PsiDeclarationStatement declaration : declarations) {
             for (PsiElement element : declaration.getDeclaredElements()) {
-                if (element instanceof PsiLocalVariable variable) {
-                    PsiType type = variable.getType();
-                    if (type.getCanonicalText().contains("TaskGraph")) {
-                        String code = declaration.getText();
-                        if (code.contains(".task(") && code.contains(methodName)) {
+                if (!(element instanceof PsiLocalVariable variable)) continue;
+                PsiType type = variable.getType();
+                if (type == null || !type.getCanonicalText().contains("TaskGraph")) continue;
 
-                            String updatedCode = code.replaceAll("(\\.task\\s*\\(\\s*\"[^\"]+\"\\s*,\\s*)([\\w\\.]+::\\w+)","$1" + methodWithClass);
-                            return Optional.of(updatedCode);
-                        }
-                    }
+                // Match precisely on a .task(...) that references this method,
+                // rather than a loose substring search over the declaration text.
+                int argCount = taskArgCountForMethod(declaration, methodName);
+                if (argCount < 0) continue;
+
+                if (fallback == null) {
+                    fallback = declaration;
+                }
+                if (expectedArgCount < 0 || argCount == expectedArgCount) {
+                    return Optional.of(rewriteTaskMethodReference(declaration.getText(), methodWithClass));
                 }
             }
         }
-        return Optional.empty();
+        return fallback != null
+                ? Optional.of(rewriteTaskMethodReference(fallback.getText(), methodWithClass))
+                : Optional.empty();
+    }
+
+    // Rewrites the method reference inside .task("name", Class::kernel, ...) to
+    // point at the generated harness class.
+    private static String rewriteTaskMethodReference(String code, String methodWithClass) {
+        return code.replaceAll("(\\.task\\s*\\(\\s*\"[^\"]+\"\\s*,\\s*)([\\w\\.]+::\\w+)", "$1" + methodWithClass);
     }
 
     /**
@@ -491,9 +517,22 @@ public class TornadoTWTask {
     }
 
     public static Optional<List<TaskParametersInfo>> extractTasksParameters(PsiFile psiFile, String methodName) {
+        return extractTasksParameters(psiFile, methodName, -1);
+    }
+
+    /**
+     * Extracts the arguments passed to the {@code .task(...)} call that invokes
+     * {@code methodName}. A class may declare several {@link TaskGraph}s that
+     * reference the same kernel name, so when {@code expectedArgCount >= 0} we
+     * prefer the {@code .task(...)} whose argument count matches the kernel's
+     * parameter count, falling back to the first match only if none line up.
+     */
+    public static Optional<List<TaskParametersInfo>> extractTasksParameters(PsiFile psiFile, String methodName,
+                                                                            int expectedArgCount) {
         Collection<PsiDeclarationStatement> declarations =
                 PsiTreeUtil.findChildrenOfType(psiFile, PsiDeclarationStatement.class);
 
+        List<TaskParametersInfo> fallback = null;
         for (PsiDeclarationStatement declaration : declarations) {
             for (PsiElement element : declaration.getDeclaredElements()) {
                 if (!(element instanceof PsiLocalVariable variable)) continue;
@@ -513,15 +552,7 @@ public class TornadoTWTask {
                     if (args.length < 2) continue; // need at least task name + method ref
 
                     // 2nd arg must be a method reference to methodName
-                    PsiExpression second = args[1];
-                    boolean matches;
-                    if (second instanceof PsiMethodReferenceExpression mref) {
-                        matches = methodName.equals(mref.getReferenceName());
-                    } else {
-                        String txt = second.getText();
-                        matches = txt != null && txt.contains("::" + methodName);
-                    }
-                    if (!matches) continue;
+                    if (!taskRefMatches(args[1], methodName)) continue;
 
                     List<TaskParametersInfo> vars = new ArrayList<>();
                     for (int i = 2; i < args.length; i++) {
@@ -532,11 +563,53 @@ public class TornadoTWTask {
                         if (typeText == null || typeText.isEmpty()) typeText = "<unknown>";
                         vars.add(new TaskParametersInfo(name, typeText));
                     }
-                    return Optional.of(vars);
+                    // Prefer the .task(...) whose argument count matches the
+                    // kernel signature; remember the first match as a fallback.
+                    if (expectedArgCount < 0 || vars.size() == expectedArgCount) {
+                        return Optional.of(vars);
+                    }
+                    if (fallback == null) {
+                        fallback = vars;
+                    }
                 }
             }
         }
-        return Optional.empty();
+        return Optional.ofNullable(fallback);
+    }
+
+    /**
+     * Whether the second argument of a {@code .task("name", Class::kernel, ...)}
+     * call references {@code methodName}. Uses an exact reference-name match for
+     * a real method-reference expression, and an {@code endsWith("::name")} text
+     * match otherwise so that prefixes (e.g. {@code atomic18} vs
+     * {@code atomic180}) are not confused.
+     */
+    private static boolean taskRefMatches(PsiExpression second, String methodName) {
+        if (second instanceof PsiMethodReferenceExpression mref) {
+            return methodName.equals(mref.getReferenceName());
+        }
+        String txt = second.getText();
+        return txt != null && txt.endsWith("::" + methodName);
+    }
+
+    /**
+     * Returns the number of arguments the {@code .task(...)} call that invokes
+     * {@code methodName} passes to the kernel (i.e. excluding the task name and
+     * the method reference), or {@code -1} if {@code scope} contains no such
+     * call.
+     */
+    private static int taskArgCountForMethod(PsiElement scope, String methodName) {
+        Collection<PsiMethodCallExpression> calls =
+                PsiTreeUtil.findChildrenOfType(scope, PsiMethodCallExpression.class);
+        for (PsiMethodCallExpression call : calls) {
+            if (!"task".equals(call.getMethodExpression().getReferenceName())) continue;
+            PsiExpression[] args = call.getArgumentList().getExpressions();
+            if (args.length < 2) continue;
+            if (taskRefMatches(args[1], methodName)) {
+                return args.length - 2;
+            }
+        }
+        return -1;
     }
 
     public static class TaskParametersInfo {

@@ -65,7 +65,7 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                         KernelCallGraphAnalyzer.resolve(kernelMethod);
 
                 for (PsiMethod method : scope.getAnalyzableMethods()) {
-                    checkRecursion(method, kernelMethod);
+                    checkRecursion(method, kernelMethod, scope);
                 }
 
                 for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
@@ -87,7 +87,7 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                                 KernelCallGraphAnalyzer.resolve(method);
 
                         for (PsiMethod m : scope.getAnalyzableMethods()) {
-                            checkRecursion(m, method);
+                            checkRecursion(m, method, scope);
                         }
 
                         for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
@@ -101,7 +101,8 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                 }
             }
 
-            private void checkRecursion(PsiMethod method, PsiMethod kernelMethod) {
+            private void checkRecursion(PsiMethod method, PsiMethod kernelMethod,
+                                        KernelCallGraphAnalyzer.AnalysisScope scope) {
                 String context = KernelCallGraphAnalyzer.helperContext(method, kernelMethod);
                 method.accept(new JavaRecursiveElementVisitor() {
                     @Override
@@ -111,9 +112,16 @@ public class RecursionInspection extends AbstractBaseJavaLocalInspectionTool {
                         Set<PsiMethod> visited = new HashSet<>();
                         if (isRecursive(calledMethod, visited)) {
                             if (calledMethod == null) return;
+                            // Prefer highlighting the recursive method declaration;
+                            // fall back to the call site when it is in another file.
+                            PsiElement anchor = scope.anchorFor(calledMethod, method, holder.getFile());
+                            if (anchor == null) {
+                                anchor = scope.anchorFor(callExpression, method, holder.getFile());
+                            }
+                            if (anchor == null) return;
                             ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
                             holder.registerProblem(
-                                    calledMethod,
+                                    anchor,
                                     MessageBundle.message("inspection.recursion") + context,
                                     ProblemHighlightType.ERROR);
                         }
