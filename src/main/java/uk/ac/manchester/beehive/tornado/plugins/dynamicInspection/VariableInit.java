@@ -144,6 +144,7 @@ public class VariableInit {
             case "VectorDouble", "VectorDouble2", "VectorDouble3", "VectorDouble4", "VectorDouble8", "VectorDouble16" -> vectorInit(name, type, "Double");
             case "VectorHalf", "VectorHalf2", "VectorHalf3", "VectorHalf4", "VectorHalf8", "VectorHalf16" -> vectorHalfInit(name, type);
             case "KernelContext" -> " = new KernelContext();";
+            case "AtomicInteger" -> "= new AtomicInteger(" + generateValueByType("Int") + ");";
             default -> "";
         };
     }
