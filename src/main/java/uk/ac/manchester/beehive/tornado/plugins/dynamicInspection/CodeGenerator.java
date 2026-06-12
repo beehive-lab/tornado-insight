@@ -99,8 +99,12 @@ public class CodeGenerator {
 
         String methodWithClass = filename + "::" + method.getName();
 
-        Optional<String> maybeOriginalTaskGraph = TornadoTWTask.extractOriginalTaskGraphDeclaration(TornadoTWTask.getPsiFile(), method.getName(), methodWithClass);
-        Optional<List<TornadoTWTask.TaskParametersInfo>> taskParametersInfos = TornadoTWTask.extractTasksParameters(TornadoTWTask.getPsiFile(), method.getName());
+        // The class may declare several TaskGraphs that reference this kernel by
+        // name; prefer the one whose .task(...) argument count matches the
+        // kernel's parameter count so we don't pick a stale/unrelated TaskGraph.
+        int kernelParamCount = method.getParameterList().getParametersCount();
+        Optional<String> maybeOriginalTaskGraph = TornadoTWTask.extractOriginalTaskGraphDeclaration(TornadoTWTask.getPsiFile(), method.getName(), methodWithClass, kernelParamCount);
+        Optional<List<TornadoTWTask.TaskParametersInfo>> taskParametersInfos = TornadoTWTask.extractTasksParameters(TornadoTWTask.getPsiFile(), method.getName(), kernelParamCount);
         String taskParameters = getTaskParameters(method, taskParametersInfos, fields);
         String mainCode = getTaskGraphCode(method, maybeOriginalTaskGraph, taskParameters, methodWithClass);
 
@@ -144,11 +148,29 @@ public class CodeGenerator {
             return VariableInit.variableInitHelper(method, localMemoryParams, intOverrides);
         }
 
+        // The arguments passed to .task("t0", Class::kernel, arg0, arg1, ...)
+        // map positionally onto the kernel's parameters. TornadoVM requires the
+        // argument type to match the kernel parameter type exactly (these are
+        // concrete types with no subtyping), so when the counts line up we
+        // allocate each harness variable with the KERNEL parameter's type
+        // rather than the type resolved from the user's source variable. The
+        // latter can be a mismatch (e.g. an IntArray variable passed to a
+        // LongArray/DoubleArray kernel parameter), which would generate code
+        // that does not compile against the strongly-typed TaskGraph.task(...)
+        // overloads. We keep the user's argument NAMES so the reused TaskGraph
+        // (which references them) still resolves.
+        PsiParameter[] kernelParams = method.getParameterList().getParameters();
+        boolean alignWithKernel = params.size() == kernelParams.length;
+
         ArrayList<String> names = new ArrayList<>(params.size());
         ArrayList<String> types = new ArrayList<>(params.size());
-        for (TornadoTWTask.TaskParametersInfo v : params) {
+        for (int i = 0; i < params.size(); i++) {
+            TornadoTWTask.TaskParametersInfo v = params.get(i);
             names.add(v.getName());
-            types.add(v.getType());
+            String kernelType = alignWithKernel && kernelParams[i].getTypeElement() != null
+                    ? kernelParams[i].getTypeElement().getText()
+                    : null;
+            types.add(kernelType != null ? kernelType : v.getType());
         }
         Map<String, String> intOverrides = collectIntParamOverrides(intParamNames(names, types), fields);
         return VariableInit.variableInitHelper(names, types, localMemoryParams, intOverrides);
