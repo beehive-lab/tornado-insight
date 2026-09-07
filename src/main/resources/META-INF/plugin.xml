@@ -40,6 +40,13 @@
         debugging and testing.</li>
 </ul>
 <br/>
+<h2>What's New in 1.6.0</h2>
+<b>TornadoInsight 1.6.0 adds compatibility with TornadoVM 6.0.0.</b> The plugin reads the JDK requirement that TornadoVM 6.0.0
+records in <code>$TORNADOVM_HOME/etc/tornado.jdk</code> and accepts any project JDK at or above that minimum. A GraalVM project
+JDK is now flagged with a clear error, because TornadoVM 6.0.0 and newer bundle their own Graal compiler and JVMCI and must run
+on a standard OpenJDK build.
+<br/>
+<br/>
 <h2>What's New in 1.4.2</h2>
 <b>Important:</b> Starting with version 1.4.2, the required environment variable has been renamed from <code>TORNADO_SDK</code> to <code>TORNADOVM_HOME</code> to align with TornadoVM's updated naming conventions. Please update your environment configuration before upgrading.
 <br/><br/>
@@ -54,8 +61,8 @@ TornadoInsight is available for versions 2023.1.7 and higher of compatible JetBr
 It invokes Java and TornadoVM at runtime on the computer where the plugin is installed, and therefore,
 developers must have installed Java and TornadoVM prior to using the plugin:
 <ul>
-    <li><a href="https://github.com/beehive-lab/TornadoVM">TornadoVM</a> >= v2.2.0 (for TornadoInsight 1.4.2+)</li>
-    <li>JDK 21 or JDK 25</li>
+    <li><a href="https://github.com/beehive-lab/TornadoVM">TornadoVM</a> >= v2.2.0 (for TornadoInsight 1.4.2+); TornadoVM 6.0.0 is supported from TornadoInsight 1.6.0</li>
+    <li>JDK 21 or newer, matching the requirement of your TornadoVM SDK (a standard OpenJDK build, not a GraalVM one)</li>
 </ul>
 
 <h3>Install TornadoVM SDK</h3>
@@ -111,6 +118,13 @@ Enjoy and share your feedback!
     <!-- Change notes displayed in the plugin manager when users view updates.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#change-notes -->
     <change-notes><![CDATA[
+<h3>Version 1.6.0</h3>
+<ul>
+    <li><b>TornadoVM 6.0.0 compatibility:</b> The JDK compatibility check now reads the <code>etc/tornado.jdk</code> contract that TornadoVM 6.0.0 ships (minimum JDK plus preview flag) instead of the removed <code>tornado --version</code> JDK marker, and accepts any project JDK at or above that minimum.</li>
+    <li><b>GraalVM JDK guard:</b> A GraalVM project JDK is detected and reported with a clear error instead of a JVM crash, since TornadoVM 6.0.0+ bundles its own Graal compiler and JVMCI.</li>
+    <li>The info console reports the resolved TornadoVM JDK requirement and the project JDK in use.</li>
+</ul>
+
 <h3>Version 1.4.2</h3>
 <ul>
     <li><b>Environment Variable Update:</b> The required environment variable has been renamed from <code>TORNADO_SDK</code> to <code>TORNADOVM_HOME</code> to align with TornadoVM's updated naming conventions. Please update your environment configuration accordingly.</li>
