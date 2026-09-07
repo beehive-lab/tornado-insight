@@ -48,11 +48,13 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
@@ -156,7 +158,7 @@ public class ExecutionEngine {
             Notification notification = new Notification(
                 "Print",
                 "No Project JDK Configured",
-                "Please configure JDK 21 or 25 in Project Structure (File > Project Structure > Project Settings > Project)",
+                "Please configure JDK 21 or newer in Project Structure (File > Project Structure > Project Settings > Project)",
                 NotificationType.ERROR
             );
             notification.addAction(new NotificationAction("Open Project Structure") {
@@ -174,7 +176,7 @@ public class ExecutionEngine {
             Notification notification = new Notification(
                 "Print",
                 "Incompatible JDK Version",
-                "TornadoVM supports JDK 21 and JDK 25. Current project JDK: " +
+                "TornadoVM requires JDK 21 or newer. Current project JDK: " +
                     (sdkVersion != null ? sdkVersion.getDescription() : projectSdk.getVersionString()) +
                     ". Please update your project JDK in Project Structure.",
                 NotificationType.ERROR
@@ -249,8 +251,15 @@ public class ExecutionEngine {
         return false;
     }
 
-    // Matches the JDK feature number in lines like "version=4.0.1-jdk21" emitted by
-    // 'tornado --version' on success.
+    // TornadoVM >= 6.0.0 records its JDK compatibility contract in
+    // $TORNADOVM_HOME/etc/tornado.jdk, written when the SDK was compiled:
+    //   tornado.jdk.floor=<n>       lowest supported JDK feature version
+    //   tornado.jdk.preview=<bool>  built with preview features -> pinned to <n>
+    // This mirrors bin/tornado.py::checkCompatibilityWithTornadoVM.
+    private static final String TORNADO_JDK_CONTRACT_PATH = "etc/tornado.jdk";
+
+    // Pre-6.0.0 SDKs ship no contract file; 'tornado --version' instead embeds
+    // the target JDK in a line like "version=4.0.1-jdk21".
     private static final Pattern TORNADO_JDK_PATTERN =
             Pattern.compile("(?im)^\\s*version\\s*=\\s*\\S*-jdk(\\d+)");
 
@@ -262,18 +271,65 @@ public class ExecutionEngine {
             Pattern.compile("(?im)(?:compatible with|supports only)\\s+JDK\\s+version\\s+(\\d+)");
 
     /**
-     * Cross-checks the JDK that TornadoVM was built against (reported by
-     * {@code tornado --version}) with the JDK currently configured for the
-     * project. Only the JDK feature version is compared &mdash; vendor
-     * (Temurin, GraalVM, Oracle, Zulu, ...) is intentionally ignored, since
-     * TornadoVM's compatibility is keyed on the language/runtime version.
-     * Mismatches typically manifest as runtime errors deep inside TornadoVM,
-     * so failing fast here gives a clearer diagnostic.
+     * JDK compatibility contract of a TornadoVM SDK. {@code floor} is the lowest
+     * supported JDK feature version; when {@code pinned} the SDK was built with
+     * preview features enabled and runs on exactly that release, nothing newer.
+     * {@code vendorsGraal} is set for TornadoVM &ge; 6.0.0, which bundles its own
+     * Graal compiler and JVMCI as application modules &mdash; incompatible with a
+     * GraalVM JDK that already ships those modules (see {@link #isGraalVmDistribution}).
+     */
+    private record TornadoJdkContract(int floor, boolean pinned, boolean vendorsGraal) {
+        boolean accepts(int projectJdk) {
+            return pinned ? projectJdk == floor : projectJdk >= floor;
+        }
+
+        String requirement() {
+            return pinned
+                    ? "JDK " + floor + " exactly (this build has preview features enabled)"
+                    : "JDK " + floor + " or newer";
+        }
+
+        String source() {
+            return vendorsGraal ? "etc/tornado.jdk" : "tornado --version";
+        }
+    }
+
+    /**
+     * Human-readable identity of the project JDK for diagnostic messages, e.g.
+     * {@code "temurin-25 (25.0.4) [GraalVM]"}. Falls back to the feature number
+     * when the SDK exposes neither a name nor a version string.
+     */
+    private static String describeProjectJdk(Sdk sdk, int feature) {
+        String name = sdk.getName();
+        String version = sdk.getVersionString();
+        StringBuilder sb = new StringBuilder();
+        if (name != null && !name.isBlank()) {
+            sb.append(name.trim());
+        }
+        if (version != null && !version.isBlank() && !version.trim().equals(name)) {
+            sb.append(sb.isEmpty() ? version.trim() : " (" + version.trim() + ")");
+        }
+        if (sb.isEmpty()) {
+            sb.append("JDK ").append(feature);
+        }
+        if (isGraalVmDistribution(sdk)) {
+            sb.append(" [GraalVM]");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Cross-checks the JDK compatibility contract of the default TornadoVM SDK
+     * against the JDK currently configured for the project. Only the JDK feature
+     * version is compared &mdash; vendor (Temurin, GraalVM, Oracle, Zulu, ...) is
+     * intentionally ignored, since TornadoVM's compatibility is keyed on the
+     * language/runtime version. Mismatches typically manifest as runtime errors
+     * deep inside TornadoVM, so failing fast here gives a clearer diagnostic.
      */
     private boolean validateJdkCompatibility() {
-        Integer tornadoJdk = detectTornadoVmJdkVersion();
-        if (tornadoJdk == null) {
-            // detectTornadoVmJdkVersion already surfaced a notification with details
+        TornadoJdkContract contract = detectTornadoVmJdkContract();
+        if (contract == null) {
+            // detectTornadoVmJdkContract already surfaced a notification with details
             return false;
         }
 
@@ -284,15 +340,40 @@ public class ExecutionEngine {
                 ? projectVersion.getMaxLanguageLevel().toJavaVersion().feature
                 : -1;
 
-        if (projectJdk != tornadoJdk) {
+        MessageUtils.getInstance(project).showInfoMsg("Info",
+                "TornadoVM requires " + contract.requirement() + " (from " + contract.source() + "); project JDK is "
+                        + describeProjectJdk(projectSdk, projectJdk) + ".");
+
+        if (!contract.accepts(projectJdk)) {
             Notification notification = new Notification(
                 "Print",
                 "Incompatible JDK for default TornadoVM",
                 "Current project JDK " + projectJdk +
                     " is not compatible with the default TornadoVM at " + System.getenv("TORNADOVM_HOME") +
-                    ", which requires JDK " + tornadoJdk + "." +
-                    " Either change the project JDK to " + tornadoJdk +
-                    " in Project Structure, or point TORNADOVM_HOME at a TornadoVM build that targets JDK " + projectJdk + ".",
+                    ", which requires " + contract.requirement() + "." +
+                    " Either change the project JDK in Project Structure, or point TORNADOVM_HOME at a" +
+                    " TornadoVM build that supports JDK " + projectJdk + ".",
+                NotificationType.ERROR
+            );
+            notification.addAction(new NotificationAction("Open Project Structure") {
+                @Override
+                public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
+                    ProjectSettingsService.getInstance(project).openProjectSettings();
+                }
+            });
+            Notifications.Bus.notify(notification, project);
+            return false;
+        }
+
+        if (contract.vendorsGraal() && isGraalVmDistribution(projectSdk)) {
+            Notification notification = new Notification(
+                "Print",
+                "Incompatible JDK distribution for default TornadoVM",
+                "The project JDK at " + projectSdk.getHomePath() + " is a GraalVM build. TornadoVM 6.0.0 and" +
+                    " newer bundle their own Graal compiler and JVMCI, which collide with the modules a" +
+                    " GraalVM JDK already ships and abort the JVM (fatal error: HotSpotNmethod.profileDeopt)." +
+                    " Set the project JDK to a standard OpenJDK build (e.g. Eclipse Temurin or Oracle OpenJDK)," +
+                    " " + contract.requirement() + ", in Project Structure.",
                 NotificationType.ERROR
             );
             notification.addAction(new NotificationAction("Open Project Structure") {
@@ -309,12 +390,78 @@ public class ExecutionEngine {
     }
 
     /**
-     * Runs {@code tornado --version} and parses the JDK feature version from
-     * the {@code version=<x>-jdk<n>} line. Returns {@code null} (and surfaces
-     * a user-visible notification) if the subprocess cannot be launched, fails,
-     * or its output does not contain a recognisable JDK marker.
+     * Detects a GraalVM JDK (Community or Oracle) from the {@code release} file
+     * in its home directory. TornadoVM &ge; 6.0.0 vendors its own Graal compiler
+     * and, on JDK 22-26, patches {@code jdk.internal.vm.ci} with a frozen JDK-21
+     * copy; a GraalVM JDK ships both with a different JVMCI ABI, so the patched-in
+     * classes fail HotSpot's field-offset checks and the JVM aborts. Recognising
+     * this lets us refuse with a clear message instead of a core dump.
      */
-    private Integer detectTornadoVmJdkVersion() {
+    private static boolean isGraalVmDistribution(Sdk sdk) {
+        String home = sdk.getHomePath();
+        if (home == null || home.isEmpty()) {
+            return false;
+        }
+        Path release = Path.of(home, "release");
+        if (!Files.isRegularFile(release)) {
+            return false;
+        }
+        try {
+            for (String line : Files.readAllLines(release)) {
+                if (line.startsWith("GRAALVM_VERSION=")) {
+                    return true;
+                }
+                if (line.startsWith("JAVA_RUNTIME_VERSION=") && line.contains("-jvmci-")) {
+                    return true;
+                }
+            }
+        } catch (IOException ignore) {
+            // Cannot read it - assume a stock JDK rather than block the run.
+        }
+        return false;
+    }
+
+    /**
+     * Determines the JDK compatibility contract of the default TornadoVM SDK.
+     * Prefers {@code $TORNADOVM_HOME/etc/tornado.jdk} (TornadoVM &ge; 6.0.0);
+     * falls back to parsing {@code tornado --version} for older SDKs. Returns
+     * {@code null} (and surfaces a user-visible notification) when neither
+     * source yields a usable answer.
+     */
+    private TornadoJdkContract detectTornadoVmJdkContract() {
+        String home = EnvironmentVariable.getTornadoSdk();
+        if (home != null && !home.isEmpty()) {
+            Path contractFile = Path.of(home, TORNADO_JDK_CONTRACT_PATH);
+            if (Files.isRegularFile(contractFile)) {
+                Properties props = new Properties();
+                try (InputStream in = Files.newInputStream(contractFile)) {
+                    props.load(in);
+                    String floor = props.getProperty("tornado.jdk.floor");
+                    if (floor != null && !floor.isBlank()) {
+                        return new TornadoJdkContract(
+                                Integer.parseInt(floor.trim()),
+                                Boolean.parseBoolean(props.getProperty("tornado.jdk.preview", "false").trim()),
+                                true);
+                    }
+                } catch (IOException | NumberFormatException e) {
+                    LOG.warn("Could not parse " + contractFile + ": " + e.getMessage());
+                    // fall through to the 'tornado --version' probe
+                }
+            }
+        }
+        return probeTornadoJdkContractViaVersion();
+    }
+
+    /**
+     * Fallback for SDKs without {@code etc/tornado.jdk}: runs
+     * {@code tornado --version} and reads the target JDK from the
+     * {@code version=<x>-jdk<n>} line (such SDKs are pinned to that single
+     * release). If {@code tornado} itself rejected the running JDK, its stderr
+     * names the one it wants, which is surfaced as the target instead. Returns
+     * {@code null} (and surfaces a user-visible notification) when the
+     * subprocess cannot be launched, fails, or yields no recognisable marker.
+     */
+    private TornadoJdkContract probeTornadoJdkContractViaVersion() {
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
         commandLine.setExePath(resolveTornadoExe());
@@ -333,14 +480,12 @@ public class ExecutionEngine {
 
         String combined = (output.getStdout() + "\n" + output.getStderr()).trim();
 
-        // Happy path: the version line is present.
+        // Happy path: the legacy version line carries the target JDK.
         Matcher matcher = TORNADO_JDK_PATTERN.matcher(combined);
         if (matcher.find()) {
             try {
                 int jdk = Integer.parseInt(matcher.group(1));
-                MessageUtils.getInstance(project).showInfoMsg("Info",
-                        "TornadoVM JDK version detected: " + jdk);
-                return jdk;
+                return new TornadoJdkContract(jdk, true, false);
             } catch (NumberFormatException ignore) {
                 // Fall through to the structured-failure handling below.
             }
@@ -352,16 +497,16 @@ public class ExecutionEngine {
         Matcher requiredJdk = TORNADO_REQUIRED_JDK_PATTERN.matcher(combined);
         if (requiredJdk.find()) {
             try {
-                return Integer.parseInt(requiredJdk.group(1));
+                return new TornadoJdkContract(Integer.parseInt(requiredJdk.group(1)), true, false);
             } catch (NumberFormatException ignore) {
                 // Fall through.
             }
         }
 
-        // Neither pattern produced a usable version - report the raw output.
+        // Neither source produced a usable version - report the raw output.
         String prefix = output.getExitCode() != 0
                 ? "'tornado --version' exited with code " + output.getExitCode() + "."
-                : "'tornado --version' did not report a JDK target (expected a 'version=<x>-jdk<n>' line).";
+                : "'tornado --version' did not report a JDK target, and $TORNADOVM_HOME/etc/tornado.jdk was missing or unreadable.";
         notifyTornadoVersionFailure(prefix + "\nOutput:\n" + combined);
         return null;
     }
