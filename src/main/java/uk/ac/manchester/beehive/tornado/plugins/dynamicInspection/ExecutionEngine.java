@@ -255,8 +255,9 @@ public class ExecutionEngine {
     // $TORNADOVM_HOME/etc/tornado.jdk, written when the SDK was compiled:
     //   tornado.jdk.floor=<n>       lowest supported JDK feature version
     //   tornado.jdk.preview=<bool>  built with preview features -> pinned to <n>
-    // This mirrors bin/tornado.py::checkCompatibilityWithTornadoVM.
-    private static final String TORNADO_JDK_CONTRACT_PATH = "etc/tornado.jdk";
+    // This mirrors bin/tornado.py::checkCompatibilityWithTornadoVM. Held as path
+    // segments so it resolves correctly on Windows too.
+    private static final String[] TORNADO_JDK_CONTRACT_PATH = {"etc", "tornado.jdk"};
 
     // Pre-6.0.0 SDKs ship no contract file; 'tornado --version' instead embeds
     // the target JDK in a line like "version=4.0.1-jdk21".
