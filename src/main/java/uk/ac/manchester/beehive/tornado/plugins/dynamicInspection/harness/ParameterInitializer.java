@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
+ * Copyright (c) 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,96 +15,50 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
+package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness;
 
-import com.intellij.psi.PsiMethod;
-import com.intellij.psi.PsiParameter;
-import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import org.jetbrains.annotations.NotNull;
+import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Parameter;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
-public class VariableInit {
+/**
+ * Generates the declaration, with test data, of one harness variable.
+ */
+final class ParameterInitializer {
 
     private static final int LOCAL_MEMORY_PARAM_MAX = 16;
 
-    private static int parameterSize;
+    private final int parameterSize;
+    private final Random r;
 
-    public static String variableInitHelper(@NotNull PsiMethod method) {
-        return variableInitHelper(method, Collections.emptySet(), Collections.emptyMap());
+    ParameterInitializer(int parameterSize, @NotNull Random random) {
+        this.parameterSize = parameterSize;
+        this.r = random;
     }
 
-    public static String variableInitHelper(@NotNull PsiMethod method, @NotNull Set<String> localMemoryParams) {
-        return variableInitHelper(method, localMemoryParams, Collections.emptyMap());
+    /**
+     * Returns the statements that declare and initialise {@code parameter}.
+     */
+    @NotNull String declaration(@NotNull Parameter parameter) {
+        String name = parameter.name();
+        String type = parameter.type();
+        return "\t\t" + type + " " + name + lookupBoxedTypes(type, name, parameter);
     }
 
-    public static String variableInitHelper(@NotNull PsiMethod method, @NotNull Set<String> localMemoryParams,
-                                            @NotNull Map<String, String> intParamOverrides) {
-        initializeSizes();
-        ArrayList<String> parametersName = new ArrayList<>();
-        ArrayList<String> parametersType = new ArrayList<>();
-        for (PsiParameter parameter : method.getParameterList().getParameters()) {
-            parametersType.add(parameter.getTypeElement().getText());
-            parametersName.add(parameter.getName());
-        }
-        return variableInit(parametersName, parametersType, localMemoryParams, intParamOverrides);
-    }
-
-    public static String variableInitHelper(ArrayList<String> fieldNames, ArrayList<String> fieldTypes) {
-        return variableInitHelper(fieldNames, fieldTypes, Collections.emptySet(), Collections.emptyMap());
-    }
-
-    public static String variableInitHelper(ArrayList<String> fieldNames, ArrayList<String> fieldTypes,
-                                            @NotNull Set<String> localMemoryParams) {
-        return variableInitHelper(fieldNames, fieldTypes, localMemoryParams, Collections.emptyMap());
-    }
-
-    public static String variableInitHelper(ArrayList<String> fieldNames, ArrayList<String> fieldTypes,
-                                            @NotNull Set<String> localMemoryParams,
-                                            @NotNull Map<String, String> intParamOverrides) {
-        initializeSizes();
-        return variableInit(fieldNames, fieldTypes, localMemoryParams, intParamOverrides);
-    }
-
-    private static void initializeSizes() {
-        parameterSize = TornadoSettingState.getInstance().parameterSize;
-    }
-
-    private static String variableInit(@NotNull ArrayList<String> parametersName, ArrayList<String> parametersType,
-                                       @NotNull Set<String> localMemoryParams,
-                                       @NotNull Map<String, String> intParamOverrides){
-        StringBuilder returnString = new StringBuilder();
-        int size = parametersName.size();
-        for (int i = 0; i < size; i++) {
-            returnString.append("\t\t");
-            String name = parametersName.get(i);
-            String type = parametersType.get(i);
-            returnString.append(type).append(" ").append(name);
-            boolean constrain = localMemoryParams.contains(name);
-            String value = lookupBoxedTypes(type, name, parameterSize, constrain, intParamOverrides);
-            returnString.append(value);
-            returnString.append("\n");
-        }
-        return returnString.toString();
-    }
-
-    private static String lookupBoxedTypes(String type, String name, int size, boolean constrainForLocalMemory,
-                                           @NotNull Map<String, String> intParamOverrides){
+    private String lookupBoxedTypes(String type, String name, Parameter parameter) {
+        int size = parameterSize;
         return switch (type) {
             // Scalar int parameters either reuse a user-defined constant /
-            // field that matches the parameter name (resolved upstream by
-            // CodeGenerator, e.g. parameter 'size' picking up an existing
-            // 'SIZE' field), or fall back to the configured parameterSize so
+            // field that matches the parameter name (resolved by the model
+            // builder, e.g. parameter 'size' picking up an existing 'SIZE'
+            // field), or fall back to the configured parameterSize so
             // kernel loop bounds stay in sync with the array lengths the
             // harness just allocated. Local-memory parameters keep their
             // constrained-random initialisation.
-            case "int" -> "=" + (constrainForLocalMemory
+            case "int" -> "=" + (parameter.localMemorySize()
                     ? generateConstrainedInt()
-                    : intParamOverrides.getOrDefault(name, String.valueOf(parameterSize))) + ";";
+                    : parameter.intOverride() != null ? parameter.intOverride() : String.valueOf(parameterSize)) + ";";
             case "float" -> "=" + generateValueByType("Float") + ";";
             case "double" -> "=" + generateValueByType("Double") + ";";
             case "HalfFloat" -> "= new HalfFloat(" + generateValueByType("HalfFloat") + ");";
@@ -137,7 +91,7 @@ public class VariableInit {
             case "Matrix3DLong" -> matrix3DInit(type, name, "Long");
             case "Matrix3DDouble" -> matrix3DInit(type, name, "Double");
             case "Matrix4x4Float" -> matrix1DInit(type, name, "Float");
-            case "ImageByte3", "ImageByte4" -> imageInit(type,name, "Byte");
+            case "ImageByte3", "ImageByte4" -> imageInit(type, name, "Byte");
             case "ImageFloat", "ImageFloat3", "ImageFloat4", "ImageFloat8" -> imageInit(type, name, "Float");
             case "VectorInt", "VectorInt2", "VectorInt3", "VectorInt4", "VectorInt8", "VectorInt16" -> vectorInit(name, type, "Int");
             case "VectorFloat", "VectorFloat2", "VectorFloat3", "VectorFloat4", "VectorFloat8", "VectorFloat16" -> vectorInit(name, type, "Float");
@@ -150,41 +104,40 @@ public class VariableInit {
         };
     }
 
-    private static String arrayInit(String type){
+    private String arrayInit(String type) {
         String primitive = type.split("\\[]")[0];
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("={");
         stringBuilder.append(generateValueByType(primitive));
-        for (int i = 0; i < parameterSize - 1; i++){
+        for (int i = 0; i < parameterSize - 1; i++) {
             stringBuilder.append(",").append(generateValueByType(primitive));
         }
         stringBuilder.append("};");
         return stringBuilder.toString();
     }
-    private static String tupleInit(String type){
-        String primitiveType = type.substring(0, type.length()-1);
-        int size = type.charAt(type.length()-1) - '0';
-        System.out.println(primitiveType);
+
+    private String tupleInit(String type) {
+        String primitiveType = type.substring(0, type.length() - 1);
+        int size = type.charAt(type.length() - 1) - '0';
         StringBuilder builder = new StringBuilder();
         builder.append(" = new ").append(type).append("(");
         builder.append(generateValueByType(primitiveType));
-        for (int i = 0; i < size - 1; i++){
+        for (int i = 0; i < size - 1; i++) {
             builder.append(",");
             builder.append(generateValueByType(primitiveType));
         }
         builder.append(");");
-
         return builder.toString();
     }
 
-    private static String matrix1DInit(String type, String name, String primitive){
+    private String matrix1DInit(String type, String name, String primitive) {
         return " = new " + type + "();" +
                 "for (int i = 0; i <" + name + ".size()" + "; i++) { " +
                 name + ".set(i, " + generateValueByType(primitive) + ");" +
                 "}";
     }
 
-    private static String matrix2DInit(String type, String name, String primitive){
+    private String matrix2DInit(String type, String name, String primitive) {
         return " = new " + type + "(" + parameterSize + "," + parameterSize + ");" +
                 "for (int i = 0; i <" + parameterSize + "; i++) { " +
                 "for (int j = 0; j < " + parameterSize + "; j++) {" + "\n" +
@@ -193,48 +146,45 @@ public class VariableInit {
                 "}";
     }
 
-    private static String matrix3DInit(String type, String name, String primitive){
-        if (primitive.equals("Short")){
+    private String matrix3DInit(String type, String name, String primitive) {
+        if (primitive.equals("Short")) {
             String castedType = primitive.toLowerCase();
             String emittedCastedOperation = ".fill((" + castedType + ")";
             return " = new " + type + "(" + parameterSize + "," + parameterSize + "," + parameterSize + ");" + "\n" +
-                    name + emittedCastedOperation  + generateValueByType(primitive) + ");";
+                    name + emittedCastedOperation + generateValueByType(primitive) + ");";
         }
         return " = new " + type + "(" + parameterSize + "," + parameterSize + "," + parameterSize + ");" + "\n" +
-                name  + ".fill(" + generateValueByType(primitive) + ");";
+                name + ".fill(" + generateValueByType(primitive) + ");";
     }
 
-    private static String imageInit(String type, String name, String primitive){
+    private String imageInit(String type, String name, String primitive) {
         return " = new " + type + "(" + parameterSize + "," + parameterSize + ");" + "\n" +
                 name + ".fill(" + generateValueByType(primitive) + ");";
     }
 
-    private static String vectorInit(String name, String type, String innerType){
+    private String vectorInit(String name, String type, String innerType) {
         return " = new " + type + "(" + parameterSize + ");" + "\n" +
                 name + ".fill(" + generateValueByType(innerType) + ");";
     }
 
-    private static String vectorHalfInit(String name, String type){
+    private String vectorHalfInit(String name, String type) {
         return " = new " + type + "(" + parameterSize + ");" + "\n" +
                 name + ".fill(new HalfFloat(" + generateValueByType("HalfFloat") + "));";
     }
 
-    private static String generateValueByType(String type){
-        Random r = new Random();
+    private String generateValueByType(String type) {
         return switch (type) {
             case "Int", "int", "Short", "short" -> "" + r.nextInt(50);
             case "Long", "long" -> "" + r.nextLong(50);
             case "Float", "float", "HalfFloat" -> r.nextFloat(50) + "f";
-            case "Double","double" -> "" + r.nextDouble(50);
-            case "Byte","byte" -> "(byte)" + r.nextInt(127);
-            case "Char", "char" -> "'" + (char)(r.nextInt(26) + 'a') + "'";
+            case "Double", "double" -> "" + r.nextDouble(50);
+            case "Byte", "byte" -> "(byte)" + r.nextInt(127);
+            case "Char", "char" -> "'" + (char) (r.nextInt(26) + 'a') + "'";
             default -> "";
         };
     }
 
-    private static String generateConstrainedInt() {
-        Random r = new Random();
+    private String generateConstrainedInt() {
         return "" + (r.nextInt(LOCAL_MEMORY_PARAM_MAX) + 1);
     }
-
 }

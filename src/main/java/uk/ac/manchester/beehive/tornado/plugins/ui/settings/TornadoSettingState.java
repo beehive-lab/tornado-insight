@@ -38,7 +38,7 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
     // messages, so valid sizes are 1..MAX_PARAMETER_SIZE - 1.
     public static final int MAX_PARAMETER_SIZE = 65536;
 
-    // Default test-data size used by VariableInit when generating synthetic
+    // Default test-data size used by the harness generator for synthetic
     // inputs for dynamic inspection. Picked to be large enough that kernels
     // actually exercise real data, while staying within the Settings-dialog
     // validator (>0 and <MAX_PARAMETER_SIZE). Overridden when the user changes

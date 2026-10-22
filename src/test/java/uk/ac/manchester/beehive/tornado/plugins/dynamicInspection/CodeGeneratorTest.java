@@ -53,17 +53,17 @@ public class CodeGeneratorTest extends TornadoTestCase {
         List<TaskEntry> tasks = TornadoTaskService.computeSnapshot(file).tasks();
         assertEquals(2, tasks.size());
 
-        Batch batch = CodeGenerator.generate(tasks);
+        Batch batch = CodeGenerator.collect(tasks);
 
         assertEmpty(batch.staleTasks());
-        assertEquals(2, batch.harnesses().size());
-        Harness add = batch.harnesses().get(0);
+        assertEquals(2, batch.tasks().size());
+        Harness add = CodeGenerator.render(batch.tasks().get(0), 16);
         assertEquals("add(IntArray, IntArray, IntArray): void", add.displayName());
         assertTrue(add.className(), add.className().matches("add[A-Za-z0-9]{5}"));
         assertTrue(add.source(), add.source().contains("public class " + add.className() + " {"));
         assertTrue(add.source(), add.source().contains(add.className() + "::add"));
         assertTrue(add.source(), add.source().contains("import uk.ac.manchester.tornado.api.types.arrays.IntArray;"));
-        assertTrue(batch.harnesses().get(1).className().startsWith("twice"));
+        assertTrue(batch.tasks().get(1).model().className().startsWith("twice"));
     }
 
     public void testDeletedTaskIsReportedAsStale() {
@@ -71,10 +71,10 @@ public class CodeGeneratorTest extends TornadoTestCase {
         List<TaskEntry> tasks = TornadoTaskService.computeSnapshot(file).tasks();
         WriteCommandAction.runWriteCommandAction(getProject(), () -> tasks.get(1).resolve().delete());
 
-        Batch batch = CodeGenerator.generate(tasks);
+        Batch batch = CodeGenerator.collect(tasks);
 
         assertEquals(List.of("'twice(IntArray): void'"), batch.staleTasks());
-        assertEquals(1, batch.harnesses().size());
-        assertEquals("add(IntArray, IntArray, IntArray): void", batch.harnesses().get(0).displayName());
+        assertEquals(1, batch.tasks().size());
+        assertEquals("add(IntArray, IntArray, IntArray): void", batch.tasks().get(0).displayName());
     }
 }

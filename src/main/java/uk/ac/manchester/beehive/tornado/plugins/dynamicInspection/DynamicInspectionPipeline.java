@@ -85,6 +85,7 @@ public final class DynamicInspectionPipeline {
     private final TornadoSdk sdk;
     private final ProjectJdk jdk;
     private final List<TaskEntry> tasks;
+    private final int parameterSize;
     private final boolean saveFileEnabled;
     private final String debugFileSaveLocation;
 
@@ -92,12 +93,14 @@ public final class DynamicInspectionPipeline {
     private boolean hasRuntimeErrors;
 
     private DynamicInspectionPipeline(Project project, DynamicInspectionReporter reporter, TornadoSdk sdk, ProjectJdk jdk,
-                                      List<TaskEntry> tasks, boolean saveFileEnabled, String debugFileSaveLocation) {
+                                      List<TaskEntry> tasks, int parameterSize, boolean saveFileEnabled,
+                                      String debugFileSaveLocation) {
         this.project = project;
         this.reporter = reporter;
         this.sdk = sdk;
         this.jdk = jdk;
         this.tasks = List.copyOf(tasks);
+        this.parameterSize = parameterSize;
         this.saveFileEnabled = saveFileEnabled;
         this.debugFileSaveLocation = debugFileSaveLocation;
     }
@@ -131,7 +134,7 @@ public final class DynamicInspectionPipeline {
 
         TornadoSettingState settings = TornadoSettingState.getInstance();
         DynamicInspectionPipeline pipeline = new DynamicInspectionPipeline(project, reporter, sdk, jdk, tasks,
-                settings.saveFileEnabled, settings.debugFileSaveLocation);
+                settings.parameterSize, settings.saveFileEnabled, settings.debugFileSaveLocation);
         new Task.Backgroundable(project, "Running TornadoVM dynamic inspection", true) {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
@@ -162,7 +165,7 @@ public final class DynamicInspectionPipeline {
 
     /**
      * Refuses to launch dynamic inspection when the configured test-data size
-     * is non-positive (or absurdly large). {@code VariableInit} pipes this
+     * is non-positive (or absurdly large). The harness generator pipes this
      * value into every synthetic allocator it emits (arrays, matrices, images,
      * vectors), so a zero would generate empty inputs that compile and "run"
      * cleanly without actually exercising the kernel - a misleading green
@@ -196,7 +199,7 @@ public final class DynamicInspectionPipeline {
 
             indicator.checkCanceled();
             indicator.setText("Generating test code");
-            Batch batch = ReadAction.nonBlocking(() -> CodeGenerator.generate(tasks))
+            Batch batch = ReadAction.nonBlocking(() -> CodeGenerator.collect(tasks))
                     .inSmartMode(project)
                     .expireWhen(project::isDisposed)
                     .wrapProgress(indicator)
@@ -204,7 +207,10 @@ public final class DynamicInspectionPipeline {
             for (String stale : batch.staleTasks()) {
                 reporter.staleTask(stale);
             }
-            List<Harness> harnesses = batch.harnesses();
+            List<Harness> harnesses = new ArrayList<>();
+            for (CodeGenerator.TaskModel task : batch.tasks()) {
+                harnesses.add(CodeGenerator.render(task, parameterSize));
+            }
             if (harnesses.isEmpty()) {
                 return;
             }
