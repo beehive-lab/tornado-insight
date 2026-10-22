@@ -60,4 +60,86 @@ public class HarnessModelBuilderTest extends TornadoTestCase {
                 new Parameter("n", "int", false, null)), model.parameters());
         assertEquals(TornadoKernels.Kind.PARALLEL_LOOP, model.kind());
     }
+
+    private static final String KERNELS = """
+            import uk.ac.manchester.tornado.api.TaskGraph;
+            import uk.ac.manchester.tornado.api.annotations.Parallel;
+            import uk.ac.manchester.tornado.api.enums.DataTransferMode;
+            import uk.ac.manchester.tornado.api.types.arrays.IntArray;
+
+            class K {
+                static void a(IntArray x) { for (@Parallel int i = 0; i < x.getSize(); i++) { x.set(i, 1); } }
+                static void b(IntArray y) { for (@Parallel int i = 0; i < y.getSize(); i++) { y.set(i, 2); } }
+                static void scale(IntArray data, int factor) {
+                    for (@Parallel int i = 0; i < data.getSize(); i++) { data.set(i, data.get(i) * factor); }
+                }
+                void run(IntArray x, IntArray y, IntArray data, int factor) {
+                    %s
+                }
+            }""";
+
+    public void testSingleTaskGraphIsReusedWithOnlyTheKernelReferenceRewritten() {
+        HarnessModel model = build("K.java", KERNELS.formatted("""
+                TaskGraph graph = new TaskGraph("s0")
+                            .transferToDevice(DataTransferMode.FIRST_EXECUTION, data)
+                            .task("t0", K::scale, data, factor)
+                            .transferToHost(DataTransferMode.EVERY_EXECUTION, data);"""), "scale");
+
+        assertNotNull(model.taskGraph());
+        assertEquals("""
+                TaskGraph graph = new TaskGraph("s0")
+                            .transferToDevice(DataTransferMode.FIRST_EXECUTION, data)
+                            .task("t0", scaleAb12C::scale, data, factor)
+                            .transferToHost(DataTransferMode.EVERY_EXECUTION, data);""", model.taskGraph().declaration());
+        assertEquals("graph", model.taskGraph().variableName());
+        assertEquals("s0", model.taskGraph().graphName());
+        assertEquals("t0", model.taskGraph().taskName());
+        assertEquals(List.of(new Parameter("data", INT_ARRAY, false, null), new Parameter("factor", "int", false, null)),
+                model.parameters());
+    }
+
+    public void testGraphWithOtherTasksFallsBackToASyntheticGraph() {
+        String graph = """
+                TaskGraph graph = new TaskGraph("s0")
+                            .task("t0", K::a, x)
+                            .task("t1", K::b, y);""";
+        HarnessModel a = build("K.java", KERNELS.formatted(graph), "a");
+        HarnessModel b = build("K.java", KERNELS.formatted(graph), "b");
+
+        // Rewriting every .task(...) would have made both tasks call the harness kernel
+        assertNull(a.taskGraph());
+        assertNull(b.taskGraph());
+        assertEquals(List.of(new Parameter("x", INT_ARRAY, false, null)), a.parameters());
+        assertEquals(List.of(new Parameter("y", INT_ARRAY, false, null)), b.parameters());
+    }
+
+    public void testGraphPassingAnExpressionFallsBackToASyntheticGraph() {
+        HarnessModel model = build("K.java", KERNELS.formatted("""
+                TaskGraph graph = new TaskGraph("s0").task("t0", K::scale, data, factor * 2);"""), "scale");
+
+        assertNull(model.taskGraph());
+        assertEquals(List.of(new Parameter("data", INT_ARRAY, false, null), new Parameter("factor", "int", false, null)),
+                model.parameters());
+    }
+
+    public void testTaskOfASameNamedKernelInAnotherClassIsNotReused() {
+        myFixture.addClass("""
+                package other;
+                public class Other {
+                    public static void scale(uk.ac.manchester.tornado.api.types.arrays.IntArray data, int factor) { }
+                }""");
+        HarnessModel model = build("K.java", KERNELS.formatted("""
+                TaskGraph graph = new TaskGraph("s0").task("t0", other.Other::scale, data, factor);"""), "scale");
+
+        assertNull(model.taskGraph());
+    }
+
+    public void testGraphUsingOtherLocalsFallsBackToASyntheticGraph() {
+        HarnessModel model = build("K.java", KERNELS.formatted("""
+                TaskGraph graph = new TaskGraph("s0")
+                            .transferToDevice(DataTransferMode.FIRST_EXECUTION, data, y)
+                            .task("t0", K::scale, data, factor);"""), "scale");
+
+        assertNull(model.taskGraph());
+    }
 }
