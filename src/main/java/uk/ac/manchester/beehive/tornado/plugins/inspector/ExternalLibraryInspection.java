@@ -26,8 +26,6 @@ import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Objects;
-
 /**
  * The `ExternalLibraryInspection` class checks for external library method
  * calls within methods annotated with "@Parallel" or "@Reduce".
@@ -72,7 +70,15 @@ public class ExternalLibraryInspection extends AbstractBaseJavaLocalInspectionTo
                             if (expression.getMethodExpression().resolve() != null) {
                                 PsiMethod calledMethod = (PsiMethod) expression.getMethodExpression().resolve();
                                 if (calledMethod != null) {
-                                    String qualifiedName = Objects.requireNonNull(calledMethod.getContainingClass()).getQualifiedName();
+                                    // Helpers in the user's own sources (same class or other project
+                                    // classes) are inlined by TornadoVM; KernelCallGraphAnalyzer already
+                                    // adds their bodies to the analysis scope, so only library calls count.
+                                    if (KernelCallGraphAnalyzer.isUserProjectMethod(calledMethod)) return;
+                                    PsiClass containingClass = calledMethod.getContainingClass();
+                                    if (containingClass == null) return;
+                                    String qualifiedName = containingClass.getQualifiedName();
+                                    // "_Dummy_" is the synthetic holder of the platform's array class,
+                                    // so array methods such as a.clone() resolve to it
                                     if (qualifiedName != null && !qualifiedName.startsWith("java.") &&
                                             !qualifiedName.startsWith("uk.ac.manchester.tornado") &&
                                             !qualifiedName.startsWith("_Dummy_")) {
