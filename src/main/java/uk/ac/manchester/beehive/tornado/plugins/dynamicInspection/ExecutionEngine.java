@@ -618,8 +618,9 @@ public class ExecutionEngine {
             // Under normal circumstances TornadoVM output includes warnings like:
             // "WARNING: Using incubator modules: jdk.incubator.foreign, jdk.incubator.vector"
             // We must check for both Java exceptions and OpenCL/SPIR-V/PTX runtime errors.
-            boolean hasError = RuntimeOutputClassifier.detectRuntimeError(output.getStdout(), output.getStderr());
-            printResults(jarPath, hasError, output);
+            RuntimeOutputClassifier.Verdict verdict =
+                    RuntimeOutputClassifier.classify(output.getStdout(), output.getStderr(), output.getExitCode());
+            printResults(jarPath, verdict, output);
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
@@ -681,15 +682,15 @@ public class ExecutionEngine {
     }
 
     //Test results for each method
-    private void printResults(String jarPath, boolean hasError, ProcessOutput output) {
+    private void printResults(String jarPath, RuntimeOutputClassifier.Verdict verdict, ProcessOutput output) {
         String javaPath = jarPath.substring(0, jarPath.lastIndexOf(".jar")) + ".java";
         ApplicationManager.getApplication().runReadAction(() -> {
             String methodName = TornadoTWTask.psiMethodFormat(fileMethodMap.get(javaPath));
-            if (hasError) {
+            if (verdict.failed()) {
                 hasRuntimeErrors = true;
                 MessageUtils consoleInstance = MessageUtils.getInstance(project);
 
-                String deviceLimitation = RuntimeOutputClassifier.describeDeviceLimitation(output.getStdout(), output.getStderr());
+                String deviceLimitation = verdict.deviceLimitation();
 
                 if (deviceLimitation != null) {
                     // The kernel was generated correctly; it simply uses a
@@ -700,15 +701,13 @@ public class ExecutionEngine {
                 } else {
                     // Genuine error (including OpenCL compiler exceptions): keep
                     // the raw diagnostic so it is not mistaken for a clean run.
-                    String errorSummary = RuntimeOutputClassifier.extractErrorLines(output.getStdout(), output.getStderr());
-                    String stderr = output.getStderr();
-                    String errorDetail = errorSummary.isEmpty() ? stderr : errorSummary;
+                    String errorDetail = verdict.errorDetail();
                     consoleInstance.showErrorMsg(MessageBundle.message("dynamic.info.title"),
                             methodName + ": " + errorDetail);
                 }
 
                 // Show the generated kernel with error lines stripped out (for debugging)
-                String cleanKernel = RuntimeOutputClassifier.stripErrorLines(output.getStdout());
+                String cleanKernel = verdict.kernelSource();
                 if (!cleanKernel.isBlank()) {
                     consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.opencl"), cleanKernel);
                 }
