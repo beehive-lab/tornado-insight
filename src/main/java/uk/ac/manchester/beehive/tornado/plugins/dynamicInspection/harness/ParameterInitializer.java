@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,14 +20,38 @@ package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness;
 import org.jetbrains.annotations.NotNull;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Parameter;
 
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Generates the declaration, with test data, of one harness variable.
+ * <p>
+ * The type of a {@link Parameter} is its canonical text: fully qualified when it
+ * resolves (e.g. {@code uk.ac.manchester.tornado.api.types.arrays.IntArray}), as
+ * written otherwise. Values are chosen by the simple name; the declaration and the
+ * constructor call use the type as given, so they compile without extra imports.
+ * A type without a known initialisation is rejected with
+ * {@link UnsupportedParameterTypeException} rather than left uninitialised.
+ * </p>
  */
 final class ParameterInitializer {
 
     private static final int LOCAL_MEMORY_PARAM_MAX = 16;
+
+    // TornadoVM vector types: element type and width, e.g. Int16, Half4
+    private static final Pattern TUPLE = Pattern.compile("^(Int|Byte|Short|Float|Double|Half)(\\d+)$");
+
+    // The vector types the TornadoVM API declares
+    private static final Map<String, Set<Integer>> TUPLE_WIDTHS = Map.of(
+            "Int", Set.of(2, 3, 4, 8, 16),
+            "Float", Set.of(2, 3, 4, 8, 16),
+            "Double", Set.of(2, 3, 4, 8, 16),
+            "Half", Set.of(2, 3, 4, 8, 16),
+            "Byte", Set.of(3, 4),
+            "Short", Set.of(2, 3));
 
     private final int parameterSize;
     private final Random r;
@@ -39,16 +63,23 @@ final class ParameterInitializer {
 
     /**
      * Returns the statements that declare and initialise {@code parameter}.
+     *
+     * @throws UnsupportedParameterTypeException if no test data can be generated for its type
      */
-    @NotNull String declaration(@NotNull Parameter parameter) {
+    @NotNull String declaration(@NotNull Parameter parameter) throws UnsupportedParameterTypeException {
         String name = parameter.name();
         String type = parameter.type();
-        return "\t\t" + type + " " + name + lookupBoxedTypes(type, name, parameter);
+        return "\t\t" + type + " " + name + initializer(type, name, parameter);
     }
 
-    private String lookupBoxedTypes(String type, String name, Parameter parameter) {
+    static @NotNull String simpleName(@NotNull String type) {
+        return type.substring(type.lastIndexOf('.') + 1);
+    }
+
+    private String initializer(String type, String name, Parameter parameter) throws UnsupportedParameterTypeException {
         int size = parameterSize;
-        return switch (type) {
+        String simple = simpleName(type);
+        switch (simple) {
             // Scalar int parameters either reuse a user-defined constant /
             // field that matches the parameter name (resolved by the model
             // builder, e.g. parameter 'size' picking up an existing 'SIZE'
@@ -56,131 +87,181 @@ final class ParameterInitializer {
             // kernel loop bounds stay in sync with the array lengths the
             // harness just allocated. Local-memory parameters keep their
             // constrained-random initialisation.
-            case "int" -> "=" + (parameter.localMemorySize()
-                    ? generateConstrainedInt()
-                    : parameter.intOverride() != null ? parameter.intOverride() : String.valueOf(parameterSize)) + ";";
-            case "float" -> "=" + generateValueByType("Float") + ";";
-            case "double" -> "=" + generateValueByType("Double") + ";";
-            case "HalfFloat" -> "= new HalfFloat(" + generateValueByType("HalfFloat") + ");";
-            case "int[]", "float[]", "double[]", "byte[]" -> arrayInit(type);
-            case "Int2", "Int3", "Int4", "Int8", "Int16",
-                    "Byte2", "Byte3", "Byte4", "Byte8",
-                    "Double2", "Double3", "Double4", "Double8", "Double16",
-                    "Float2", "Float3", "Float4", "Float8", "Float16",
-                    "Half2", "Half3", "Half4", "Half8", "Half16",
-                    "Short2", "Short3" -> tupleInit(type);
-            case "IntArray" -> "= new IntArray(" + size + ");" + name + ".init(" + generateValueByType("Int") + ");";
-            case "Int8Array" -> "= new Int8Array(" + size + ");" + name + ".init(" + generateValueByType("byte") + ");";
-            case "ShortArray" -> "= new ShortArray(" + size + ");" + name + ".init((short)" + generateValueByType("Short") + ");";
-            case "DoubleArray" ->
-                    "= new DoubleArray(" + size + ");" + name + ".init(" + generateValueByType("Double") + ");";
-            case "FloatArray" ->
-                    "= new FloatArray(" + size + ");" + name + ".init(" + generateValueByType("Float") + ");";
-            case "HalfFloatArray" ->
-                    "= new HalfFloatArray(" + size + ");" + name + ".init(new HalfFloat(" + generateValueByType("HalfFloat") + "));";
-            case "CharArray" ->
-                    "= new CharArray(" + size + ");" + name + ".init(" + generateValueByType("Char") + ");";
-            case "ByteArray" ->
-                    "= new ByteArray(" + size + ");" + name + ".init(" + generateValueByType("Byte") + ");";
-            case "LongArray" ->
-                    "= new LongArray(" + size + ");" + name + ".init(" + generateValueByType("Long") + ");";
-            case "Matrix2DFloat", "Matrix2DFloat4", "Matrix2DDouble", "Matrix2DInt" -> matrix2DInit(type, name, "Int");
-            case "Matrix3DInt" -> matrix3DInit(type, name, "Int");
-            case "Matrix3DShort" -> matrix3DInit(type, name, "Short");
-            case "Matrix3DFloat", "Matrix3DFloat4", "Matrix" -> matrix3DInit(type, name, "Float");
-            case "Matrix3DLong" -> matrix3DInit(type, name, "Long");
-            case "Matrix3DDouble" -> matrix3DInit(type, name, "Double");
-            case "Matrix4x4Float" -> matrix1DInit(type, name, "Float");
-            case "ImageByte3", "ImageByte4" -> imageInit(type, name, "Byte");
-            case "ImageFloat", "ImageFloat3", "ImageFloat4", "ImageFloat8" -> imageInit(type, name, "Float");
-            case "VectorInt", "VectorInt2", "VectorInt3", "VectorInt4", "VectorInt8", "VectorInt16" -> vectorInit(name, type, "Int");
-            case "VectorFloat", "VectorFloat2", "VectorFloat3", "VectorFloat4", "VectorFloat8", "VectorFloat16" -> vectorInit(name, type, "Float");
-            case "VectorDouble", "VectorDouble2", "VectorDouble3", "VectorDouble4", "VectorDouble8", "VectorDouble16" -> vectorInit(name, type, "Double");
-            case "VectorHalf", "VectorHalf2", "VectorHalf3", "VectorHalf4", "VectorHalf8", "VectorHalf16" -> vectorHalfInit(name, type);
-            case "KernelContext" -> " = new KernelContext();";
-            case "TileContext" -> " = new TileContext();";
-            case "AtomicInteger" -> "= new AtomicInteger(" + generateValueByType("Int") + ");";
-            default -> "";
-        };
+            case "int":
+                return "=" + (parameter.localMemorySize()
+                        ? generateConstrainedInt()
+                        : parameter.intOverride() != null ? parameter.intOverride() : String.valueOf(size)) + ";";
+            case "long":
+            case "short":
+            case "byte":
+            case "char":
+            case "boolean":
+            case "float":
+            case "double":
+                return "=" + value(simple) + ";";
+            case "HalfFloat":
+                return "= new " + type + "(" + value("float") + ");";
+            case "int[]":
+            case "long[]":
+            case "short[]":
+            case "byte[]":
+            case "char[]":
+            case "boolean[]":
+            case "float[]":
+            case "double[]":
+                return arrayInit(simple.substring(0, simple.length() - 2));
+            case "IntArray":
+                return arrayTypeInit(type, name, value("int"));
+            case "Int8Array":
+            case "ByteArray":
+                return arrayTypeInit(type, name, value("byte"));
+            case "ShortArray":
+                return arrayTypeInit(type, name, value("short"));
+            case "LongArray":
+                return arrayTypeInit(type, name, value("long"));
+            case "CharArray":
+                return arrayTypeInit(type, name, value("char"));
+            case "FloatArray":
+                return arrayTypeInit(type, name, value("float"));
+            case "DoubleArray":
+                return arrayTypeInit(type, name, value("double"));
+            case "HalfFloatArray":
+                return arrayTypeInit(type, name, value("HalfFloat"));
+            case "Matrix2DInt":
+                return matrix2DInit(type, name, "int");
+            case "Matrix2DFloat":
+            case "Matrix2DFloat4":
+                return matrix2DInit(type, name, "float");
+            case "Matrix2DDouble":
+                return matrix2DInit(type, name, "double");
+            case "Matrix3DInt":
+                return matrix3DInit(type, name, "int");
+            case "Matrix3DShort":
+                return matrix3DInit(type, name, "short");
+            case "Matrix3DLong":
+                return matrix3DInit(type, name, "long");
+            case "Matrix3DFloat":
+            case "Matrix3DFloat4":
+                return matrix3DInit(type, name, "float");
+            case "Matrix3DDouble":
+                return matrix3DInit(type, name, "double");
+            case "Matrix4x4Float":
+                return " = new " + type + "();\n" + name + ".fill(" + value("float") + ");";
+            case "ImageByte3":
+            case "ImageByte4":
+                return imageInit(type, name, "byte");
+            case "ImageFloat":
+            case "ImageFloat3":
+            case "ImageFloat4":
+            case "ImageFloat8":
+                return imageInit(type, name, "float");
+            case "VectorInt":
+            case "VectorInt2":
+            case "VectorInt3":
+            case "VectorInt4":
+            case "VectorInt8":
+            case "VectorInt16":
+                return vectorInit(type, name, "int");
+            case "VectorFloat":
+            case "VectorFloat2":
+            case "VectorFloat3":
+            case "VectorFloat4":
+            case "VectorFloat8":
+            case "VectorFloat16":
+                return vectorInit(type, name, "float");
+            case "VectorDouble":
+            case "VectorDouble2":
+            case "VectorDouble3":
+            case "VectorDouble4":
+            case "VectorDouble8":
+            case "VectorDouble16":
+                // a float literal: VectorDouble4.fill takes a float, the others a double
+                return vectorInit(type, name, "float");
+            case "VectorHalf":
+            case "VectorHalf2":
+            case "VectorHalf3":
+            case "VectorHalf4":
+            case "VectorHalf8":
+            case "VectorHalf16":
+                return vectorInit(type, name, "HalfFloat");
+            case "KernelContext":
+            case "TileContext":
+                return " = new " + type + "();";
+            case "AtomicInteger":
+                return "= new " + type + "(" + value("int") + ");";
+            default:
+                Matcher tuple = TUPLE.matcher(simple);
+                if (tuple.matches() && TUPLE_WIDTHS.get(tuple.group(1)).contains(Integer.parseInt(tuple.group(2)))) {
+                    return tupleInit(type, tuple.group(1), Integer.parseInt(tuple.group(2)));
+                }
+                throw new UnsupportedParameterTypeException(name, type);
+        }
     }
 
-    private String arrayInit(String type) {
-        String primitive = type.split("\\[]")[0];
+    private String arrayInit(String primitive) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("={");
-        stringBuilder.append(generateValueByType(primitive));
+        stringBuilder.append(value(primitive));
         for (int i = 0; i < parameterSize - 1; i++) {
-            stringBuilder.append(",").append(generateValueByType(primitive));
+            stringBuilder.append(",").append(value(primitive));
         }
         stringBuilder.append("};");
         return stringBuilder.toString();
     }
 
-    private String tupleInit(String type) {
-        String primitiveType = type.substring(0, type.length() - 1);
-        int size = type.charAt(type.length() - 1) - '0';
+    private String arrayTypeInit(String type, String name, String value) {
+        return "= new " + type + "(" + parameterSize + ");" + name + ".init(" + value + ");";
+    }
+
+    private String tupleInit(String type, String element, int width) {
+        String primitive = element.equals("Half") ? "HalfFloat" : element.toLowerCase();
         StringBuilder builder = new StringBuilder();
         builder.append(" = new ").append(type).append("(");
-        builder.append(generateValueByType(primitiveType));
-        for (int i = 0; i < size - 1; i++) {
-            builder.append(",");
-            builder.append(generateValueByType(primitiveType));
+        for (int i = 0; i < width; i++) {
+            if (i > 0) {
+                builder.append(",");
+            }
+            builder.append(value(primitive));
         }
         builder.append(");");
         return builder.toString();
     }
 
-    private String matrix1DInit(String type, String name, String primitive) {
-        return " = new " + type + "();" +
-                "for (int i = 0; i <" + name + ".size()" + "; i++) { " +
-                name + ".set(i, " + generateValueByType(primitive) + ");" +
-                "}";
-    }
-
     private String matrix2DInit(String type, String name, String primitive) {
-        return " = new " + type + "(" + parameterSize + "," + parameterSize + ");" +
-                "for (int i = 0; i <" + parameterSize + "; i++) { " +
-                "for (int j = 0; j < " + parameterSize + "; j++) {" + "\n" +
-                name + ".set(i, j, " + generateValueByType(primitive) + ");" +
-                "}" +
-                "}";
+        return " = new " + type + "(" + parameterSize + "," + parameterSize + ");" + "\n" +
+                name + ".fill(" + value(primitive) + ");";
     }
 
     private String matrix3DInit(String type, String name, String primitive) {
-        if (primitive.equals("Short")) {
-            String castedType = primitive.toLowerCase();
-            String emittedCastedOperation = ".fill((" + castedType + ")";
-            return " = new " + type + "(" + parameterSize + "," + parameterSize + "," + parameterSize + ");" + "\n" +
-                    name + emittedCastedOperation + generateValueByType(primitive) + ");";
-        }
         return " = new " + type + "(" + parameterSize + "," + parameterSize + "," + parameterSize + ");" + "\n" +
-                name + ".fill(" + generateValueByType(primitive) + ");";
+                name + ".fill(" + value(primitive) + ");";
     }
 
     private String imageInit(String type, String name, String primitive) {
         return " = new " + type + "(" + parameterSize + "," + parameterSize + ");" + "\n" +
-                name + ".fill(" + generateValueByType(primitive) + ");";
+                name + ".fill(" + value(primitive) + ");";
     }
 
-    private String vectorInit(String name, String type, String innerType) {
+    private String vectorInit(String type, String name, String primitive) {
         return " = new " + type + "(" + parameterSize + ");" + "\n" +
-                name + ".fill(" + generateValueByType(innerType) + ");";
+                name + ".fill(" + value(primitive) + ");";
     }
 
-    private String vectorHalfInit(String name, String type) {
-        return " = new " + type + "(" + parameterSize + ");" + "\n" +
-                name + ".fill(new HalfFloat(" + generateValueByType("HalfFloat") + "));";
-    }
-
-    private String generateValueByType(String type) {
-        return switch (type) {
-            case "Int", "int", "Short", "short" -> "" + r.nextInt(50);
-            case "Long", "long" -> "" + r.nextLong(50);
-            case "Float", "float", "HalfFloat" -> r.nextFloat(50) + "f";
-            case "Double", "double" -> "" + r.nextDouble(50);
-            case "Byte", "byte" -> "(byte)" + r.nextInt(127);
-            case "Char", "char" -> "'" + (char) (r.nextInt(26) + 'a') + "'";
-            default -> "";
+    /**
+     * Returns a random literal of a primitive type, or a {@code HalfFloat} construction.
+     */
+    String value(String primitive) {
+        return switch (primitive) {
+            case "int" -> "" + r.nextInt(50);
+            case "long" -> r.nextInt(50) + "L";
+            case "short" -> "(short)" + r.nextInt(50);
+            case "byte" -> "(byte)" + r.nextInt(127);
+            case "char" -> "'" + (char) (r.nextInt(26) + 'a') + "'";
+            case "boolean" -> String.valueOf(r.nextBoolean());
+            case "float" -> r.nextFloat(50) + "f";
+            case "double" -> "" + r.nextDouble(50);
+            case "HalfFloat" -> "new HalfFloat(" + r.nextFloat(50) + "f)";
+            default -> throw new IllegalArgumentException(primitive);
         };
     }
 

@@ -160,6 +160,11 @@ final class DynamicInspectionReporter {
                 "Task " + task + " no longer exists in the source. Refresh the TornadoVM panel and try again.");
     }
 
+    void unsupportedParameter(@NotNull String task, @NotNull String message) {
+        console().showWarnMsg(title(), task + ": cannot generate test data, " + message
+                + ". This kernel cannot be dynamically inspected yet.");
+    }
+
     void cancelled() {
         console().showWarnMsg(title(), "Dynamic inspection was cancelled.");
     }

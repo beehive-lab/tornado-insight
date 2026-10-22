@@ -48,7 +48,7 @@ public class CodeGeneratorTest extends TornadoTestCase {
                 }
             }""";
 
-    public void testHarnessesArePlainDataNamedAfterTheKernel() {
+    public void testHarnessesArePlainDataNamedAfterTheKernel() throws Exception {
         PsiFile file = myFixture.configureByText("VectorAdd.java", VECTOR_ADD);
         List<TaskEntry> tasks = TornadoTaskService.computeSnapshot(file).tasks();
         assertEquals(2, tasks.size());

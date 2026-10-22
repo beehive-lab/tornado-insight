@@ -110,7 +110,7 @@ public final class HarnessModelBuilder {
             // Fallback: infer from the method signature when TaskGraphs are not declared
             for (PsiParameter parameter : kernelParams) {
                 names.add(parameter.getName());
-                types.add(parameter.getTypeElement() != null ? parameter.getTypeElement().getText() : parameter.getType().getPresentableText());
+                types.add(parameter.getType().getCanonicalText(false));
             }
         } else {
             // The arguments passed to .task("t0", Class::kernel, arg0, arg1, ...)
@@ -125,10 +125,7 @@ public final class HarnessModelBuilder {
             for (int i = 0; i < taskArguments.size(); i++) {
                 TornadoTWTask.TaskParametersInfo argument = taskArguments.get(i);
                 names.add(argument.getName());
-                String kernelType = alignWithKernel && kernelParams[i].getTypeElement() != null
-                        ? kernelParams[i].getTypeElement().getText()
-                        : null;
-                types.add(kernelType != null ? kernelType : argument.getType());
+                types.add(alignWithKernel ? kernelParams[i].getType().getCanonicalText(false) : argument.getType());
             }
         }
 

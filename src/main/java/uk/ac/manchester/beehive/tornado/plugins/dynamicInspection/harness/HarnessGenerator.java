@@ -52,8 +52,10 @@ public final class HarnessGenerator {
      * @param model         the harness to generate
      * @param parameterSize the size of the generated test data (array lengths, sizes)
      * @param random        the source of the test values
+     * @throws UnsupportedParameterTypeException if no test data can be generated for a parameter
      */
-    public static @NotNull String generate(@NotNull HarnessModel model, int parameterSize, @NotNull Random random) {
+    public static @NotNull String generate(@NotNull HarnessModel model, int parameterSize, @NotNull Random random)
+            throws UnsupportedParameterTypeException {
         ParameterInitializer initializer = new ParameterInitializer(parameterSize, random);
         StringBuilder variableInit = new StringBuilder();
         for (Parameter parameter : model.parameters()) {
@@ -133,7 +135,7 @@ public final class HarnessGenerator {
     // Scalars are passed by value; everything else is transferred to and from the device
     private static boolean isTransferred(Parameter p) {
         return switch (p.type()) {
-            case "int", "float", "double", "long", "boolean" -> false;
+            case "int", "long", "short", "byte", "char", "boolean", "float", "double" -> false;
             default -> true;
         };
     }

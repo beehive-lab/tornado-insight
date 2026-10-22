@@ -50,7 +50,7 @@ public class HarnessGeneratorTest {
             new Parameter("size", "int", false, "SIZE"));
 
     @Test
-    public void syntheticTaskGraph() {
+    public void syntheticTaskGraph() throws Exception {
         String source = HarnessGenerator.generate(model(VADD_PARAMETERS, null), 16, new Random(1));
 
         assertTrue(source, source.startsWith(HarnessGenerator.DEFAULT_IMPORTS
@@ -72,7 +72,7 @@ public class HarnessGeneratorTest {
     }
 
     @Test
-    public void reusedTaskGraph() {
+    public void reusedTaskGraph() throws Exception {
         String declaration = """
                 TaskGraph graph = new TaskGraph("s0")
                         .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b)

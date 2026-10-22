@@ -34,6 +34,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.CodeGenerator.Batch;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.CodeGenerator.Harness;
+import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.UnsupportedParameterTypeException;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.run.JarPacker;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.run.JavacRunner;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.run.TornadoRunner;
@@ -209,7 +210,11 @@ public final class DynamicInspectionPipeline {
             }
             List<Harness> harnesses = new ArrayList<>();
             for (CodeGenerator.TaskModel task : batch.tasks()) {
-                harnesses.add(CodeGenerator.render(task, parameterSize));
+                try {
+                    harnesses.add(CodeGenerator.render(task, parameterSize));
+                } catch (UnsupportedParameterTypeException e) {
+                    reporter.unsupportedParameter(task.displayName(), e.getMessage());
+                }
             }
             if (harnesses.isEmpty()) {
                 return;

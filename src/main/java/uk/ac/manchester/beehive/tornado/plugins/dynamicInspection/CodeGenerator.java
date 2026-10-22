@@ -23,6 +23,7 @@ import org.jetbrains.annotations.NotNull;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessGenerator;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModelBuilder;
+import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.UnsupportedParameterTypeException;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
 
@@ -114,8 +115,10 @@ public final class CodeGenerator {
      * Generates the source of a task's harness.
      *
      * @param parameterSize the size of the generated test data
+     * @throws UnsupportedParameterTypeException if no test data can be generated for a parameter
      */
-    public static @NotNull Harness render(@NotNull TaskModel task, int parameterSize) {
+    public static @NotNull Harness render(@NotNull TaskModel task, int parameterSize)
+            throws UnsupportedParameterTypeException {
         HarnessModel model = task.model();
         return new Harness(task.displayName(), model.className(),
                 HarnessGenerator.generate(model, parameterSize, new Random()));
