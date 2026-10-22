@@ -222,6 +222,13 @@ Enjoy and share your feedback!
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory" id="TornadoInsight Console" anchor="bottom"/>
         <errorHandler implementation="uk.ac.manchester.beehive.tornado.plugins.error.ErrorSubmitter"/>
         <postStartupActivity implementation="uk.ac.manchester.beehive.tornado.plugins.listener.TornadoSettingListener"/>
+        <liveTemplateContext contextId="TORNADOVM_STATEMENT" baseContextId="JAVA_CODE"
+                             implementation="uk.ac.manchester.beehive.tornado.plugins.templates.TornadoVMContextType$Statement"/>
+        <liveTemplateContext contextId="TORNADOVM_DECLARATION" baseContextId="JAVA_CODE"
+                             implementation="uk.ac.manchester.beehive.tornado.plugins.templates.TornadoVMContextType$Declaration"/>
+        <liveTemplateContext contextId="TORNADOVM_TILE_DECLARATION" baseContextId="JAVA_CODE"
+                             implementation="uk.ac.manchester.beehive.tornado.plugins.templates.TornadoVMContextType$TileDeclaration"/>
+        <defaultLiveTemplates file="/liveTemplates/TornadoVM.xml"/>
     </extensions>
     <actions>
         <group id="tornado.bar">
