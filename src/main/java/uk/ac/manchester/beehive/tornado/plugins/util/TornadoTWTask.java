@@ -23,7 +23,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
 import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
-import uk.ac.manchester.beehive.tornado.plugins.inspector.KernelCallGraphAnalyzer;
+import uk.ac.manchester.beehive.tornado.plugins.inspector.TornadoKernels;
 
 import java.util.*;
 
@@ -161,32 +161,13 @@ public class TornadoTWTask {
         return allMethodsList;
     }
     /**
-     * Finds methods in the given PsiFile that are annotated with TornadoVM related annotations.
+     * Finds the TornadoVM kernels declared in the given PsiFile, in document order.
      *
      * @param psiFile the file to search in
-     * @return a list of methods that have Tornado VM related annotations, or null if none found
+     * @return the kernels of the file (see {@link TornadoKernels}); empty if none found
      */
     public static List<PsiMethod> findSuitableMethods(PsiFile psiFile) {
-        Set<PsiMethod> tornadoTask = new HashSet<>();
-        Collection<PsiAnnotation> annotationList = PsiTreeUtil.findChildrenOfType(psiFile, PsiAnnotation.class);
-        for (PsiAnnotation annotation : annotationList) {
-            if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
-                    annotation.getQualifiedName().endsWith("Reduce")) {
-                tornadoTask.add(PsiTreeUtil.getParentOfType(annotation, PsiMethod.class));
-            }
-        }
-        Collection<PsiMethod> methodList = PsiTreeUtil.findChildrenOfType(psiFile, PsiMethod.class);
-        for (PsiMethod method: methodList) {
-            if (!tornadoTask.contains(method)) {
-                PsiParameter[] parameterList = method.getParameterList().getParameters();
-                for (PsiParameter parameter: parameterList) {
-                    if (KernelCallGraphAnalyzer.isKernelContextType(parameter.getType())) {
-                        tornadoTask.add(method);
-                    }
-                }
-            }
-        }
-        return tornadoTask.stream().toList();
+        return TornadoKernels.findKernels(psiFile);
     }
 
     /**

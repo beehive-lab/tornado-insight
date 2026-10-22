@@ -43,7 +43,7 @@ public class KernelInspectionsTest extends TornadoTestCase {
         addSystemStubs();
         myFixture.enableInspections(new DataTypeInspection(), new RecursionInspection(), new ThrowInspection(),
                 new AssertInspection(), new SystemCallInspection(), new ExternalLibraryInspection(),
-                new NonVoidReturnInspection(), new StaticTaskGraphInspection());
+                new NonVoidReturnInspection(), new StaticTaskGraphInspection(), new UnanalysableHelperInspection());
     }
 
     public void testCleanKernelHasNoProblems() {
@@ -87,8 +87,9 @@ public class KernelInspectionsTest extends TornadoTestCase {
                     }
                 }""");
 
+        // Reported for the call in the kernel and for the self-call inside the helper
         List<HighlightInfo> infos = problems("inspection.recursion");
-        assertFalse(infos.isEmpty());
+        assertSize(2, infos);
         for (HighlightInfo info : infos) {
             assertEquals(HighlightSeverity.ERROR, info.getSeverity());
             assertTrue(info.getText().startsWith("static int fact(int n)"));
@@ -156,6 +157,82 @@ public class KernelInspectionsTest extends TornadoTestCase {
         HighlightInfo info = assertOne("inspection.nonVoidReturn");
         assertEquals(HighlightSeverity.WARNING, info.getSeverity());
         assertEquals("int", info.getText());
+    }
+
+    public void testTwoDimensionalKernelReportsEachProblemOnce() {
+        configure("""
+                class Demo {
+                    static void kernel(int[] a, int n) {
+                        for (@Parallel int i = 0; i < n; i++) {
+                            for (@Parallel int j = 0; j < n; j++) {
+                                String s = "x";
+                                assert i >= 0;
+                                if (j < 0) throw new IllegalStateException();
+                                System.out.println(j);
+                            }
+                        }
+                    }
+                }""");
+
+        assertOne("inspection.datatype");
+        assertOne("inspection.assert");
+        assertOne("inspection.traps.throw");
+        assertOne("inspection.external");
+    }
+
+    public void testHelperSharedByTwoKernelsIsReportedOnce() {
+        configure("""
+                class Demo {
+                    static int check(int x) { assert x >= 0; return x; }
+                    static void first(int[] a) { for (@Parallel int i = 0; i < a.length; i++) { a[i] = check(i); } }
+                    static void second(int[] a) { for (@Parallel int i = 0; i < a.length; i++) { a[i] = check(a[i]); } }
+                }""");
+
+        assertOne("inspection.assert");
+    }
+
+    public void testKernelContextKernelIsChecked() {
+        configure("""
+                class Demo {
+                    static void kernel(KernelContext context, int[] a) {
+                        int i = context.globalIdx;
+                        String s = "x";
+                        assert i >= 0;
+                        System.out.println(a[i]);
+                    }
+                }""");
+
+        assertOne("inspection.datatype");
+        assertOne("inspection.assert");
+        assertOne("inspection.external");
+    }
+
+    public void testTileContextKernelIsChecked() {
+        addTileContext();
+        configure("""
+                import uk.ac.manchester.tornado.api.tile.TileContext;
+                class Demo {
+                    static void kernel(TileContext tc, int[] a) {
+                        assert a.length > 0;
+                    }
+                }""");
+
+        assertOne("inspection.assert");
+    }
+
+    public void testUnresolvableHelperIsReportedOncePerCallSite() {
+        configure("""
+                class Demo {
+                    static void kernel(int[] a) {
+                        for (@Parallel int i = 0; i < a.length; i++) {
+                            a[i] = undefined(i);
+                        }
+                    }
+                }""");
+
+        HighlightInfo info = assertOne("inspection.helper.unresolvable");
+        assertEquals(HighlightSeverity.WEAK_WARNING, info.getSeverity());
+        assertEquals("undefined(i)", info.getText());
     }
 
     private void configure(String body) {

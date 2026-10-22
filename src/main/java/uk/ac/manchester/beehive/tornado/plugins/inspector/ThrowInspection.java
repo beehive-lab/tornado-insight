@@ -17,20 +17,15 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.inspector;
 
-import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.ProblemHighlightType;
-import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.*;
-import com.intellij.psi.util.PsiTreeUtil;
 import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashSet;
-
 /**
- * A custom inspection tool to check for thrown exceptions within methods annotated with
- * "Parallel" or "Reduce" as TornadoVM does not support for traps/exceptions.
+ * A custom inspection tool to check for thrown exceptions within TornadoVM kernels
+ * (see {@link TornadoKernels}) as TornadoVM does not support for traps/exceptions.
  * <p>
  * This inspection tool ensures that:
  * - No exceptions are thrown within the method body.
@@ -42,109 +37,47 @@ import java.util.HashSet;
  * that TornadoVM would inline at runtime.
  * </p>
  */
-public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
+public class ThrowInspection extends TornadoKernelInspection {
 
-    /**
-     * Builds the visitor used for the inspection.
-     *
-     * @param holder The container which receives the problems found during the inspection.
-     * @param isOnTheFly Whether this inspection is being run on-the-fly, as the user types, or as a batch process.
-     * @return The visitor instance for analyzing code constructs.
-     */
-    public @NotNull PsiElementVisitor buildVisitor(@NotNull final ProblemsHolder holder, boolean isOnTheFly) {
-        HashSet<PsiThrowStatement> reportedStatement = new HashSet<>();
-        HashSet<PsiMethod> reportedMethod = new HashSet<>();
-        return new JavaElementVisitor() {
+    @Override
+    protected void checkKernel(@NotNull PsiMethod kernelMethod, @NotNull KernelCallGraphAnalyzer.AnalysisScope scope,
+                               @NotNull KernelProblemSink sink) {
+        for (PsiMethod method : scope.getAnalyzableMethods()) {
+            checkThrow(method, kernelMethod, scope, sink);
+        }
+    }
+
+    private void checkThrow(PsiMethod method, PsiMethod kernelMethod,
+                            KernelCallGraphAnalyzer.AnalysisScope scope, KernelProblemSink sink) {
+        String context = KernelCallGraphAnalyzer.helperContext(method, kernelMethod);
+        method.accept(new JavaRecursiveElementVisitor() {
             @Override
-            public void visitAnnotation(PsiAnnotation annotation) {
-                super.visitAnnotation(annotation);
-                if (!KernelCallGraphAnalyzer.isKernelAnnotation(annotation)) return;
-
-                PsiMethod kernelMethod = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
-                if (kernelMethod == null) return;
-
-                KernelCallGraphAnalyzer.AnalysisScope scope =
-                        KernelCallGraphAnalyzer.resolve(kernelMethod);
-
-                for (PsiMethod method : scope.getAnalyzableMethods()) {
-                    checkThrow(method, kernelMethod, scope);
-                }
-
-                for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
-                    holder.registerProblem(entry.getKey(),
-                            MessageBundle.message("inspection.helper.unresolvable")
-                                    + ": " + entry.getValue(),
-                            ProblemHighlightType.WEAK_WARNING);
-                }
+            public void visitThrowStatement(PsiThrowStatement statement) {
+                super.visitThrowStatement(statement);
+                PsiElement anchor = scope.anchorFor(statement, method, sink.file());
+                if (anchor == null) return;
+                ProblemMethods.getInstance().addMethod(sink.file().getProject(), sink.file(), kernelMethod);
+                sink.report(anchor, MessageBundle.message("inspection.traps.throw") + context, ProblemHighlightType.ERROR);
             }
 
             @Override
-            public void visitMethod(PsiMethod method) {
-                super.visitMethod(method);
-
-                for (PsiParameter parameter : method.getParameterList().getParameters()) {
-                    PsiType type = parameter.getType();
-                    if (KernelCallGraphAnalyzer.isKernelContextType(type)) {
-                        KernelCallGraphAnalyzer.AnalysisScope scope =
-                                KernelCallGraphAnalyzer.resolve(method);
-
-                        for (PsiMethod m : scope.getAnalyzableMethods()) {
-                            checkThrow(m, method, scope);
-                        }
-
-                        for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
-                            holder.registerProblem(entry.getKey(),
-                                    MessageBundle.message("inspection.helper.unresolvable")
-                                            + ": " + entry.getValue(),
-                                    ProblemHighlightType.WEAK_WARNING);
-                        }
-                        break;
-                    }
-                }
+            public void visitTryStatement(PsiTryStatement statement) {
+                super.visitTryStatement(statement);
+                PsiElement anchor = scope.anchorFor(statement, method, sink.file());
+                if (anchor == null) return;
+                ProblemMethods.getInstance().addMethod(sink.file().getProject(), sink.file(), kernelMethod);
+                sink.report(anchor, MessageBundle.message("inspection.traps.tryCatch") + context, ProblemHighlightType.ERROR);
             }
+        });
 
-            private void checkThrow(PsiMethod method, PsiMethod kernelMethod,
-                                    KernelCallGraphAnalyzer.AnalysisScope scope) {
-                String context = KernelCallGraphAnalyzer.helperContext(method, kernelMethod);
-                method.accept(new JavaRecursiveElementVisitor() {
-                    @Override
-                    public void visitThrowStatement(PsiThrowStatement statement) {
-                        super.visitThrowStatement(statement);
-                        if (!reportedStatement.contains(statement)) {
-                            PsiElement anchor = scope.anchorFor(statement, method, holder.getFile());
-                            if (anchor == null) return;
-                            ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
-                            holder.registerProblem(anchor,
-                                    MessageBundle.message("inspection.traps.throw") + context,
-                                    ProblemHighlightType.ERROR);
-                            reportedStatement.add(statement);
-                        }
-                    }
-                    @Override
-                    public void visitTryStatement(PsiTryStatement statement) {
-                        super.visitTryStatement(statement);
-                        PsiElement anchor = scope.anchorFor(statement, method, holder.getFile());
-                        if (anchor == null) return;
-                        ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
-                        holder.registerProblem(anchor,
-                                MessageBundle.message("inspection.traps.tryCatch") + context,
-                                ProblemHighlightType.ERROR);
-                    }
-                });
-
-                // Checking the method signature for thrown exceptions
-                if (!reportedMethod.contains(method)) {
-                    for (PsiClassType exception : method.getThrowsList().getReferencedTypes()) {
-                        PsiElement anchor = scope.anchorFor(method.getThrowsList(), method, holder.getFile());
-                        if (anchor == null) continue;
-                        holder.registerProblem(anchor,
-                                MessageBundle.message("inspection.traps.throws") + "\n" + exception.getCanonicalText() + context,
-                                ProblemHighlightType.ERROR);
-                        ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), kernelMethod);
-                    }
-                    reportedMethod.add(method);
-                }
-            }
-        };
+        // Checking the method signature for thrown exceptions
+        for (PsiClassType exception : method.getThrowsList().getReferencedTypes()) {
+            PsiElement anchor = scope.anchorFor(method.getThrowsList(), method, sink.file());
+            if (anchor == null) continue;
+            sink.report(anchor,
+                    MessageBundle.message("inspection.traps.throws") + "\n" + exception.getCanonicalText() + context,
+                    ProblemHighlightType.ERROR);
+            ProblemMethods.getInstance().addMethod(sink.file().getProject(), sink.file(), kernelMethod);
+        }
     }
 }

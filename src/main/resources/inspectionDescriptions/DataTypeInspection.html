@@ -20,7 +20,8 @@
 <p>
   Flags variables, fields and parameters declared with a type that the TornadoVM
   compiler cannot translate to OpenCL, PTX or SPIR-V. The inspection runs on
-  any kernel method (annotated with <code>@Parallel</code> or <code>@Reduce</code>)
+  any kernel method (annotated with <code>@Parallel</code> or <code>@Reduce</code>,
+  or taking a <code>KernelContext</code> or <code>TileContext</code> parameter)
   and on every helper method that TornadoVM would inline at runtime.
 </p>
 

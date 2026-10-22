@@ -17,70 +17,33 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.inspector;
 
-import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.ProblemHighlightType;
-import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.*;
-import com.intellij.psi.util.PsiTreeUtil;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashSet;
-import java.util.Objects;
-
 /**
- * A custom inspection tool to check for non-void return types in methods that are
- * annotated with "Parallel" or "Reduce", or that have a KernelContext or TileContext parameter.
+ * A custom inspection tool to check for non-void return types of TornadoVM kernels:
+ * methods with "Parallel" or "Reduce" annotations, or with a KernelContext or TileContext
+ * parameter (see {@link TornadoKernels}).
  * <p>
  * Methods registered as kernel entry points via .task() must return void. However,
  * non-void return types are valid when the method is inlined as a helper, so this
  * inspection registers a WARNING rather than an ERROR.
  * </p>
  */
-public class NonVoidReturnInspection extends AbstractBaseJavaLocalInspectionTool {
+public class NonVoidReturnInspection extends TornadoKernelInspection {
 
     @Override
-    public @NotNull PsiElementVisitor buildVisitor(@NotNull final ProblemsHolder holder, boolean isOnTheFly) {
-        HashSet<PsiMethod> reportedMethods = new HashSet<>();
-        return new JavaElementVisitor() {
-            @Override
-            public void visitAnnotation(@NotNull PsiAnnotation annotation) {
-                super.visitAnnotation(annotation);
-                if (Objects.requireNonNull(annotation.getQualifiedName()).endsWith("Parallel") ||
-                        annotation.getQualifiedName().endsWith("Reduce")) {
-                    PsiMethod parent = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
-                    if (parent == null) return;
-                    checkReturnType(parent);
-                }
+    protected void checkKernel(@NotNull PsiMethod method, @NotNull KernelCallGraphAnalyzer.AnalysisScope scope,
+                               @NotNull KernelProblemSink sink) {
+        PsiType returnType = method.getReturnType();
+        if (returnType != null && !PsiTypes.voidType().equals(returnType)) {
+            PsiTypeElement returnTypeElement = method.getReturnTypeElement();
+            if (returnTypeElement != null) {
+                sink.report(returnTypeElement, MessageBundle.message("inspection.nonVoidReturn"),
+                        ProblemHighlightType.GENERIC_ERROR_OR_WARNING);
             }
-
-            @Override
-            public void visitMethod(@NotNull PsiMethod method) {
-                super.visitMethod(method);
-
-                for (PsiParameter parameter : method.getParameterList().getParameters()) {
-                    PsiType type = parameter.getType();
-                    if (KernelCallGraphAnalyzer.isKernelContextType(type)) {
-                        checkReturnType(method);
-                        break;
-                    }
-                }
-            }
-
-            private void checkReturnType(PsiMethod method) {
-                if (reportedMethods.contains(method)) return;
-                reportedMethods.add(method);
-
-                PsiType returnType = method.getReturnType();
-                if (returnType != null && !PsiTypes.voidType().equals(returnType)) {
-                    PsiTypeElement returnTypeElement = method.getReturnTypeElement();
-                    if (returnTypeElement != null) {
-                        holder.registerProblem(returnTypeElement,
-                                MessageBundle.message("inspection.nonVoidReturn"),
-                                ProblemHighlightType.GENERIC_ERROR_OR_WARNING);
-                    }
-                }
-            }
-        };
+        }
     }
 }

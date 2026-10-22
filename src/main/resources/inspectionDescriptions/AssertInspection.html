@@ -19,7 +19,8 @@
 <body>
 <p>
   Flags Java <code>assert</code> statements that appear inside a TornadoVM kernel,
-  i.e. a method annotated with <code>@Parallel</code> or <code>@Reduce</code>, or
+  i.e. a method annotated with <code>@Parallel</code> or <code>@Reduce</code> or
+  taking a <code>KernelContext</code> or <code>TileContext</code> parameter, or
   any helper method transitively inlined into one.
 </p>
 <p>

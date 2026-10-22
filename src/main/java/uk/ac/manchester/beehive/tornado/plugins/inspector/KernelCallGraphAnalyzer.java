@@ -243,30 +243,6 @@ public final class KernelCallGraphAnalyzer {
     }
 
     /**
-     * Checks whether the given annotation marks a kernel method.
-     *
-     * @param annotation the annotation to check
-     * @return true if it is {@code @Parallel} or {@code @Reduce}
-     */
-    public static boolean isKernelAnnotation(PsiAnnotation annotation) {
-        String qName = annotation.getQualifiedName();
-        return qName != null
-                && (qName.endsWith("Parallel") || qName.endsWith("Reduce"));
-    }
-
-    /**
-     * Checks whether the given type is one of the TornadoVM execution contexts that
-     * mark a method as a kernel entry point when used as a parameter.
-     *
-     * @param type the parameter type to check
-     * @return true if it is {@code KernelContext} or {@code TileContext}
-     */
-    public static boolean isKernelContextType(PsiType type) {
-        String typeName = type.getCanonicalText();
-        return typeName.endsWith("KernelContext") || typeName.endsWith("TileContext");
-    }
-
-    /**
      * Formats a context suffix for diagnostic messages when a violation is found
      * inside a helper method rather than the kernel method itself.
      *
