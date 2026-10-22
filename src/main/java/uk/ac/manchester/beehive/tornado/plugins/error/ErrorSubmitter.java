@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +38,7 @@ import java.nio.charset.StandardCharsets;
 
 public class ErrorSubmitter extends ErrorReportSubmitter {
 
-    private String url = "https://github.com/beehive-lab/tornado-insight/issues/new?";
+    private static final String NEW_ISSUE_URL = "https://github.com/beehive-lab/tornado-insight/issues/new?";
     private final String label = "exception";
     private final int stackTraceLen = 6500;
     @Override
@@ -55,9 +55,9 @@ public class ErrorSubmitter extends ErrorReportSubmitter {
         IdeaLoggingEvent event = ArrayUtil.getFirstElement(events);
         String title = "Exception: ";
         String stacktrace = "Please paste the full stacktrace from the IDEA error popup.\n";
-        if (events != null){
-            String throwableText = event.getThrowableText();
-            String exceptionTitle = throwableText.lines().findFirst().get();
+        if (event != null) {
+            String throwableText = StringUtil.notNullize(event.getThrowableText());
+            String exceptionTitle = throwableText.lines().findFirst().orElse("");
             title += (!StringUtil.isEmptyOrSpaces(exceptionTitle) ? exceptionTitle : "<Fill in title>");
             if (!StringUtil.isEmptyOrSpaces(throwableText)){
                 String quotes = "\n```\n";
@@ -81,7 +81,8 @@ public class ErrorSubmitter extends ErrorReportSubmitter {
                 .append("IDE version: ").append(ideaVersion).append("\n")
                 .append("Plugin version: ").append(pluginVersion).append("\n");
         Charset utf8 = StandardCharsets.UTF_8;
-        url = String.format("%stitle=%s&labels=%s&body=%s", url,
+        // Build the URL per report; the base URL must not accumulate query strings across reports
+        String url = String.format("%stitle=%s&labels=%s&body=%s", NEW_ISSUE_URL,
                 URLEncoder.encode(title,utf8), URLEncoder.encode(label,utf8),
                 URLEncoder.encode(template.toString(),utf8));
         BrowserUtil.browse(url);
