@@ -22,6 +22,7 @@ import com.intellij.openapi.actionSystem.ActionToolbar;
 import com.intellij.openapi.actionSystem.DataKey;
 import com.intellij.openapi.actionSystem.DataProvider;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.SimpleToolWindowPanel;
@@ -44,6 +45,8 @@ import javax.swing.*;
 import java.util.Objects;
 
 public class TornadoSideWindow implements ToolWindowFactory {
+
+    private static final Logger LOG = Logger.getInstance(TornadoSideWindow.class);
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
@@ -120,8 +123,7 @@ public class TornadoSideWindow implements ToolWindowFactory {
                     if (selectedFiles.length > 0) {
                         TornadoTWTask.refresh(project, selectedFiles[0], getModel());
                     } else {
-                        // Optional: handle the case where no file is selected
-                        System.out.println("No file selected in editor for Tornado refresh.");
+                        LOG.debug("No file selected in editor for Tornado refresh");
                     }
                 }
 

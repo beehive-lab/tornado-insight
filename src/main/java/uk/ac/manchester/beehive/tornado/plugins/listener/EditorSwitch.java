@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ package uk.ac.manchester.beehive.tornado.plugins.listener;
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent;
 import com.intellij.openapi.fileEditor.FileEditorManagerListener;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowManager;
 import uk.ac.manchester.beehive.tornado.plugins.message.TornadoTaskRefreshListener;
 import org.jetbrains.annotations.NotNull;
@@ -31,8 +32,9 @@ public class EditorSwitch implements FileEditorManagerListener {
     public void selectionChanged(@NotNull FileEditorManagerEvent event) {
         //ProblemMethods.getInstance().clear();
         Project project = event.getManager().getProject();
-        if (ToolWindowManager.getInstance(project).getToolWindow("TornadoVM") == null ||
-            event.getNewFile() == null) return;
+        ToolWindow toolWindow = ToolWindowManager.getInstance(project).getToolWindow("TornadoVM");
+        // Skip while the tool window is hidden; ToolWindowOpen refreshes it when shown
+        if (toolWindow == null || !toolWindow.isVisible() || event.getNewFile() == null) return;
 
 
         TornadoTaskRefreshListener tornadoTaskRefreshListener =
