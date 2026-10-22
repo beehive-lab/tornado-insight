@@ -1,0 +1,67 @@
+<templateSet group="TornadoVM">
+    <template name="tg"
+              value="uk.ac.manchester.tornado.api.TaskGraph $TG$ = new uk.ac.manchester.tornado.api.TaskGraph(&quot;$NAME$&quot;)&#10;        .transferToDevice(uk.ac.manchester.tornado.api.enums.DataTransferMode.FIRST_EXECUTION, $INPUTS$)&#10;        .task(&quot;$TASK$&quot;, $CLASS$::$METHOD$, $ARGS$)&#10;        .transferToHost(uk.ac.manchester.tornado.api.enums.DataTransferMode.EVERY_EXECUTION, $OUTPUTS$);&#10;$END$"
+              description="New TornadoVM TaskGraph"
+              toReformat="true"
+              toShortenFQNames="true">
+        <variable name="TG" expression="" defaultValue="&quot;taskGraph&quot;" alwaysStopAt="true"/>
+        <variable name="NAME" expression="" defaultValue="&quot;s0&quot;" alwaysStopAt="true"/>
+        <variable name="INPUTS" expression="" defaultValue="" alwaysStopAt="true"/>
+        <variable name="TASK" expression="" defaultValue="&quot;t0&quot;" alwaysStopAt="true"/>
+        <variable name="CLASS" expression="className()" defaultValue="" alwaysStopAt="true"/>
+        <variable name="METHOD" expression="" defaultValue="" alwaysStopAt="true"/>
+        <variable name="ARGS" expression="" defaultValue="" alwaysStopAt="true"/>
+        <variable name="OUTPUTS" expression="" defaultValue="" alwaysStopAt="true"/>
+        <context>
+            <option name="TORNADOVM_STATEMENT" value="true"/>
+        </context>
+    </template>
+    <template name="tep"
+              value="try (uk.ac.manchester.tornado.api.TornadoExecutionPlan $PLAN$ = new uk.ac.manchester.tornado.api.TornadoExecutionPlan($TG$.snapshot())) {&#10;    $PLAN$.execute();$END$&#10;}"
+              description="New TornadoVM TornadoExecutionPlan for a TaskGraph"
+              toReformat="true"
+              toShortenFQNames="true">
+        <variable name="TG" expression="variableOfType(&quot;uk.ac.manchester.tornado.api.TaskGraph&quot;)" defaultValue="&quot;taskGraph&quot;" alwaysStopAt="true"/>
+        <variable name="PLAN" expression="" defaultValue="&quot;executionPlan&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="TORNADOVM_STATEMENT" value="true"/>
+        </context>
+    </template>
+    <template name="kpar"
+              value="public static void $NAME$($PARAMS$) {&#10;    for (@uk.ac.manchester.tornado.api.annotations.Parallel int $I$ = 0; $I$ &lt; $SIZE$; $I$++) {&#10;        $END$&#10;    }&#10;}"
+              description="New TornadoVM kernel method with a @Parallel loop"
+              toReformat="true"
+              toShortenFQNames="true">
+        <variable name="NAME" expression="" defaultValue="&quot;compute&quot;" alwaysStopAt="true"/>
+        <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
+        <variable name="I" expression="" defaultValue="&quot;i&quot;" alwaysStopAt="true"/>
+        <variable name="SIZE" expression="" defaultValue="" alwaysStopAt="true"/>
+        <context>
+            <option name="TORNADOVM_DECLARATION" value="true"/>
+        </context>
+    </template>
+    <template name="kctx"
+              value="public static void $NAME$(uk.ac.manchester.tornado.api.KernelContext $CONTEXT$, $PARAMS$) {&#10;    $END$&#10;}"
+              description="New TornadoVM kernel method using KernelContext"
+              toReformat="true"
+              toShortenFQNames="true">
+        <variable name="NAME" expression="" defaultValue="&quot;compute&quot;" alwaysStopAt="true"/>
+        <variable name="CONTEXT" expression="" defaultValue="&quot;context&quot;" alwaysStopAt="true"/>
+        <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
+        <context>
+            <option name="TORNADOVM_DECLARATION" value="true"/>
+        </context>
+    </template>
+    <template name="ktile"
+              value="public static void $NAME$(uk.ac.manchester.tornado.api.tile.TileContext $CONTEXT$, $PARAMS$) {&#10;    $END$&#10;}"
+              description="New TornadoVM kernel method using TileContext"
+              toReformat="true"
+              toShortenFQNames="true">
+        <variable name="NAME" expression="" defaultValue="&quot;compute&quot;" alwaysStopAt="true"/>
+        <variable name="CONTEXT" expression="" defaultValue="&quot;tc&quot;" alwaysStopAt="true"/>
+        <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
+        <context>
+            <option name="TORNADOVM_TILE_DECLARATION" value="true"/>
+        </context>
+    </template>
+</templateSet>
