@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2025-2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,28 +17,22 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.ui.console;
 
-import com.intellij.execution.filters.TextConsoleBuilderFactory;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionToolbar;
-import com.intellij.openapi.actionSystem.DataKey;
-import com.intellij.openapi.actionSystem.DataProvider;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
-import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.SimpleToolWindowPanel;
-import com.intellij.openapi.util.Disposer;
-import com.intellij.openapi.wm.ToolWindow;
-import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import uk.ac.manchester.beehive.tornado.plugins.util.DataKeys;
 
-public class ConsolePanel extends SimpleToolWindowPanel implements DataProvider {
-    private final ConsoleView consoleView;
+/**
+ * Tool-window panel that embeds the project's TornadoInsight console. The
+ * {@link ConsoleView} is owned (and disposed) by
+ * {@link uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils}.
+ */
+public class ConsolePanel extends SimpleToolWindowPanel {
 
-    public ConsolePanel(ToolWindow toolWindow, Project project) {
+    public ConsolePanel(@NotNull ConsoleView consoleView) {
         super(Boolean.FALSE, Boolean.TRUE);
-        this.consoleView = TextConsoleBuilderFactory.getInstance().createBuilder(project).getConsole();
         SimpleToolWindowPanel toolWindowPanel = new SimpleToolWindowPanel(Boolean.FALSE, Boolean.TRUE);
         toolWindowPanel.setContent(consoleView.getComponent());
         setContent(toolWindowPanel);
@@ -46,23 +40,5 @@ public class ConsolePanel extends SimpleToolWindowPanel implements DataProvider 
         ActionToolbar consoleToolbar = ActionManager.getInstance().createActionToolbar("ConsoleToolbar", consoleGroup, true);
         consoleToolbar.setTargetComponent(toolWindowPanel);
         setToolbar(consoleToolbar.getComponent());
-    }
-
-    public void dispose() {
-        if (consoleView != null) {
-            Disposer.dispose(consoleView);
-        }
-    }
-
-    /**
-     * @deprecated Use {@link #getData(DataKey)} instead.
-     */
-    @Deprecated
-    @Override
-    public @Nullable Object getData(@NotNull @NonNls String dataId) {
-        if (DataKeys.TORNADO_CONSOLE_VIEW.is(dataId)) {
-            return consoleView;
-        }
-        return super.getData(dataId);
     }
 }

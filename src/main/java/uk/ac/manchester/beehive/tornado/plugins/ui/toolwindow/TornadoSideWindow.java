@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2025-2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow;
 
-import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionToolbar;
 import com.intellij.openapi.actionSystem.DataKey;
@@ -44,7 +43,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.util.Objects;
 
-public class TornadoSideWindow implements ToolWindowFactory, Disposable {
+public class TornadoSideWindow implements ToolWindowFactory {
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
@@ -54,10 +53,6 @@ public class TornadoSideWindow implements ToolWindowFactory, Disposable {
         toolWindow.getContentManager().addContent(content);
         content = ContentFactory.getInstance().createContent(inspectorInfoPanel, "Inspector Guide", false);
         toolWindow.getContentManager().addContent(content);
-    }
-
-    @Override
-    public void dispose() {
     }
 
     private static class ToolWindowContent extends SimpleToolWindowPanel implements DataProvider {
@@ -78,7 +73,7 @@ public class TornadoSideWindow implements ToolWindowFactory, Disposable {
             toolbar.setTargetComponent(simpleToolWindowPanel);
             setToolbar(toolbar.getComponent());
 
-            init(project);
+            init(project, toolWindow);
         }
 
         public <T> @Nullable T getData(@NotNull DataKey<T> key) {
@@ -116,8 +111,9 @@ public class TornadoSideWindow implements ToolWindowFactory, Disposable {
             return (DefaultListModel<String>) TornadoList.getModel();
         }
 
-        public void init(Project project) {
-            project.getMessageBus().connect().subscribe(TornadoTaskRefreshListener.REFRESH_TOPIC, new TornadoTaskRefreshListener() {
+        public void init(Project project, ToolWindow toolWindow) {
+            // Tie the subscription to the tool window so it is dropped with its content
+            project.getMessageBus().connect(toolWindow.getDisposable()).subscribe(TornadoTaskRefreshListener.REFRESH_TOPIC, new TornadoTaskRefreshListener() {
                 @Override
                 public void refresh() {
                     VirtualFile[] selectedFiles = FileEditorManager.getInstance(project).getSelectedFiles();

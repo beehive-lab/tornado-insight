@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.util;
 
+import com.intellij.execution.filters.TextConsoleBuilderFactory;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.openapi.Disposable;
@@ -32,6 +33,7 @@ import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.awt.RelativePoint;
+import com.intellij.util.concurrency.annotations.RequiresEdt;
 import uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.jetbrains.annotations.NotNull;
@@ -40,16 +42,20 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.Date;
 
-@Service
+/**
+ * Project service that owns the TornadoInsight console. The {@link ConsoleView}
+ * is created lazily, registered as a child of this service (so it is disposed
+ * with the project), and embedded by {@link ConsoleWindowFactory}.
+ */
+@Service(Service.Level.PROJECT)
 public final class MessageUtils implements Disposable {
-    
+
     private final Project project;
     private ConsoleView consoleView;
     private ToolWindow toolWindow;
 
     public MessageUtils(Project project) {
         this.project = project;
-        this.toolWindow = ToolWindowManager.getInstance(project).getToolWindow(ConsoleWindowFactory.ID);
     }
 
     @NotNull
@@ -108,8 +114,23 @@ public final class MessageUtils implements Disposable {
         }
     }
 
+    /**
+     * Returns the project's console view, creating it on first use.
+     */
+    @RequiresEdt
+    public @NotNull ConsoleView getConsoleView() {
+        if (consoleView == null) {
+            consoleView = TextConsoleBuilderFactory.getInstance().createBuilder(project).getConsole();
+            Disposer.register(this, consoleView);
+        }
+        return consoleView;
+    }
+
     private void showConsole(Runnable runnable) {
         ApplicationManager.getApplication().invokeLater(() -> {
+            if (project.isDisposed()) {
+                return;
+            }
             if (toolWindow == null) {
                 toolWindow = ToolWindowManager.getInstance(project).getToolWindow(ConsoleWindowFactory.ID);
             }
@@ -122,10 +143,7 @@ public final class MessageUtils implements Disposable {
             if (!toolWindow.isActive()) {
                 toolWindow.activate(null);
             }
-            if (consoleView == null) {
-                this.consoleView = ConsoleWindowFactory.getDataContext(project).getData(DataKeys.TORNADO_CONSOLE_VIEW);
-            }
-            consoleView.requestScrollingToEnd();
+            getConsoleView().requestScrollingToEnd();
             runnable.run();
         });
 
@@ -134,8 +152,6 @@ public final class MessageUtils implements Disposable {
 
     @Override
     public void dispose() {
-        if (consoleView != null) {
-            Disposer.dispose(consoleView);
-        }
+        // The console view is registered as a child disposable in getConsoleView()
     }
 }
