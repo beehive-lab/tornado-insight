@@ -21,7 +21,6 @@ import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.process.CapturingProcessHandler;
 import com.intellij.execution.process.ProcessOutput;
-import com.intellij.execution.util.ExecUtil;
 import com.intellij.ide.BrowserUtil;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationAction;
@@ -29,14 +28,24 @@ import com.intellij.notification.NotificationType;
 import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.diagnostic.ControlFlowException;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.options.ShowSettingsUtil;
+import com.intellij.openapi.progress.ProcessCanceledException;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.projectRoots.JavaSdkVersion;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.roots.ui.configuration.ProjectSettingsService;
-import com.intellij.psi.PsiMethod;
+import com.intellij.openapi.util.io.FileUtil;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.CodeGenerator.Batch;
+import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.CodeGenerator.Harness;
+import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.run.JarPacker;
 import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
 import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoJdkContract;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration;
@@ -44,42 +53,108 @@ import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoNotifications;
-import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
-import org.apache.commons.io.FileUtils;
-import org.jetbrains.annotations.NotNull;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.jar.Attributes;
-import java.util.jar.JarEntry;
-import java.util.jar.JarOutputStream;
-import java.util.jar.Manifest;
 
-public class ExecutionEngine {
+/**
+ * Runs dynamic inspection for the selected tasks: checks the project JDK and the
+ * TornadoVM installation, generates a test harness per task, compiles them with
+ * {@code javac}, packs each into a jar and runs it with {@code tornado}.
+ * <p>
+ * {@link #start} does the quick checks on the UI thread and queues the rest as a
+ * cancellable background task. The PSI is read once, in a non-blocking read action,
+ * into plain {@link Harness} data; no PSI element is used after that. Every stage
+ * reports its own expected failures on the console or in a notification and tells
+ * the caller whether to go on; nothing is rethrown to the IDE.
+ * </p>
+ */
+public final class ExecutionEngine {
 
     private static final Logger LOG = Logger.getInstance(ExecutionEngine.class);
 
-    private final String tempFolderPath;
+    /** Upper bound for compiling the generated harnesses. */
+    static final int JAVAC_TIMEOUT_MS = 2 * 60 * 1000;
+    /** Upper bound for running one harness on TornadoVM. */
+    static final int TORNADO_RUN_TIMEOUT_MS = 5 * 60 * 1000;
+    /** Upper bound for 'tornado --version' and 'tornado --device'. */
+    static final int TORNADO_PROBE_TIMEOUT_MS = 60 * 1000;
 
-    private final HashMap<String, PsiMethod> fileMethodMap;
+    /**
+     * The project JDK, copied on the UI thread so the background task does not
+     * query the project model.
+     *
+     * @param name          the SDK name, may be {@code null}
+     * @param homePath      the JDK home, may be {@code null}
+     * @param versionString the SDK version string, may be {@code null}
+     * @param feature       the JDK feature version, or -1 if unknown
+     */
+    record ProjectJdk(@Nullable String name, @Nullable String homePath, @Nullable String versionString, int feature) {
+    }
 
     private final Project project;
+    private final ProjectJdk jdk;
+    private final List<TaskEntry> tasks;
+    private final boolean saveFileEnabled;
+    private final String debugFileSaveLocation;
 
     private boolean completed;
     private boolean hasRuntimeErrors;
 
-    public ExecutionEngine(Project project, String tempFolderPath, HashMap<String, PsiMethod> fileMethodMap) {
+    private ExecutionEngine(Project project, ProjectJdk jdk, List<TaskEntry> tasks,
+                            boolean saveFileEnabled, String debugFileSaveLocation) {
         this.project = project;
-        this.tempFolderPath = tempFolderPath;
-        this.fileMethodMap = fileMethodMap;
-        this.completed = false;
-        this.hasRuntimeErrors = false;
+        this.jdk = jdk;
+        this.tasks = List.copyOf(tasks);
+        this.saveFileEnabled = saveFileEnabled;
+        this.debugFileSaveLocation = debugFileSaveLocation;
+    }
+
+    /**
+     * Starts dynamic inspection of {@code tasks}. Called on the UI thread.
+     */
+    public static void start(@NotNull Project project, @NotNull List<TaskEntry> tasks) {
+        MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
+                MessageBundle.message("dynamic.info.start"));
+
+        // Validate JDK before starting
+        ProjectJdk jdk = validateProjectJdk(project);
+        if (jdk == null) {
+            return;
+        }
+
+        // Validate TornadoVM SDK before starting
+        if (!validateTornadoSdk(project)) {
+            return;
+        }
+
+        // Make sure the configured test-data size will produce a meaningful run
+        if (!validateParameterSize(project)) {
+            return;
+        }
+
+        TornadoSettingState settings = TornadoSettingState.getInstance();
+        ExecutionEngine engine = new ExecutionEngine(project, jdk, tasks,
+                settings.saveFileEnabled, settings.debugFileSaveLocation);
+        new Task.Backgroundable(project, "Running TornadoVM dynamic inspection", true) {
+            @Override
+            public void run(@NotNull ProgressIndicator indicator) {
+                engine.run(indicator);
+            }
+
+            @Override
+            public void onCancel() {
+                MessageUtils.getInstance(project).showWarnMsg(MessageBundle.message("dynamic.info.title"),
+                        "Dynamic inspection was cancelled.");
+            }
+        }.queue();
     }
 
     private static boolean isWindows() {
@@ -106,51 +181,145 @@ public class ExecutionEngine {
         return exe;
     }
 
-    public void run(){
-        // Performing UI related operations on a non-EDT is not allowed.
-        MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
-                MessageBundle.message("dynamic.info.start"));
-
-        // Validate JDK before starting
-        if (!validateProjectJdk()) {
-            return;
-        }
-
-        // Validate TornadoVM SDK before starting
-        if (!validateTornadoSdk()) {
-            return;
-        }
-
-        // Make sure the configured test-data size will produce a meaningful run
-        if (!validateParameterSize()) {
-            return;
-        }
-
-        ApplicationManager.getApplication().executeOnPooledThread(() -> {
-            // 'tornado --version' is a blocking subprocess call, so it must
-            // run off the EDT (OSProcessHandler.waitFor refuses on the EDT).
-            if (!validateJdkCompatibility()) {
+    /**
+     * The background part of the pipeline. Expected failures stop it after being
+     * reported; cancellation is propagated to the task.
+     */
+    private void run(@NotNull ProgressIndicator indicator) {
+        long startTime = System.currentTimeMillis();
+        Path workDir = null;
+        try {
+            indicator.setIndeterminate(true);
+            indicator.setText("Checking the TornadoVM installation");
+            if (!validateJdkCompatibility(indicator)) {
                 return;
             }
 
-            long startTime = System.currentTimeMillis();
-            ArrayList<String> files = new ArrayList<>(fileMethodMap.keySet());
-            try {
-                compile(tempFolderPath, files);
-                packFolder(tempFolderPath, tempFolderPath);
-                executeJars(tempFolderPath);
-            }catch (UnsupportedOperationException ignore){}
-            catch (Exception e) {
-                throw new RuntimeException(e);
-            }finally {
-                long runningTime = System.currentTimeMillis() - startTime;
-                showStatDialog(runningTime);
-                cleanUp();
+            indicator.checkCanceled();
+            indicator.setText("Generating test code");
+            Batch batch = ReadAction.nonBlocking(() -> CodeGenerator.generate(tasks))
+                    .inSmartMode(project)
+                    .expireWhen(project::isDisposed)
+                    .wrapProgress(indicator)
+                    .executeSynchronously();
+            for (String stale : batch.staleTasks()) {
+                reportStaleTask(stale);
+            }
+            List<Harness> harnesses = batch.harnesses();
+            if (harnesses.isEmpty()) {
+                return;
+            }
+
+            workDir = FileUtil.createTempDirectory("tornado-insight", null, false).toPath();
+            Path sourceDir = Files.createDirectory(workDir.resolve("src"));
+            Path classDir = Files.createDirectory(workDir.resolve("classes"));
+            Path jarDir = Files.createDirectory(workDir.resolve("jars"));
+            // tornado puts its working directory on the module path, so run it in an empty one
+            Path runDir = Files.createDirectory(workDir.resolve("run"));
+
+            List<String> sourceFiles = writeSources(harnesses, sourceDir);
+
+            indicator.checkCanceled();
+            indicator.setText(MessageBundle.message("dynamic.info.compile"));
+            if (!compile(indicator, classDir, sourceFiles)) {
+                return;
+            }
+
+            indicator.checkCanceled();
+            indicator.setText(MessageBundle.message("dynamic.info.packing"));
+            Map<Harness, Path> jars = packJars(harnesses, classDir, jarDir);
+            if (jars == null) {
+                return;
+            }
+
+            indicator.checkCanceled();
+            indicator.setText(MessageBundle.message("dynamic.info.execution"));
+            executeJars(indicator, jars, runDir);
+        } catch (ProcessCanceledException e) {
+            throw e;
+        } catch (IOException e) {
+            LOG.warn("Dynamic inspection failed", e);
+            MessageUtils.getInstance(project).showErrorMsg(MessageBundle.message("dynamic.info.title"),
+                    "Dynamic inspection failed: " + e.getMessage());
+        } catch (RuntimeException e) {
+            if (e instanceof ControlFlowException) {
+                throw e;
+            }
+            LOG.error("Dynamic inspection failed unexpectedly", e);
+            MessageUtils.getInstance(project).showErrorMsg(MessageBundle.message("dynamic.info.title"),
+                    "Dynamic inspection failed unexpectedly: " + e);
+        } finally {
+            long runningTime = System.currentTimeMillis() - startTime;
+            showStatDialog(runningTime);
+            cleanUp(workDir);
+        }
+    }
+
+    // A task in the panel whose method (or file) was deleted or changed beyond
+    // recognition since the last refresh
+    private void reportStaleTask(String task) {
+        MessageUtils.getInstance(project).showWarnMsg(MessageBundle.message("dynamic.info.title"),
+                "Task " + task + " no longer exists in the source. Refresh the TornadoVM panel and try again.");
+    }
+
+    private List<String> writeSources(List<Harness> harnesses, Path sourceDir) throws IOException {
+        List<String> files = new ArrayList<>();
+        for (Harness harness : harnesses) {
+            Path file = sourceDir.resolve(harness.className() + ".java");
+            Files.writeString(file, harness.source());
+            files.add(file.toString());
+            if (saveFileEnabled) {
+                saveFileToDisk(harness);
+            }
+        }
+        return files;
+    }
+
+    // Keeps a copy of the generated harness for debugging (Settings > Save Internal Debug File)
+    private void saveFileToDisk(Harness harness) {
+        if (debugFileSaveLocation == null || debugFileSaveLocation.isBlank()) {
+            return;
+        }
+        Path target = Path.of(debugFileSaveLocation, harness.className() + ".java");
+        try {
+            Files.writeString(target, harness.source());
+        } catch (IOException e) {
+            LOG.warn("Could not save the generated test code to " + target, e);
+            MessageUtils.getInstance(project).showWarnMsg(MessageBundle.message("dynamic.info.title"),
+                    "Could not save the generated test code to " + target + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Runs {@code commandLine} to completion, or until {@code timeoutMs} passes or
+     * the user cancels. A cancelled run throws {@link ProcessCanceledException}; a
+     * timed-out one returns an output whose {@link ProcessOutput#isTimeout()} is set
+     * (the process is destroyed).
+     */
+    private static ProcessOutput runProcess(GeneralCommandLine commandLine, ProgressIndicator indicator, int timeoutMs)
+            throws ExecutionException {
+        ProcessOutput output = new CapturingProcessHandler(commandLine)
+                .runProcessWithProgressIndicator(indicator, timeoutMs);
+        if (output.isCancelled()) {
+            throw new ProcessCanceledException();
+        }
+        return output;
+    }
+
+    private static String seconds(int timeoutMs) {
+        return timeoutMs / 1000 + " seconds";
+    }
+
+    private static void openProjectStructureAction(Project project, Notification notification) {
+        notification.addAction(new NotificationAction("Open Project Structure") {
+            @Override
+            public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
+                ProjectSettingsService.getInstance(project).openProjectSettings();
             }
         });
     }
 
-    private boolean validateProjectJdk() {
+    private static @Nullable ProjectJdk validateProjectJdk(Project project) {
         Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
 
         if (projectSdk == null) {
@@ -159,14 +328,9 @@ public class ExecutionEngine {
                 "Please configure JDK 21 or newer in Project Structure (File > Project Structure > Project Settings > Project)",
                 NotificationType.ERROR
             );
-            notification.addAction(new NotificationAction("Open Project Structure") {
-                @Override
-                public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
-                    ProjectSettingsService.getInstance(project).openProjectSettings();
-                }
-            });
+            openProjectStructureAction(project, notification);
             Notifications.Bus.notify(notification, project);
-            return false;
+            return null;
         }
 
         JavaSdkVersion sdkVersion = JavaSdkVersion.fromVersionString(projectSdk.getVersionString());
@@ -178,20 +342,16 @@ public class ExecutionEngine {
                     ". Please update your project JDK in Project Structure.",
                 NotificationType.ERROR
             );
-            notification.addAction(new NotificationAction("Open Project Structure") {
-                @Override
-                public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
-                    ProjectSettingsService.getInstance(project).openProjectSettings();
-                }
-            });
+            openProjectStructureAction(project, notification);
             Notifications.Bus.notify(notification, project);
-            return false;
+            return null;
         }
 
-        return true;
+        return new ProjectJdk(projectSdk.getName(), projectSdk.getHomePath(), projectSdk.getVersionString(),
+                sdkVersion.getMaxLanguageLevel().toJavaVersion().feature);
     }
 
-    private boolean validateTornadoSdk() {
+    private static boolean validateTornadoSdk(Project project) {
         String tornadoSdk = System.getenv("TORNADOVM_HOME");
 
         // Show TORNADOVM_HOME detection info
@@ -226,7 +386,7 @@ public class ExecutionEngine {
      * does, so a fresh install or a hand-edited state file can still leak a
      * bad value through to the runtime path.
      */
-    private boolean validateParameterSize() {
+    private static boolean validateParameterSize(Project project) {
         int size = TornadoSettingState.getInstance().parameterSize;
         int maxSize = TornadoSettingState.MAX_PARAMETER_SIZE - 1;
         if (size > 0 && size <= maxSize) {
@@ -252,9 +412,9 @@ public class ExecutionEngine {
      * {@code "temurin-25 (25.0.4) [GraalVM]"}. Falls back to the feature number
      * when the SDK exposes neither a name nor a version string.
      */
-    private static String describeProjectJdk(Sdk sdk, int feature) {
-        String name = sdk.getName();
-        String version = sdk.getVersionString();
+    private static String describeProjectJdk(ProjectJdk jdk) {
+        String name = jdk.name();
+        String version = jdk.versionString();
         StringBuilder sb = new StringBuilder();
         if (name != null && !name.isBlank()) {
             sb.append(name.trim());
@@ -263,9 +423,9 @@ public class ExecutionEngine {
             sb.append(sb.isEmpty() ? version.trim() : " (" + version.trim() + ")");
         }
         if (sb.isEmpty()) {
-            sb.append("JDK ").append(feature);
+            sb.append("JDK ").append(jdk.feature());
         }
-        if (isGraalVmDistribution(sdk)) {
+        if (isGraalVmDistribution(jdk.homePath())) {
             sb.append(" [GraalVM]");
         }
         return sb.toString();
@@ -279,23 +439,18 @@ public class ExecutionEngine {
      * language/runtime version. Mismatches typically manifest as runtime errors
      * deep inside TornadoVM, so failing fast here gives a clearer diagnostic.
      */
-    private boolean validateJdkCompatibility() {
-        TornadoJdkContract contract = detectTornadoVmJdkContract();
+    private boolean validateJdkCompatibility(ProgressIndicator indicator) {
+        TornadoJdkContract contract = detectTornadoVmJdkContract(indicator);
         if (contract == null) {
             // detectTornadoVmJdkContract already surfaced a notification with details
             return false;
         }
 
-        Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
-        // validateProjectJdk already guaranteed a non-null SDK >= 21
-        JavaSdkVersion projectVersion = JavaSdkVersion.fromVersionString(projectSdk.getVersionString());
-        int projectJdk = projectVersion != null
-                ? projectVersion.getMaxLanguageLevel().toJavaVersion().feature
-                : -1;
+        int projectJdk = jdk.feature();
 
         MessageUtils.getInstance(project).showInfoMsg("Info",
                 "TornadoVM requires " + contract.requirement() + " (from " + contract.source() + "); project JDK is "
-                        + describeProjectJdk(projectSdk, projectJdk) + ".");
+                        + describeProjectJdk(jdk) + ".");
 
         if (!contract.accepts(projectJdk)) {
             Notification notification = TornadoNotifications.create(
@@ -307,32 +462,22 @@ public class ExecutionEngine {
                     " TornadoVM build that supports JDK " + projectJdk + ".",
                 NotificationType.ERROR
             );
-            notification.addAction(new NotificationAction("Open Project Structure") {
-                @Override
-                public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
-                    ProjectSettingsService.getInstance(project).openProjectSettings();
-                }
-            });
+            openProjectStructureAction(project, notification);
             Notifications.Bus.notify(notification, project);
             return false;
         }
 
-        if (contract.vendorsGraal() && isGraalVmDistribution(projectSdk)) {
+        if (contract.vendorsGraal() && isGraalVmDistribution(jdk.homePath())) {
             Notification notification = TornadoNotifications.create(
                 "Incompatible JDK distribution for default TornadoVM",
-                "The project JDK at " + projectSdk.getHomePath() + " is a GraalVM build. TornadoVM 6.0.0 and" +
+                "The project JDK at " + jdk.homePath() + " is a GraalVM build. TornadoVM 6.0.0 and" +
                     " newer bundle their own Graal compiler and JVMCI, which collide with the modules a" +
                     " GraalVM JDK already ships and abort the JVM (fatal error: HotSpotNmethod.profileDeopt)." +
                     " Set the project JDK to a standard OpenJDK build (e.g. Eclipse Temurin or Oracle OpenJDK)," +
                     " " + contract.requirement() + ", in Project Structure.",
                 NotificationType.ERROR
             );
-            notification.addAction(new NotificationAction("Open Project Structure") {
-                @Override
-                public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
-                    ProjectSettingsService.getInstance(project).openProjectSettings();
-                }
-            });
+            openProjectStructureAction(project, notification);
             Notifications.Bus.notify(notification, project);
             return false;
         }
@@ -342,14 +487,10 @@ public class ExecutionEngine {
 
     /**
      * Detects a GraalVM JDK (Community or Oracle) from the {@code release} file
-     * in its home directory. TornadoVM &ge; 6.0.0 vendors its own Graal compiler
-     * and, on JDK 22-26, patches {@code jdk.internal.vm.ci} with a frozen JDK-21
-     * copy; a GraalVM JDK ships both with a different JVMCI ABI, so the patched-in
-     * classes fail HotSpot's field-offset checks and the JVM aborts. Recognising
-     * this lets us refuse with a clear message instead of a core dump.
+     * in its home directory (see {@link TornadoJdkContract#isGraalVmRelease}).
+     * Recognising this lets us refuse with a clear message instead of a core dump.
      */
-    private static boolean isGraalVmDistribution(Sdk sdk) {
-        String home = sdk.getHomePath();
+    private static boolean isGraalVmDistribution(@Nullable String home) {
         if (home == null || home.isEmpty()) {
             return false;
         }
@@ -372,7 +513,7 @@ public class ExecutionEngine {
      * {@code null} (and surfaces a user-visible notification) when neither
      * source yields a usable answer.
      */
-    private TornadoJdkContract detectTornadoVmJdkContract() {
+    private @Nullable TornadoJdkContract detectTornadoVmJdkContract(ProgressIndicator indicator) {
         String home = EnvironmentVariable.getTornadoSdk();
         if (home != null && !home.isEmpty()) {
             Path contractFile = Path.of(home, TornadoJdkContract.CONTRACT_FILE_PATH);
@@ -389,19 +530,16 @@ public class ExecutionEngine {
                 // fall through to the 'tornado --version' probe
             }
         }
-        return probeTornadoJdkContractViaVersion();
+        return probeTornadoJdkContractViaVersion(indicator);
     }
 
     /**
      * Fallback for SDKs without {@code etc/tornado.jdk}: runs
-     * {@code tornado --version} and reads the target JDK from the
-     * {@code version=<x>-jdk<n>} line (such SDKs are pinned to that single
-     * release). If {@code tornado} itself rejected the running JDK, its stderr
-     * names the one it wants, which is surfaced as the target instead. Returns
-     * {@code null} (and surfaces a user-visible notification) when the
-     * subprocess cannot be launched, fails, or yields no recognisable marker.
+     * {@code tornado --version} (see {@link TornadoJdkContract#parseVersionOutput}).
+     * Returns {@code null} (and surfaces a user-visible notification) when the
+     * subprocess cannot be launched, fails, times out or yields no recognisable marker.
      */
-    private TornadoJdkContract probeTornadoJdkContractViaVersion() {
+    private @Nullable TornadoJdkContract probeTornadoJdkContractViaVersion(ProgressIndicator indicator) {
         GeneralCommandLine commandLine = new GeneralCommandLine();
         commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
         commandLine.setExePath(resolveTornadoExe());
@@ -410,16 +548,20 @@ public class ExecutionEngine {
 
         ProcessOutput output;
         try {
-            output = ExecUtil.execAndGetOutput(commandLine);
+            output = runProcess(commandLine, indicator, TORNADO_PROBE_TIMEOUT_MS);
         } catch (ExecutionException e) {
             notifyTornadoVersionFailure(
                     "Failed to launch 'tornado --version': " + e.getMessage()
                             + ". Verify that 'tornado' is on PATH and that TORNADOVM_HOME points at a valid installation.");
             return null;
         }
+        if (output.isTimeout()) {
+            notifyTornadoVersionFailure("'tornado --version' did not finish within "
+                    + seconds(TORNADO_PROBE_TIMEOUT_MS) + " and was stopped.");
+            return null;
+        }
 
         String combined = (output.getStdout() + "\n" + output.getStderr()).trim();
-
         TornadoJdkContract contract = TornadoJdkContract.parseVersionOutput(combined);
         if (contract != null) {
             return contract;
@@ -444,14 +586,15 @@ public class ExecutionEngine {
         Notifications.Bus.notify(notification, project);
     }
 
-    private void compile(String outputDir, ArrayList<String> javaFiles) {
+    /**
+     * Compiles the harnesses into {@code outputDir}. A failure is reported (with
+     * the summarised javac errors) and stops the pipeline.
+     *
+     * @return whether compilation succeeded
+     */
+    private boolean compile(ProgressIndicator indicator, Path outputDir, List<String> javaFiles) {
         MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
                 MessageBundle.message("dynamic.info.compile"));
-
-        Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
-        if (projectSdk == null) {
-            throw new UnsupportedOperationException("No project JDK configured");
-        }
 
         // Build classpath with null checks
         TornadoSettingState settings = TornadoSettingState.getInstance();
@@ -474,7 +617,7 @@ public class ExecutionEngine {
                 "For installation instructions, visit: https://www.tornadovm.org/downloads";
 
             MessageUtils.getInstance(project).showErrorMsg("TornadoVM JARs Not Found", errorMsg);
-            throw new UnsupportedOperationException("TornadoVM JARs not found");
+            return false;
         }
 
         String classpath = apiPath + File.pathSeparator + matricesPath + File.pathSeparator + unitTestPath;
@@ -482,13 +625,10 @@ public class ExecutionEngine {
         // Derive --release from the project SDK so it stays in sync with the JDK
         // actually used to compile (and so that --enable-preview, which requires
         // --release to match the current JDK, remains valid).
-        JavaSdkVersion projectSdkVersion = JavaSdkVersion.fromVersionString(projectSdk.getVersionString());
-        int releaseVersion = projectSdkVersion != null
-                ? projectSdkVersion.getMaxLanguageLevel().toJavaVersion().feature
-                : 21; // Fallback to the minimum supported release
+        int releaseVersion = jdk.feature() > 0 ? jdk.feature() : 21; // Fallback to the minimum supported release
 
         GeneralCommandLine commandLine = new GeneralCommandLine();
-        String javacPath = projectSdk.getHomePath() + File.separator + "bin" + File.separator + "javac";
+        String javacPath = jdk.homePath() + File.separator + "bin" + File.separator + "javac";
         if (isWindows()) {
             javacPath += ".exe";
         }
@@ -500,66 +640,66 @@ public class ExecutionEngine {
         commandLine.addParameter("-classpath");
         commandLine.addParameter(classpath);
         commandLine.addParameter("-d");
-        commandLine.addParameter(outputDir);
+        commandLine.addParameter(outputDir.toString());
         commandLine.addParameters(javaFiles);  // Adds each Java file to the command line
 
-        // Execute the command
+        ProcessOutput output;
         try {
-            ProcessOutput output = ExecUtil.execAndGetOutput(commandLine);
-            int exitCode = output.getExitCode();
-            String stderr = output.getStderr();
-            if (exitCode != 0) {
-                // Surface a concise, human-readable warning instead of dumping
-                // the raw javac output. A type mismatch in the generated harness
-                // (e.g. a kernel parameter whose type the device does not
-                // support, such as FP64/double on a GPU without double support)
-                // produces hundreds of lines of overload candidates and
-                // type-variable declarations that bury the actual cause.
-                LOG.warn("Generated code compilation failed (exit code " + exitCode + "):\n" + stderr);
-                MessageUtils.getInstance(project).showWarnMsg("Generated code did not compile",
-                        CompilerOutputSummarizer.summarize(stderr));
-                throw new UnsupportedOperationException("Compilation failed with exit code " + exitCode);
-            }
+            output = runProcess(commandLine, indicator, JAVAC_TIMEOUT_MS);
         } catch (ExecutionException e) {
+            LOG.warn("Could not run javac", e);
             MessageUtils.getInstance(project).showErrorMsg(MessageBundle.message("dynamic.info.title"),
-                    MessageBundle.message("dynamic.error.compile"));
+                    MessageBundle.message("dynamic.error.compile") + "\n" + e.getMessage());
+            return false;
         }
+        if (output.isTimeout()) {
+            MessageUtils.getInstance(project).showErrorMsg(MessageBundle.message("dynamic.info.title"),
+                    "Compiling the generated test code did not finish within " + seconds(JAVAC_TIMEOUT_MS)
+                            + " and was stopped.");
+            return false;
+        }
+        int exitCode = output.getExitCode();
+        if (exitCode != 0) {
+            // Surface a concise, human-readable warning instead of dumping
+            // the raw javac output. A type mismatch in the generated harness
+            // (e.g. a kernel parameter whose type the device does not
+            // support, such as FP64/double on a GPU without double support)
+            // produces hundreds of lines of overload candidates and
+            // type-variable declarations that bury the actual cause.
+            LOG.warn("Generated code compilation failed (exit code " + exitCode + "):\n" + output.getStderr());
+            MessageUtils.getInstance(project).showWarnMsg("Generated code did not compile",
+                    CompilerOutputSummarizer.summarize(output.getStderr()));
+            return false;
+        }
+        return true;
     }
 
-    private void packFolder(String classFolderPath, String outputFolderPath) {
+    /**
+     * Packs each compiled harness, with its nested and anonymous classes, into its
+     * own executable jar.
+     *
+     * @return the jar of each harness, or {@code null} if packing failed (reported)
+     */
+    private @Nullable Map<Harness, Path> packJars(List<Harness> harnesses, Path classDir, Path jarDir) {
         MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
                 MessageBundle.message("dynamic.info.packing"));
-        File classFolder = new File(classFolderPath);
-        File[] classFiles = classFolder.listFiles((dir, name) -> name.endsWith(".class"));
-        if (classFiles == null) {
-            return;
-        }
-
-        File outputFolder = new File(outputFolderPath);
-        if (!outputFolder.exists()) {
-            outputFolder.mkdirs();
-        }
-
-        for (File classFile : classFiles) {
-            Manifest manifest = new Manifest();
-            manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
-            manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS, classFile.getName().replace(".class", ""));
-
-            File outputJar = new File(outputFolder, classFile.getName().replace(".class", ".jar"));
-
-            try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(outputJar), manifest)) {
-                Path classPath = classFile.toPath();
-                jos.putNextEntry(new JarEntry(classPath.getFileName().toString()));
-                Files.copy(classPath, jos);
-                jos.closeEntry();
+        Map<Harness, Path> jars = new LinkedHashMap<>();
+        for (Harness harness : harnesses) {
+            Path jar = jarDir.resolve(harness.className() + ".jar");
+            try {
+                JarPacker.pack(classDir, harness.className(), jar);
             } catch (IOException e) {
+                LOG.warn("Could not pack " + harness.className(), e);
                 MessageUtils.getInstance(project).showErrorMsg(MessageBundle.message("dynamic.info.title"),
-                        MessageBundle.message("dynamic.error.packing"));
+                        MessageBundle.message("dynamic.error.packing") + ": " + e.getMessage());
+                return null;
             }
+            jars.put(harness, jar);
         }
+        return jars;
     }
 
-    private void executeJars(String jarFolderPath) {
+    private void executeJars(ProgressIndicator indicator, Map<Harness, Path> jars, Path runDir) {
         MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
                 MessageBundle.message("dynamic.info.execution"));
         GeneralCommandLine commandLine = new GeneralCommandLine();
@@ -567,13 +707,13 @@ public class ExecutionEngine {
         commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
         // On Windows, explicitly use tornado.exe to avoid trying to execute the Unix shell script
         commandLine.setExePath(resolveTornadoExe());
+        commandLine.setWorkDirectory(runDir.toFile());
         configureEnvironmentVariables(commandLine);
         commandLine.addParameter("--device");
 
         try {
-            CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
-            ProcessOutput output = handler.runProcess();
-            if (output.getExitCode() != 0) {
+            ProcessOutput output = runProcess(commandLine, indicator, TORNADO_PROBE_TIMEOUT_MS);
+            if (output.isTimeout() || output.getExitCode() != 0) {
                 // TornadoVM is not properly installed on the user's machine
                 Notification notification = TornadoNotifications.create("TornadoVM not detected",
                         "TornadoVM is not properly installed or configured", NotificationType.ERROR);
@@ -594,36 +734,43 @@ public class ExecutionEngine {
             return;
         }
 
-        File folder = new File(jarFolderPath);
-        File[] listOfFiles = folder.listFiles();
-
-        if (listOfFiles == null) {
-            System.out.println("No files found in the specified directory.");
-            return;
-        }
-
-        for (File file : listOfFiles) {
-            if (file.isFile() && file.getName().endsWith(".jar")) {
-                runTornadoOnJar(file.getAbsolutePath());
-            }
+        int done = 0;
+        indicator.setIndeterminate(false);
+        for (Map.Entry<Harness, Path> entry : jars.entrySet()) {
+            indicator.checkCanceled();
+            indicator.setText2(entry.getKey().displayName());
+            indicator.setFraction((double) done++ / jars.size());
+            runTornadoOnJar(indicator, entry.getKey(), entry.getValue(), runDir);
         }
     }
 
-    private void runTornadoOnJar(String jarPath) {
-        GeneralCommandLine commandLine = getGeneralCommandLine(jarPath);
+    private void runTornadoOnJar(ProgressIndicator indicator, Harness harness, Path jar, Path runDir) {
+        GeneralCommandLine commandLine = getGeneralCommandLine(jar.toString());
+        commandLine.setWorkDirectory(runDir.toFile());
+        ProcessOutput output;
         try {
-            CapturingProcessHandler handler = new CapturingProcessHandler(commandLine);
-            ProcessOutput output = handler.runProcess();
-            // Cannot use the exit code alone to determine if TornadoVM hit an error.
-            // Under normal circumstances TornadoVM output includes warnings like:
-            // "WARNING: Using incubator modules: jdk.incubator.foreign, jdk.incubator.vector"
-            // We must check for both Java exceptions and OpenCL/SPIR-V/PTX runtime errors.
-            RuntimeOutputClassifier.Verdict verdict =
-                    RuntimeOutputClassifier.classify(output.getStdout(), output.getStderr(), output.getExitCode());
-            printResults(jarPath, verdict, output);
+            output = runProcess(commandLine, indicator, TORNADO_RUN_TIMEOUT_MS);
         } catch (ExecutionException e) {
-            e.printStackTrace();
+            LOG.warn("Could not run tornado on " + jar, e);
+            MessageUtils.getInstance(project).showErrorMsg(MessageBundle.message("dynamic.info.title"),
+                    harness.displayName() + ": could not run TornadoVM: " + e.getMessage());
+            return;
         }
+        if (output.isTimeout()) {
+            hasRuntimeErrors = true;
+            completed = true;
+            MessageUtils.getInstance(project).showErrorMsg(MessageBundle.message("dynamic.info.title"),
+                    harness.displayName() + ": TornadoVM did not finish within " + seconds(TORNADO_RUN_TIMEOUT_MS)
+                            + "; the run was stopped.");
+            return;
+        }
+        // Cannot use the exit code alone to determine if TornadoVM hit an error.
+        // Under normal circumstances TornadoVM output includes warnings like:
+        // "WARNING: Using incubator modules: jdk.incubator.foreign, jdk.incubator.vector"
+        // We must check for both Java exceptions and OpenCL/SPIR-V/PTX runtime errors.
+        RuntimeOutputClassifier.Verdict verdict =
+                RuntimeOutputClassifier.classify(output.getStdout(), output.getStderr(), output.getExitCode());
+        printResults(harness.displayName(), verdict, output);
     }
 
     @NotNull
@@ -644,8 +791,7 @@ public class ExecutionEngine {
         Map<String, String> environment = commandLine.getEnvironment();
 
         // Set JAVA_HOME
-        Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
-        String javaHome = projectSdk != null ? projectSdk.getHomePath() : null;
+        String javaHome = jdk.homePath();
         if (javaHome != null) {
             environment.put("JAVA_HOME", javaHome);
         }
@@ -682,50 +828,45 @@ public class ExecutionEngine {
     }
 
     //Test results for each method
-    private void printResults(String jarPath, RuntimeOutputClassifier.Verdict verdict, ProcessOutput output) {
-        String javaPath = jarPath.substring(0, jarPath.lastIndexOf(".jar")) + ".java";
-        ApplicationManager.getApplication().runReadAction(() -> {
-            String methodName = TornadoTWTask.psiMethodFormat(fileMethodMap.get(javaPath));
-            if (verdict.failed()) {
-                hasRuntimeErrors = true;
-                MessageUtils consoleInstance = MessageUtils.getInstance(project);
+    private void printResults(String methodName, RuntimeOutputClassifier.Verdict verdict, ProcessOutput output) {
+        MessageUtils consoleInstance = MessageUtils.getInstance(project);
+        if (verdict.failed()) {
+            hasRuntimeErrors = true;
 
-                String deviceLimitation = verdict.deviceLimitation();
+            String deviceLimitation = verdict.deviceLimitation();
 
-                if (deviceLimitation != null) {
-                    // The kernel was generated correctly; it simply uses a
-                    // capability this device lacks (e.g. FP64). Report it as a
-                    // warning rather than a scary exception/stack trace.
-                    consoleInstance.showWarnMsg("Kernel not supported on this device",
-                            methodName + ": " + deviceLimitation);
-                } else {
-                    // Genuine error (including OpenCL compiler exceptions): keep
-                    // the raw diagnostic so it is not mistaken for a clean run.
-                    String errorDetail = verdict.errorDetail();
-                    consoleInstance.showErrorMsg(MessageBundle.message("dynamic.info.title"),
-                            methodName + ": " + errorDetail);
-                }
-
-                // Show the generated kernel with error lines stripped out (for debugging)
-                String cleanKernel = verdict.kernelSource();
-                if (!cleanKernel.isBlank()) {
-                    consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.opencl"), cleanKernel);
-                }
-
-                consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.title"),
-                        MessageBundle.message("dynamic.info.documentation"));
-                // A device-capability limitation is not a bug, so don't prompt to report one.
-                if (deviceLimitation == null) {
-                    consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.title"),
-                            MessageBundle.message("dynamic.info.bug"));
-                }
+            if (deviceLimitation != null) {
+                // The kernel was generated correctly; it simply uses a
+                // capability this device lacks (e.g. FP64). Report it as a
+                // warning rather than a scary exception/stack trace.
+                consoleInstance.showWarnMsg("Kernel not supported on this device",
+                        methodName + ": " + deviceLimitation);
             } else {
-                MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
-                        methodName + ": " + MessageBundle.message("dynamic.info.noException") );
-                MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.opencl"), output.getStdout());
+                // Genuine error (including OpenCL compiler exceptions): keep
+                // the raw diagnostic so it is not mistaken for a clean run.
+                consoleInstance.showErrorMsg(MessageBundle.message("dynamic.info.title"),
+                        methodName + ": " + verdict.errorDetail());
             }
-            completed = true;
-        });
+
+            // Show the generated kernel with error lines stripped out (for debugging)
+            String cleanKernel = verdict.kernelSource();
+            if (!cleanKernel.isBlank()) {
+                consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.opencl"), cleanKernel);
+            }
+
+            consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.title"),
+                    MessageBundle.message("dynamic.info.documentation"));
+            // A device-capability limitation is not a bug, so don't prompt to report one.
+            if (deviceLimitation == null) {
+                consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.title"),
+                        MessageBundle.message("dynamic.info.bug"));
+            }
+        } else {
+            consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.title"),
+                    methodName + ": " + MessageBundle.message("dynamic.info.noException") );
+            consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.opencl"), output.getStdout());
+        }
+        completed = true;
     }
 
     private void showStatDialog(long runningTime){
@@ -746,12 +887,10 @@ public class ExecutionEngine {
         }
     }
 
-    private void cleanUp(){
-        File file = new File(tempFolderPath);
-        try {
-            FileUtils.deleteDirectory(file);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+    // Removes the temporary directory; never throws, so it cannot mask the original outcome
+    private static void cleanUp(@Nullable Path workDir) {
+        if (workDir != null && !FileUtil.delete(workDir.toFile())) {
+            LOG.warn("Could not delete the dynamic inspection directory " + workDir);
         }
     }
 

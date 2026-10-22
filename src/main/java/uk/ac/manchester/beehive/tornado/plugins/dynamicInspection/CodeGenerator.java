@@ -17,36 +17,28 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
 
-import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.Computable;
-import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
+import com.intellij.util.concurrency.annotations.RequiresReadLock;
 import org.jetbrains.annotations.NotNull;
-import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
-import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
-import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
-import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
-import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskSnapshot;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Files;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.security.SecureRandom;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Generates the Java test harnesses that dynamic inspection compiles and runs on
+ * TornadoVM, one per selected task.
+ */
 public class CodeGenerator {
 
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -60,67 +52,65 @@ public class CodeGenerator {
         return sb.toString();
     }
 
-    public static void fileCreationHandler(Project project, List<TaskEntry> data) throws IOException {
-        TaskSnapshot snapshot = TornadoTaskService.getInstance(project).getSnapshot();
-        boolean saveFileEnabled = TornadoSettingState.getInstance().saveFileEnabled;
-        File dir = FileUtilRt.createTempDirectory("files", null);
-
-        // Resolve the task pointers and read the PSI under one read action. (ReadAction.compute is
-        // deprecated on current platforms, and its replacement is missing on since-build 224.)
-        HashMap<String, PsiMethod> methodFile = ApplicationManager.getApplication().runReadAction((Computable<HashMap<String, PsiMethod>>) () -> {
-            HashMap<String, PsiMethod> generated = new HashMap<>();
-            PsiFile psiFile = snapshot == null ? null : snapshot.file().getElement();
-            if (psiFile == null) {
-                reportStaleTask(project, "the selected tasks");
-                return generated;
-            }
-            ArrayList<PsiMethod> methods = new ArrayList<>();
-            for (TaskEntry entry : data) {
-                PsiMethod method = entry.resolve();
-                if (method == null || !method.isValid()) {
-                    reportStaleTask(project, "'" + entry.displayName() + "'");
-                } else {
-                    methods.add(method);
-                }
-            }
-            ArrayList<PsiMethod> others = TornadoTWTask.getCalledMethods(methods);
-            Map<String, Object> fields = TornadoTWTask.getFields(psiFile);
-            String importCodeBlock = snapshot.importCode();
-            List<TornadoTWTask.TaskGraphTransfer> transfers = TornadoTWTask.extractTaskGraphTransfers(psiFile);
-
-            for (PsiMethod method : methods) {
-                String fileName = method.getName() + randomAlphanumeric(5);
-                File file = createFile(psiFile, method, others, fields, importCodeBlock, transfers, fileName, dir);
-                if (saveFileEnabled) {
-                    saveFileToDisk(file, TornadoSettingState.getInstance().debugFileSaveLocation);
-                }
-                generated.put(file.getAbsolutePath(), method);
-            }
-            return generated;
-        });
-        if (methodFile.isEmpty()) {
-            return;
-        }
-        ExecutionEngine executionEngine = new ExecutionEngine(project, dir.getAbsolutePath(), methodFile);
-        executionEngine.run();
+    /**
+     * A generated test harness: plain data, so it can outlive the read action it was
+     * generated in.
+     *
+     * @param displayName the task as listed in the tool window, e.g. {@code vadd(FloatArray, FloatArray): void}
+     * @param className   the name of the generated public class (and of its source file)
+     * @param source      the Java source of the harness
+     */
+    public record Harness(@NotNull String displayName, @NotNull String className, @NotNull String source) {
     }
 
-    // A task in the panel whose method (or file) was deleted or changed beyond
-    // recognition since the last refresh
-    private static void reportStaleTask(Project project, String task) {
-        MessageUtils.getInstance(project).showWarnMsg(MessageBundle.message("dynamic.info.title"),
-                "Task " + task + " no longer exists in the source. Refresh the TornadoVM panel and try again.");
+    /**
+     * The harnesses generated for a selection of tasks.
+     *
+     * @param harnesses  one per task that still exists, in selection order
+     * @param staleTasks the display names of selected tasks that no longer exist
+     */
+    public record Batch(@NotNull List<Harness> harnesses, @NotNull List<String> staleTasks) {
+        public Batch {
+            harnesses = List.copyOf(harnesses);
+            staleTasks = List.copyOf(staleTasks);
+        }
     }
 
-    private static File createFile(PsiFile psiFile, PsiMethod method, ArrayList<PsiMethod> others, Map<String, Object> fields, String importCodeBlock, List<TornadoTWTask.TaskGraphTransfer> transfers, String filename,
-            File dir) {
-        File javaFile;
-        try {
-            javaFile = FileUtilRt.createTempFile(dir, filename, ".java", true);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+    /**
+     * Resolves the selected tasks and generates a harness for each of them. Everything
+     * the rest of the pipeline needs is copied out of the PSI here.
+     */
+    @RequiresReadLock
+    public static @NotNull Batch generate(@NotNull List<TaskEntry> data) {
+        List<Harness> harnesses = new ArrayList<>();
+        List<String> stale = new ArrayList<>();
+        ArrayList<PsiMethod> methods = new ArrayList<>();
+        for (TaskEntry entry : data) {
+            PsiMethod method = entry.resolve();
+            if (method == null || !method.isValid() || method.getContainingFile() == null) {
+                stale.add("'" + entry.displayName() + "'");
+            } else {
+                methods.add(method);
+            }
         }
+        ArrayList<PsiMethod> others = TornadoTWTask.getCalledMethods(methods);
 
+        Set<String> classNames = new HashSet<>();
+        for (PsiMethod method : methods) {
+            PsiFile psiFile = method.getContainingFile();
+            String className;
+            do {
+                className = method.getName() + randomAlphanumeric(5);
+            } while (!classNames.add(className));
+            String source = createSource(psiFile, method, others, TornadoTWTask.getFields(psiFile),
+                    TornadoTWTask.getImportCode(psiFile), className);
+            harnesses.add(new Harness(TornadoTWTask.psiMethodFormat(method), className, source));
+        }
+        return new Batch(harnesses, stale);
+    }
+
+    private static String createSource(PsiFile psiFile, PsiMethod method, ArrayList<PsiMethod> others, Map<String, Object> fields,
+                                       String importCodeBlock, String className) {
         String importCode = """
                 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
                 import uk.ac.manchester.tornado.api.TaskGraph;
@@ -132,7 +122,7 @@ public class CodeGenerator {
                 import uk.ac.manchester.tornado.api.types.HalfFloat;
                 """;
 
-        String methodWithClass = filename + "::" + method.getName();
+        String methodWithClass = className + "::" + method.getName();
 
         // The class may declare several TaskGraphs that reference this kernel by
         // name; prefer the one whose .task(...) argument count matches the
@@ -143,31 +133,28 @@ public class CodeGenerator {
         String taskParameters = getTaskParameters(method, taskParametersInfos, fields);
         String mainCode = getTaskGraphCode(method, maybeOriginalTaskGraph, taskParameters, methodWithClass);
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(javaFile))) {
-            writer.write(importCode + importCodeBlock);
-            writer.write("\n");
-            writer.write("public class " + javaFile.getName().replace(".java", "") + " {\n");
+        StringBuilder writer = new StringBuilder();
+        writer.append(importCode).append(importCodeBlock);
+        writer.append("\n");
+        writer.append("public class ").append(className).append(" {\n");
 
-            for (Map.Entry<String, Object> field : fields.entrySet()) {
-                writer.write(field.getKey());
-                if (field.getValue() != null) {
-                    writer.write(" = " + field.getValue());
-                }
-                writer.write(";\n");
+        for (Map.Entry<String, Object> field : fields.entrySet()) {
+            writer.append(field.getKey());
+            if (field.getValue() != null) {
+                writer.append(" = ").append(field.getValue());
             }
-
-            writer.write(method.getText());
-            for (PsiMethod other : others) {
-                writer.write(other.getText());
-                writer.write("\n");
-            }
-
-            writer.write(mainCode);
-            writer.write("}");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            writer.append(";\n");
         }
-        return javaFile;
+
+        writer.append(method.getText());
+        for (PsiMethod other : others) {
+            writer.append(other.getText());
+            writer.append("\n");
+        }
+
+        writer.append(mainCode);
+        writer.append("}");
+        return writer.toString();
     }
 
     private static @NotNull String getTaskParameters(PsiMethod method,
@@ -325,15 +312,4 @@ public class CodeGenerator {
             default -> true;
         };
     }
-
-    private static void saveFileToDisk(File sourceFile, String targetDir) {
-        File target = new File(targetDir);
-        File targetFile = new File(target, sourceFile.getName());
-        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(targetFile))) {
-            bufferedWriter.write(new String(Files.readAllBytes(sourceFile.toPath())));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
 }
