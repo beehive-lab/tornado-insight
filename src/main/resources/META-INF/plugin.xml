@@ -222,6 +222,7 @@ Enjoy and share your feedback!
         <psi.treeChangeListener implementation="uk.ac.manchester.beehive.tornado.plugins.listener.PsiChangeListener"/>
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory" id="TornadoInsight Console" anchor="bottom"/>
         <errorHandler implementation="uk.ac.manchester.beehive.tornado.plugins.error.ErrorSubmitter"/>
+        <notificationGroup id="TornadoInsight" displayType="BALLOON"/>
         <postStartupActivity implementation="uk.ac.manchester.beehive.tornado.plugins.listener.TornadoSettingListener"/>
         <liveTemplateContext contextId="TORNADOVM_STATEMENT" baseContextId="JAVA_CODE"
                              implementation="uk.ac.manchester.beehive.tornado.plugins.templates.TornadoVMContextType$Statement"/>

@@ -29,6 +29,7 @@ import kotlin.coroutines.Continuation;
 import org.jetbrains.annotations.NotNull;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoNotifications;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -49,8 +50,7 @@ public class TornadoSettingListener implements ProjectActivity {
             // Show warning notification when TORNADOVM_HOME is not set
             settingState.isValid = false;
 
-            Notification notification = new Notification(
-                "Print",
+            Notification notification = TornadoNotifications.create(
                 "TornadoVM SDK Not Configured",
                 "<html>TORNADOVM_HOME environment variable is not set.<br><br>" +
                     "Please:<br>" +
