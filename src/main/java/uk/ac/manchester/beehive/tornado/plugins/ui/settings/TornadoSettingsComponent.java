@@ -40,21 +40,15 @@ public class TornadoSettingsComponent {
 
     private final JPanel myMainPanel;
 
-    private final JCheckBox bytecodeVisualizerCheckbox = new JCheckBox("Use the TornadoVM Bytecode Visualizer Tool");
-
     private final JCheckBox saveFileCheckbox = new JCheckBox("Save Internal Debug File (For Developer Use Only)");
 
     private final TextFieldWithBrowseButton debugFileSaveLocationField = new TextFieldWithBrowseButton();
-
-    private final TextFieldWithBrowseButton bytecodesFileSaveLocationField = new TextFieldWithBrowseButton();
 
     private final JBTextField myMaxArraySize = new JBTextField(4);
 
     public TornadoSettingsComponent() {
         attachFolderChooser(debugFileSaveLocationField, "Save Location for Generated Code", "Choose the folder you want generated codes to be saved");
-        attachFolderChooser(bytecodesFileSaveLocationField, "Save Location for TornadoVM Bytecodes", "Choose the folder you want the TornadoVM Bytecodes to be saved");
 
-        bytecodeVisualizerCheckbox.setSelected(false);
         saveFileCheckbox.setSelected(false);
 
         // Create warning banner if TORNADOVM_HOME is not set
@@ -64,11 +58,6 @@ public class TornadoSettingsComponent {
             JPanel warningPanel = createWarningPanel();
             formBuilder.addComponent(warningPanel);
         }
-
-        JPanel bytecodesVisualizerPanel = FormBuilder.createFormBuilder().addComponent(bytecodeVisualizerCheckbox)
-                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.comment.visualizer.file") + "</div></html>"))
-                .addLabeledComponent(new JBLabel("Save Location:"), bytecodesFileSaveLocationField).getPanel();
-        bytecodesVisualizerPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.visualizer")));
 
         JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.max.array.size") + "</div></html>"))
@@ -82,7 +71,7 @@ public class TornadoSettingsComponent {
 
         debugPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.debugging")));
 
-        myMainPanel = formBuilder.addComponent(bytecodesVisualizerPanel).addComponent(dynamicInspectionPanel).addComponent(debugPanel).addComponentFillVertically(new JPanel(), 0).getPanel();
+        myMainPanel = formBuilder.addComponent(dynamicInspectionPanel).addComponent(debugPanel).addComponentFillVertically(new JPanel(), 0).getPanel();
     }
 
     private JPanel createWarningPanel() {
@@ -140,14 +129,6 @@ public class TornadoSettingsComponent {
         return myMainPanel;
     }
 
-    public boolean isBytecodeVisualizerEnabled() {
-        return bytecodeVisualizerCheckbox.isSelected();
-    }
-
-    public void setBytecodeVisualizerEnabled(boolean enabled) {
-        bytecodeVisualizerCheckbox.setSelected(enabled);
-    }
-
     public int getMaxArraySize() {
         if (myMaxArraySize.getText().isEmpty() || Objects.equals(myMaxArraySize.getText(), "0")) {
             return 128;
@@ -173,14 +154,6 @@ public class TornadoSettingsComponent {
 
     public void setDebugFileSaveLocation(String path) {
         debugFileSaveLocationField.setText(path);
-    }
-
-    public String getBytecodesFileSaveLocation() {
-        return bytecodesFileSaveLocationField.getText();
-    }
-
-    public void setBytecodesFileSaveLocation(String path) {
-        bytecodesFileSaveLocationField.setText(path);
     }
 
     public String isValidPath() {

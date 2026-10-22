@@ -53,11 +53,9 @@ public class TornadoSettingConfiguration implements Configurable {
     @Override
     public boolean isModified() {
         TornadoSettingState settings = TornadoSettingState.getInstance();
-        boolean modified = mySettingsComponent.isBytecodeVisualizerEnabled() != settings.bytecodeVisualizerEnabled;
-        modified |= mySettingsComponent.getMaxArraySize() != settings.parameterSize;
+        boolean modified = mySettingsComponent.getMaxArraySize() != settings.parameterSize;
         modified |= mySettingsComponent.isSaveFileEnabled() != settings.saveFileEnabled;
         modified |= !mySettingsComponent.getDebugFileSaveLocation().equals(settings.debugFileSaveLocation);
-        modified |= !mySettingsComponent.getBytecodesFileSaveLocation().equals(settings.bytecodesFileSaveLocation);
         return modified;
     }
 
@@ -69,11 +67,9 @@ public class TornadoSettingConfiguration implements Configurable {
             settings.isValid = false;
             throw new ConfigurationException(error);
         }
-        settings.bytecodeVisualizerEnabled = mySettingsComponent.isBytecodeVisualizerEnabled();
         settings.parameterSize = mySettingsComponent.getMaxArraySize();
         settings.saveFileEnabled = mySettingsComponent.isSaveFileEnabled();
         settings.debugFileSaveLocation = mySettingsComponent.getDebugFileSaveLocation();
-        settings.bytecodesFileSaveLocation = mySettingsComponent.getBytecodesFileSaveLocation();
 
         // Re-enable the dynamic-inspection action once the settings panel validates again.
         // 'isValid' is also gated on TORNADOVM_HOME (set by TornadoSettingListener at
@@ -86,11 +82,9 @@ public class TornadoSettingConfiguration implements Configurable {
     @Override
     public void reset() {
         TornadoSettingState settings = TornadoSettingState.getInstance();
-        mySettingsComponent.setBytecodeVisualizerEnabled(settings.bytecodeVisualizerEnabled);
         mySettingsComponent.setMaxArraySize(settings.parameterSize);
         mySettingsComponent.setSaveFileEnabled(settings.saveFileEnabled);
         mySettingsComponent.setDebugFileSaveLocation(settings.debugFileSaveLocation);
-        mySettingsComponent.setBytecodesFileSaveLocation(settings.bytecodesFileSaveLocation);
     }
 
     @Override
