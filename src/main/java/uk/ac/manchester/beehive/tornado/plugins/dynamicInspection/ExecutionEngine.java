@@ -38,6 +38,7 @@ import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.roots.ui.configuration.ProjectSettingsService;
 import com.intellij.psi.PsiMethod;
 import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
+import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
@@ -1090,7 +1091,7 @@ public class ExecutionEngine {
         }
         @Override
         public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
-            ShowSettingsUtil.getInstance().showSettingsDialog(e.getProject(), "TornadoVM");
+            ShowSettingsUtil.getInstance().showSettingsDialog(e.getProject(), TornadoSettingConfiguration.class);
             notification.expire();
         }
     }
