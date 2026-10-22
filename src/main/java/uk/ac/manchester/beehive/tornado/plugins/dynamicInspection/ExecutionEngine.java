@@ -38,6 +38,7 @@ import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.roots.ui.configuration.ProjectSettingsService;
 import com.intellij.psi.PsiMethod;
 import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
+import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoJdkContract;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
@@ -50,19 +51,15 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class ExecutionEngine {
 
@@ -250,50 +247,6 @@ public class ExecutionEngine {
         return false;
     }
 
-    // TornadoVM >= 6.0.0 records its JDK compatibility contract in
-    // $TORNADOVM_HOME/etc/tornado.jdk, written when the SDK was compiled:
-    //   tornado.jdk.floor=<n>       lowest supported JDK feature version
-    //   tornado.jdk.preview=<bool>  built with preview features -> pinned to <n>
-    // This mirrors bin/tornado.py::checkCompatibilityWithTornadoVM. Held as path
-    // segments so it resolves correctly on Windows too.
-    private static final String[] TORNADO_JDK_CONTRACT_PATH = {"etc", "tornado.jdk"};
-
-    // Pre-6.0.0 SDKs ship no contract file; 'tornado --version' instead embeds
-    // the target JDK in a line like "version=4.0.1-jdk21".
-    private static final Pattern TORNADO_JDK_PATTERN =
-            Pattern.compile("(?im)^\\s*version\\s*=\\s*\\S*-jdk(\\d+)");
-
-    // When 'tornado --version' itself rejects the current JDK, its stderr names the
-    // JDK it was built against, e.g.
-    //   "[ERROR] TornadoVM is only compatible with JDK version 25"
-    //   "TornadoVM supports only JDK version 25"
-    private static final Pattern TORNADO_REQUIRED_JDK_PATTERN =
-            Pattern.compile("(?im)(?:compatible with|supports only)\\s+JDK\\s+version\\s+(\\d+)");
-
-    /**
-     * JDK compatibility contract of a TornadoVM SDK. {@code floor} is the lowest
-     * supported JDK feature version; when {@code pinned} the SDK was built with
-     * preview features enabled and runs on exactly that release, nothing newer.
-     * {@code vendorsGraal} is set for TornadoVM &ge; 6.0.0, which bundles its own
-     * Graal compiler and JVMCI as application modules &mdash; incompatible with a
-     * GraalVM JDK that already ships those modules (see {@link #isGraalVmDistribution}).
-     */
-    private record TornadoJdkContract(int floor, boolean pinned, boolean vendorsGraal) {
-        boolean accepts(int projectJdk) {
-            return pinned ? projectJdk == floor : projectJdk >= floor;
-        }
-
-        String requirement() {
-            return pinned
-                    ? "JDK " + floor + " exactly (this build has preview features enabled)"
-                    : "JDK " + floor + " or newer";
-        }
-
-        String source() {
-            return vendorsGraal ? "etc/tornado.jdk" : "tornado --version";
-        }
-    }
-
     /**
      * Human-readable identity of the project JDK for diagnostic messages, e.g.
      * {@code "temurin-25 (25.0.4) [GraalVM]"}. Falls back to the feature number
@@ -405,14 +358,7 @@ public class ExecutionEngine {
             return false;
         }
         try {
-            for (String line : Files.readAllLines(release)) {
-                if (line.startsWith("GRAALVM_VERSION=")) {
-                    return true;
-                }
-                if (line.startsWith("JAVA_RUNTIME_VERSION=") && line.contains("-jvmci-")) {
-                    return true;
-                }
-            }
+            return TornadoJdkContract.isGraalVmRelease(Files.readAllLines(release));
         } catch (IOException ignore) {
             // Cannot read it - assume a stock JDK rather than block the run.
         }
@@ -429,22 +375,18 @@ public class ExecutionEngine {
     private TornadoJdkContract detectTornadoVmJdkContract() {
         String home = EnvironmentVariable.getTornadoSdk();
         if (home != null && !home.isEmpty()) {
-            Path contractFile = Path.of(home, TORNADO_JDK_CONTRACT_PATH);
+            Path contractFile = Path.of(home, TornadoJdkContract.CONTRACT_FILE_PATH);
             if (Files.isRegularFile(contractFile)) {
-                Properties props = new Properties();
-                try (InputStream in = Files.newInputStream(contractFile)) {
-                    props.load(in);
-                    String floor = props.getProperty("tornado.jdk.floor");
-                    if (floor != null && !floor.isBlank()) {
-                        return new TornadoJdkContract(
-                                Integer.parseInt(floor.trim()),
-                                Boolean.parseBoolean(props.getProperty("tornado.jdk.preview", "false").trim()),
-                                true);
+                try {
+                    TornadoJdkContract contract = TornadoJdkContract.parseContractFile(Files.readString(contractFile));
+                    if (contract != null) {
+                        return contract;
                     }
-                } catch (IOException | NumberFormatException e) {
+                    LOG.warn("Could not parse " + contractFile + ": no usable tornado.jdk.floor");
+                } catch (IOException e) {
                     LOG.warn("Could not parse " + contractFile + ": " + e.getMessage());
-                    // fall through to the 'tornado --version' probe
                 }
+                // fall through to the 'tornado --version' probe
             }
         }
         return probeTornadoJdkContractViaVersion();
@@ -478,27 +420,9 @@ public class ExecutionEngine {
 
         String combined = (output.getStdout() + "\n" + output.getStderr()).trim();
 
-        // Happy path: the legacy version line carries the target JDK.
-        Matcher matcher = TORNADO_JDK_PATTERN.matcher(combined);
-        if (matcher.find()) {
-            try {
-                int jdk = Integer.parseInt(matcher.group(1));
-                return new TornadoJdkContract(jdk, true, false);
-            } catch (NumberFormatException ignore) {
-                // Fall through to the structured-failure handling below.
-            }
-        }
-
-        // Failure path: tornado itself rejected the current JDK and named the
-        // version it wants. Surface that as the target JDK so the upstream
-        // comparison can produce a precise mismatch message.
-        Matcher requiredJdk = TORNADO_REQUIRED_JDK_PATTERN.matcher(combined);
-        if (requiredJdk.find()) {
-            try {
-                return new TornadoJdkContract(Integer.parseInt(requiredJdk.group(1)), true, false);
-            } catch (NumberFormatException ignore) {
-                // Fall through.
-            }
+        TornadoJdkContract contract = TornadoJdkContract.parseVersionOutput(combined);
+        if (contract != null) {
+            return contract;
         }
 
         // Neither source produced a usable version - report the raw output.
@@ -593,7 +517,7 @@ public class ExecutionEngine {
                 // type-variable declarations that bury the actual cause.
                 LOG.warn("Generated code compilation failed (exit code " + exitCode + "):\n" + stderr);
                 MessageUtils.getInstance(project).showWarnMsg("Generated code did not compile",
-                        summarizeCompilerErrors(stderr));
+                        CompilerOutputSummarizer.summarize(stderr));
                 throw new UnsupportedOperationException("Compilation failed with exit code " + exitCode);
             }
         } catch (ExecutionException e) {
@@ -601,127 +525,6 @@ public class ExecutionEngine {
                     MessageBundle.message("dynamic.error.compile"));
         }
     }
-
-    // javac diagnostic header, e.g. "atomic18YxscA.java:49: error: no suitable method ..."
-    private static final Pattern COMPILE_DIAGNOSTIC =
-            Pattern.compile("\\.java:\\d+:\\s*(error|warning):");
-
-    // Kernel method name from the offending ".task(\"t0\", Class::kernel, ...)" line.
-    private static final Pattern KERNEL_REF = Pattern.compile("::(\\w+)");
-
-    /**
-     * Condenses raw {@code javac} output into the few lines that actually
-     * explain the failure. The generated TornadoVM harness calls the strongly
-     * typed {@code TaskGraph.task(...)} overloads, so a single argument-type
-     * mismatch makes the compiler print every {@code Task1..Task15} candidate
-     * plus a page of {@code where T1#1 extends Object ...} type-variable
-     * declarations. We keep the diagnostic headers, the offending source line
-     * and caret, and the {@code upper/lower bounds} lines that pinpoint the
-     * conflicting types, dropping the candidate/type-variable noise. When the
-     * failure is a {@code task(...)} type mismatch we append an explicit
-     * explanation, since the usual cause is a kernel parameter whose type the
-     * target device does not support (for example FP64/double on a GPU without
-     * double support).
-     */
-    static String summarizeCompilerErrors(String stderr) {
-        if (stderr == null || stderr.isBlank()) {
-            return "Compilation of the generated TornadoVM test failed, but the Java compiler produced no output to explain why.";
-        }
-        StringBuilder summary = new StringBuilder();
-        boolean typeMismatch = false;
-        String kernelName = null;     // kernel whose .task(...) call failed
-        String expectedType = null;   // type the kernel parameter expects (javac "upper bounds")
-        String actualType = null;     // type the harness actually allocated (javac "lower bounds")
-        int keepContext = 0; // remaining lines to keep after a diagnostic header (source + caret)
-        for (String line : stderr.split("\n")) {
-            String trimmed = line.strip();
-            if (COMPILE_DIAGNOSTIC.matcher(line).find()) {
-                summary.append(trimmed).append("\n");
-                keepContext = 2;
-                if (trimmed.contains("for task(")) {
-                    typeMismatch = true;
-                }
-                continue;
-            }
-            // Bound lines pinpoint the conflicting types - always keep them.
-            if (trimmed.startsWith("upper bounds:") || trimmed.startsWith("lower bounds:")
-                    || trimmed.contains("has incompatible bounds")) {
-                summary.append("    ").append(trimmed).append("\n");
-                typeMismatch = true;
-                if (trimmed.startsWith("upper bounds:")) {
-                    expectedType = firstType(trimmed.substring("upper bounds:".length()));
-                } else if (trimmed.startsWith("lower bounds:")) {
-                    actualType = firstType(trimmed.substring("lower bounds:".length()));
-                }
-                continue;
-            }
-            if (keepContext > 0) {
-                // Stop as soon as the overload-candidate / type-variable noise starts.
-                if (trimmed.startsWith("method ") || trimmed.startsWith("(")
-                        || trimmed.startsWith("where ")
-                        || trimmed.contains("extends Object declared in method")) {
-                    keepContext = 0;
-                } else {
-                    summary.append("    ").append(trimmed).append("\n");
-                    keepContext--;
-                    if (kernelName == null && trimmed.contains(".task(")) {
-                        Matcher m = KERNEL_REF.matcher(trimmed);
-                        if (m.find()) {
-                            kernelName = m.group(1);
-                        }
-                    }
-                }
-            }
-        }
-
-        if (summary.length() == 0) {
-            // No recognisable diagnostic header - fall back to the raw output so
-            // we never swallow the failure entirely.
-            return stderr.strip();
-        }
-
-        if (typeMismatch) {
-            summary.append("\n--- What this means ---\n");
-            summary.append("TornadoInsight generated a test harness that allocated the wrong data type for one of ")
-                    .append(kernelName != null ? "kernel '" + kernelName + "'s parameters" : "this kernel's parameters")
-                    .append(", so the strongly-typed TaskGraph.task(...) call does not type-check.\n");
-            if (expectedType != null && actualType != null) {
-                summary.append("    - The kernel parameter expects: ").append(expectedType).append("\n");
-                summary.append("    - The generated harness supplied: ").append(actualType).append("\n");
-            }
-            summary.append("\nThis is a type-detection bug in TornadoInsight's harness generator, not a limitation of your device. ")
-                    .append("Because this is a compile-time error, it cannot be caused by the device lacking support for a type ")
-                    .append("(an unsupported type, such as FP64/double on a GPU without double-precision support, would fail at run time, not here).\n");
-            summary.append("\nWhat you can do:\n");
-            summary.append("    - This kernel cannot be dynamically inspected until the generator emits a matching type.\n");
-            summary.append("    - Please report it, including the kernel signature and the expected/supplied types shown above.");
-        }
-        return summary.toString().strip();
-    }
-
-    /**
-     * Picks the first concrete type from a javac bounds list such as
-     * "DoubleArray,Object" or " IntArray", ignoring the trailing {@code Object}
-     * upper bound that javac always adds. Returns {@code null} if nothing usable
-     * is found.
-     */
-    private static String firstType(String boundsList) {
-        for (String part : boundsList.split(",")) {
-            // Keep only the leading type token; javac wraps the lower bound in
-            // "(inference variable ... )", so a trailing ')' can bleed in.
-            Matcher m = TYPE_TOKEN.matcher(part.strip());
-            if (m.find()) {
-                String t = m.group(1);
-                if (!t.equals("Object")) {
-                    return t;
-                }
-            }
-        }
-        return null;
-    }
-
-    // Leading Java type token, e.g. "DoubleArray", "int[]", "Foo<Bar>".
-    private static final Pattern TYPE_TOKEN = Pattern.compile("^([\\w.$]+(?:\\[\\])*(?:<[^>]*>)?)");
 
     private void packFolder(String classFolderPath, String outputFolderPath) {
         MessageUtils.getInstance(project).showInfoMsg(MessageBundle.message("dynamic.info.title"),
@@ -815,94 +618,11 @@ public class ExecutionEngine {
             // Under normal circumstances TornadoVM output includes warnings like:
             // "WARNING: Using incubator modules: jdk.incubator.foreign, jdk.incubator.vector"
             // We must check for both Java exceptions and OpenCL/SPIR-V/PTX runtime errors.
-            boolean hasError = detectRuntimeError(output);
+            boolean hasError = RuntimeOutputClassifier.detectRuntimeError(output.getStdout(), output.getStderr());
             printResults(jarPath, hasError, output);
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
-    }
-
-    /**
-     * Detects whether the TornadoVM process output contains runtime errors.
-     * Checks for Java exceptions as well as OpenCL/SPIR-V/PTX JNI-level errors
-     * that do not manifest as Java exceptions.
-     */
-    private static boolean detectRuntimeError(ProcessOutput output) {
-        String combined = output.getStdout() + "\n" + output.getStderr();
-        for (String pattern : ERROR_PATTERNS) {
-            if (combined.contains(pattern)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Patterns that indicate a TornadoVM runtime error in the process output.
-     * These cover Java exceptions, OpenCL JNI errors, SPIR-V errors, and PTX/CUDA errors.
-     */
-    private static final String[] ERROR_PATTERNS = {
-            "Exception",
-            "[TornadoVM-OCL-JNI] ERROR",
-            "[TornadoVM-SPIRV-JNI] ERROR",
-            "[TornadoVM-PTX-JNI] ERROR",
-            "CL_INVALID_KERNEL",
-            "CL_BUILD_PROGRAM_FAILURE",
-            "CL_OUT_OF_RESOURCES",
-            "CL_MEM_OBJECT_ALLOCATION_FAILURE",
-            "CL_INVALID_PROGRAM",
-            "CL_INVALID_WORK_GROUP_SIZE",
-            "OpenCL Error",
-            "CUDA_ERROR",
-            "TornadoInternalError",
-            "TornadoBailoutRuntimeException",
-            "TornadoDeviceFP16NotSupported",
-            "TornadoMemoryException",
-    };
-
-    /**
-     * Recognises runtime failures that are caused by the target device lacking
-     * a capability the kernel needs (rather than a bug in the kernel or the
-     * generated harness), and returns a plain-language explanation. The harness
-     * was generated correctly in these cases - the kernel simply cannot run on
-     * this device - so the caller reports it as a warning instead of an error.
-     *
-     * <p>Note: this deliberately matches only TornadoVM's explicit
-     * "unsupported feature/type" messages, not generic OpenCL compiler
-     * exceptions (e.g. a {@code clBuildProgram} failure). A genuine compiler
-     * exception still surfaces as an error.
-     *
-     * @return a user-facing explanation, or {@code null} if the failure is not
-     *         a recognised device-capability limitation.
-     */
-    private static String describeDeviceLimitation(String combined) {
-        String lower = combined.toLowerCase();
-
-        // 64-bit floating point (FP64 / double precision).
-        if (lower.contains("cl_khr_fp64") || lower.contains("fp64")
-                || lower.contains("double precision")
-                || lower.contains("64-bit floating point")) {
-            return "this device does not support 64-bit floating point (FP64 / double precision). "
-                    + "Your kernel is valid, but TornadoVM cannot compile it for this device. "
-                    + "This is a device limitation, not an error in your kernel.";
-        }
-
-        // Floating-point atomic operations (e.g. atomicAdd on a float/double).
-        if (combined.contains("does not support floating point operations")) {
-            return "this device does not support floating-point atomic operations "
-                    + "(for example atomicAdd on a float or double). "
-                    + "Your kernel is valid, but TornadoVM cannot compile it for this device. "
-                    + "This is a device limitation, not an error in your kernel.";
-        }
-
-        // 16-bit floating point (FP16 / half).
-        if (combined.contains("TornadoDeviceFP16NotSupported")) {
-            return "this device does not support 16-bit floating point (FP16 / half). "
-                    + "Your kernel is valid, but TornadoVM cannot compile it for this device. "
-                    + "This is a device limitation, not an error in your kernel.";
-        }
-
-        return null;
     }
 
     @NotNull
@@ -969,8 +689,7 @@ public class ExecutionEngine {
                 hasRuntimeErrors = true;
                 MessageUtils consoleInstance = MessageUtils.getInstance(project);
 
-                String combined = output.getStdout() + "\n" + output.getStderr();
-                String deviceLimitation = describeDeviceLimitation(combined);
+                String deviceLimitation = RuntimeOutputClassifier.describeDeviceLimitation(output.getStdout(), output.getStderr());
 
                 if (deviceLimitation != null) {
                     // The kernel was generated correctly; it simply uses a
@@ -981,7 +700,7 @@ public class ExecutionEngine {
                 } else {
                     // Genuine error (including OpenCL compiler exceptions): keep
                     // the raw diagnostic so it is not mistaken for a clean run.
-                    String errorSummary = extractErrorLines(output);
+                    String errorSummary = RuntimeOutputClassifier.extractErrorLines(output.getStdout(), output.getStderr());
                     String stderr = output.getStderr();
                     String errorDetail = errorSummary.isEmpty() ? stderr : errorSummary;
                     consoleInstance.showErrorMsg(MessageBundle.message("dynamic.info.title"),
@@ -989,7 +708,7 @@ public class ExecutionEngine {
                 }
 
                 // Show the generated kernel with error lines stripped out (for debugging)
-                String cleanKernel = stripErrorLines(output.getStdout());
+                String cleanKernel = RuntimeOutputClassifier.stripErrorLines(output.getStdout());
                 if (!cleanKernel.isBlank()) {
                     consoleInstance.showInfoMsg(MessageBundle.message("dynamic.info.opencl"), cleanKernel);
                 }
@@ -1008,49 +727,6 @@ public class ExecutionEngine {
             }
             completed = true;
         });
-    }
-
-    /**
-     * Extracts error-relevant lines from the process output, filtering out
-     * noise like normal kernel output or incubator warnings.
-     * Returns a consolidated error summary string.
-     */
-    private static String extractErrorLines(ProcessOutput output) {
-        StringBuilder errors = new StringBuilder();
-        String combined = output.getStdout() + "\n" + output.getStderr();
-        for (String line : combined.split("\n")) {
-            for (String pattern : ERROR_PATTERNS) {
-                if (line.contains(pattern)) {
-                    errors.append(line.trim()).append("\n");
-                    break;
-                }
-            }
-        }
-        return errors.toString().trim();
-    }
-
-    /**
-     * Removes error/diagnostic lines from stdout so the kernel code section
-     * only contains the actual generated kernel, not the JNI error messages
-     * that TornadoVM may intermix with kernel output.
-     */
-    private static String stripErrorLines(String stdout) {
-        if (stdout == null) return "";
-        StringBuilder clean = new StringBuilder();
-        for (String line : stdout.split("\n")) {
-            boolean isErrorLine = false;
-            for (String pattern : ERROR_PATTERNS) {
-                if (line.contains(pattern)) {
-                    isErrorLine = true;
-                    break;
-                }
-            }
-            // Also strip JNI notify lines that precede the actual error
-            if (!isErrorLine && !line.contains("[JNI] uk.ac.manchester.tornado.drivers.")) {
-                clean.append(line).append("\n");
-            }
-        }
-        return clean.toString().trim();
     }
 
     private void showStatDialog(long runningTime){
