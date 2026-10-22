@@ -227,7 +227,6 @@ Enjoy and share your feedback!
                                  id="uk.ac.manchester.beehive.tornado.settings"
                                  displayName="TornadoInsight"/>
         <applicationService serviceImplementation="uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState"/>
-        <psi.treeChangeListener implementation="uk.ac.manchester.beehive.tornado.plugins.listener.PsiChangeListener"/>
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory" id="TornadoInsight Console" anchor="bottom"/>
         <errorHandler implementation="uk.ac.manchester.beehive.tornado.plugins.error.ErrorSubmitter"/>
         <notificationGroup id="TornadoInsight" displayType="BALLOON"/>

@@ -18,10 +18,12 @@
 package uk.ac.manchester.beehive.tornado.plugins.util;
 
 import com.intellij.openapi.Disposable;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
@@ -132,12 +134,29 @@ public final class TornadoTaskService implements Disposable {
                 .finishOnUiThread(ModalityState.defaultModalityState(), newSnapshot -> {
                     if (newSnapshot == null) return;
                     snapshot = newSnapshot;
+                    // Keep the model, and with it the user's selection, when the tasks are unchanged
+                    if (ApplicationManager.getApplication().runReadAction(
+                            (Computable<Boolean>) () -> sameTasks(model, newSnapshot.tasks()))) return;
                     model.clear();
                     for (TaskEntry entry : newSnapshot.tasks()) {
                         model.addElement(entry);
                     }
                 })
                 .submit(AppExecutorUtil.getAppExecutorService());
+    }
+
+    private boolean sameTasks(DefaultListModel<TaskEntry> model, List<TaskEntry> tasks) {
+        if (model.size() != tasks.size()) return false;
+        SmartPointerManager pointers = SmartPointerManager.getInstance(project);
+        for (int i = 0; i < tasks.size(); i++) {
+            TaskEntry shown = model.get(i);
+            TaskEntry task = tasks.get(i);
+            if (!shown.displayName().equals(task.displayName())
+                    || !pointers.pointToTheSameElement(shown.method(), task.method())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

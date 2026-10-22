@@ -22,7 +22,7 @@ import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
-import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
+import uk.ac.manchester.beehive.tornado.plugins.inspector.KernelValidator;
 import uk.ac.manchester.beehive.tornado.plugins.inspector.TornadoKernels;
 
 import java.util.*;
@@ -224,7 +224,8 @@ public class TornadoTWTask {
         // Kernel entry points registered via .task() must return void
         PsiType returnType = method.getReturnType();
         if (returnType != null && !PsiTypes.voidType().equals(returnType)) return false;
-        return !ProblemMethods.getInstance().getMethodSet().contains(method.getText());
+        // Computed from the inspections' own checks, not from whether they have run
+        return !KernelValidator.hasBlockingProblems(method);
     }
 
     private static boolean statementImportsJunit(String importStatement) {

@@ -19,7 +19,6 @@ package uk.ac.manchester.beehive.tornado.plugins.inspector;
 
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.psi.*;
-import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
@@ -46,7 +45,6 @@ public class AssertInspection extends TornadoKernelInspection {
                     super.visitAssertStatement(statement);
                     PsiElement anchor = scope.anchorFor(statement, method, sink.file());
                     if (anchor == null) return;
-                    ProblemMethods.getInstance().addMethod(sink.file().getProject(), sink.file(), kernelMethod);
                     sink.report(anchor, MessageBundle.message("inspection.assert") + context, ProblemHighlightType.ERROR);
                 }
             });

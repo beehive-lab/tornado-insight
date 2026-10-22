@@ -19,8 +19,6 @@ package uk.ac.manchester.beehive.tornado.plugins.inspector;
 
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.psi.*;
-import com.intellij.psi.util.PsiTreeUtil;
-import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
@@ -83,10 +81,6 @@ public class DataTypeInspection extends TornadoKernelInspection {
                 && !type.getCanonicalText().startsWith("byte[]") && !type.getCanonicalText().startsWith("short[]")
                 && !type.equalsToText("Int3") && !type.getCanonicalText().startsWith("uk.ac.manchester.tornado.api.")
                 && !type.getCanonicalText().startsWith("java.util.concurrent.atomic.AtomicInteger")) {
-            PsiMethod parentMethod = PsiTreeUtil.getParentOfType(anchor, PsiMethod.class);
-            if (parentMethod != null) {
-                ProblemMethods.getInstance().addMethod(sink.file().getProject(), sink.file(), parentMethod);
-            }
             sink.report(anchor, MessageBundle.message("inspection.datatype") + context, ProblemHighlightType.ERROR);
         }
     }

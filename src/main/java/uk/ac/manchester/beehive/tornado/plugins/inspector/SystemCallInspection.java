@@ -19,12 +19,9 @@ package uk.ac.manchester.beehive.tornado.plugins.inspector;
 
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.psi.*;
-import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
 import uk.ac.manchester.beehive.tornado.plugins.entity.RestrictedClasses;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Objects;
 
 /**
  * A custom inspection tool to check for invocations of potentially problematic system and external methods
@@ -55,15 +52,13 @@ public class SystemCallInspection extends TornadoKernelInspection {
                     PsiElement anchor = scope.anchorFor(expression, method, sink.file());
                     if (anchor == null) return;
                     if (calledMethod != null && calledMethod.hasModifierProperty(PsiModifier.NATIVE)) {
-                        ProblemMethods.getInstance().addMethod(sink.file().getProject(), sink.file(), kernelMethod);
                         sink.report(anchor, MessageBundle.message("inspection.nativeCall") + context, ProblemHighlightType.ERROR);
                     }
                     if (calledMethod == null) return;
-                    String className = Objects.requireNonNull(calledMethod.getContainingClass()).getQualifiedName();
-
-                    assert className != null;
-                    if (RestrictedClasses.isRestrictedClass(className)) {
-                        ProblemMethods.getInstance().addMethod(sink.file().getProject(), sink.file(), kernelMethod);
+                    // Anonymous and local classes have no qualified name, and are never restricted
+                    PsiClass containingClass = calledMethod.getContainingClass();
+                    String className = containingClass == null ? null : containingClass.getQualifiedName();
+                    if (className != null && RestrictedClasses.isRestrictedClass(className)) {
                         sink.report(anchor, MessageBundle.message("inspection.external") + context, ProblemHighlightType.ERROR);
                     }
                 }

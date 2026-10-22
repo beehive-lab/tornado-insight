@@ -30,7 +30,6 @@ public class EditorSwitch implements FileEditorManagerListener {
     //When editor selection changed, refresh the window tool
     @Override
     public void selectionChanged(@NotNull FileEditorManagerEvent event) {
-        //ProblemMethods.getInstance().clear();
         Project project = event.getManager().getProject();
         ToolWindow toolWindow = ToolWindowManager.getInstance(project).getToolWindow("TornadoVM");
         // Skip while the tool window is hidden; ToolWindowOpen refreshes it when shown

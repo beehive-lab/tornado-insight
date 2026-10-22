@@ -104,6 +104,29 @@ public class TornadoTaskServiceTest extends TornadoTestCase {
         assertNull(entry.resolve());
     }
 
+    public void testKernelsWithBlockingProblemsAreExcludedWithoutRunningInspections() {
+        addSystemStubs();
+        // No inspection is enabled: validity comes from KernelValidator alone
+        PsiFile file = myFixture.configureByText("Demo.java", """
+                import uk.ac.manchester.tornado.api.KernelContext;
+                import uk.ac.manchester.tornado.api.annotations.Parallel;
+
+                class Demo {
+                    static int fact(int n) { return n <= 1 ? 1 : n * fact(n - 1); }
+                    static int checked(int x) { if (x < 0) throw new IllegalArgumentException(); return x; }
+
+                    static void clean(int[] a) { for (@Parallel int i = 0; i < a.length; i++) { a[i] += 1; } }
+                    static void throwing(int[] a) { for (@Parallel int i = 0; i < a.length; i++) { if (a[i] < 0) throw new IllegalStateException(); } }
+                    static void printing(KernelContext context, int[] a) { System.out.println(a[context.globalIdx]); }
+                    static void recursive(int[] a) { for (@Parallel int i = 0; i < a.length; i++) { a[i] = fact(i); } }
+                    static void viaHelper(int[] a) { for (@Parallel int i = 0; i < a.length; i++) { a[i] = checked(a[i]); } }
+                    static int nonVoid(int[] a) { for (@Parallel int i = 0; i < a.length; i++) { a[i] = i; } return 0; }
+                    static void unanalysable(int[] a) { for (@Parallel int i = 0; i < a.length; i++) { a[i] = undefined(i); } }
+                }""");
+
+        assertEquals(Set.of("clean", "unanalysable"), methodNames(TornadoTaskService.computeSnapshot(file)));
+    }
+
     private static Set<String> methodNames(TaskSnapshot snapshot) {
         return snapshot.tasks().stream().map(entry -> entry.resolve().getName()).collect(Collectors.toSet());
     }

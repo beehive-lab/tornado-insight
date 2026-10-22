@@ -19,7 +19,6 @@ package uk.ac.manchester.beehive.tornado.plugins.inspector;
 
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.psi.*;
-import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
@@ -56,7 +55,6 @@ public class ThrowInspection extends TornadoKernelInspection {
                 super.visitThrowStatement(statement);
                 PsiElement anchor = scope.anchorFor(statement, method, sink.file());
                 if (anchor == null) return;
-                ProblemMethods.getInstance().addMethod(sink.file().getProject(), sink.file(), kernelMethod);
                 sink.report(anchor, MessageBundle.message("inspection.traps.throw") + context, ProblemHighlightType.ERROR);
             }
 
@@ -65,7 +63,6 @@ public class ThrowInspection extends TornadoKernelInspection {
                 super.visitTryStatement(statement);
                 PsiElement anchor = scope.anchorFor(statement, method, sink.file());
                 if (anchor == null) return;
-                ProblemMethods.getInstance().addMethod(sink.file().getProject(), sink.file(), kernelMethod);
                 sink.report(anchor, MessageBundle.message("inspection.traps.tryCatch") + context, ProblemHighlightType.ERROR);
             }
         });
@@ -77,7 +74,6 @@ public class ThrowInspection extends TornadoKernelInspection {
             sink.report(anchor,
                     MessageBundle.message("inspection.traps.throws") + "\n" + exception.getCanonicalText() + context,
                     ProblemHighlightType.ERROR);
-            ProblemMethods.getInstance().addMethod(sink.file().getProject(), sink.file(), kernelMethod);
         }
     }
 }
