@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2025-2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +29,7 @@ import com.intellij.util.ui.FormBuilder;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.util.ui.JBUI;
 import org.jetbrains.annotations.TestOnly;
+import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 import javax.swing.*;
@@ -54,8 +55,7 @@ public class TornadoSettingsComponent {
 
         // Create warning banner if TORNADOVM_HOME is not set
         FormBuilder formBuilder = FormBuilder.createFormBuilder();
-        String tornadoVmHome = System.getenv("TORNADOVM_HOME");
-        if (tornadoVmHome == null || tornadoVmHome.isEmpty()) {
+        if (!TornadoSdk.getInstance().isConfigured()) {
             JPanel warningPanel = createWarningPanel();
             formBuilder.addComponent(warningPanel);
         }

@@ -28,6 +28,6 @@ public class DynamicInspection {
      * the work itself runs as a cancellable background task.
      */
     public static void process(Project project, List<TaskEntry> data) {
-        ExecutionEngine.start(project, data);
+        DynamicInspectionPipeline.start(project, data);
     }
 }

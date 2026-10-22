@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,18 +64,11 @@ public class TornadoSettingConfiguration implements Configurable {
         TornadoSettingState settings = TornadoSettingState.getInstance();
         String error = mySettingsComponent.isValidPath();
         if (!Objects.equals(error, "")){
-            settings.isValid = false;
             throw new ConfigurationException(error);
         }
         settings.parameterSize = mySettingsComponent.getMaxArraySize();
         settings.saveFileEnabled = mySettingsComponent.isSaveFileEnabled();
         settings.debugFileSaveLocation = mySettingsComponent.getDebugFileSaveLocation();
-
-        // Re-enable the dynamic-inspection action once the settings panel validates again.
-        // 'isValid' is also gated on TORNADOVM_HOME (set by TornadoSettingListener at
-        // project open), so honour that here rather than blindly flipping to true.
-        String tornadoVmHome = System.getenv("TORNADOVM_HOME");
-        settings.isValid = tornadoVmHome != null && !tornadoVmHome.isEmpty();
     }
 
     //The method is invoked immediately after createComponent().
