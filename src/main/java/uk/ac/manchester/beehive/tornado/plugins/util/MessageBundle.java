@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@ package uk.ac.manchester.beehive.tornado.plugins.util;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
@@ -41,5 +42,18 @@ public class MessageBundle {
      */
     public static @NotNull String message(String key) {
         return ResourceBundle.getBundle("messages.plugin", Locale.forLanguageTag(langCode)).getString(key);
+    }
+
+    /**
+     * Retrieves a localized message for the provided key and substitutes the
+     * {@code {0}}, {@code {1}}, ... placeholders with the given parameters
+     * (java.text.MessageFormat syntax).
+     *
+     * @param key    The key for which the message is desired.
+     * @param params The values substituted into the message placeholders.
+     * @return Localized, formatted message for the provided key.
+     */
+    public static @NotNull String message(String key, Object... params) {
+        return MessageFormat.format(message(key), params);
     }
 }

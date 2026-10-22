@@ -233,17 +233,18 @@ public class ExecutionEngine {
      */
     private boolean validateParameterSize() {
         int size = TornadoSettingState.getInstance().parameterSize;
-        if (size > 0 && size < 65536) {
+        int maxSize = TornadoSettingState.MAX_PARAMETER_SIZE - 1;
+        if (size > 0 && size <= maxSize) {
             return true;
         }
 
         String detail = size <= 0
                 ? "Current value is " + size + ", which would generate empty inputs and produce a misleading green run."
-                : "Current value is " + size + ", which exceeds the supported maximum (65536).";
+                : "Current value is " + size + ", which exceeds the supported maximum (" + maxSize + ").";
         Notification notification = new Notification(
                 "Print",
                 "Invalid Max Array Size",
-                "Set 'Max array size' in TornadoInsight settings to a value between 1 and 65536 (recommended: 128). "
+                "Set 'Max array size' in TornadoInsight settings to a value between 1 and " + maxSize + " (recommended: 128). "
                         + detail,
                 NotificationType.ERROR
         );
