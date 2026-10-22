@@ -20,6 +20,7 @@ package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import uk.ac.manchester.beehive.tornado.plugins.TornadoTestCase;
+import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Field;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Parameter;
 import uk.ac.manchester.beehive.tornado.plugins.inspector.TornadoKernels;
 
@@ -141,5 +142,97 @@ public class HarnessModelBuilderTest extends TornadoTestCase {
                             .task("t0", K::scale, data, factor);"""), "scale");
 
         assertNull(model.taskGraph());
+    }
+
+    private static List<String> names(List<Field> fields) {
+        return fields.stream().map(Field::name).toList();
+    }
+
+    public void testFieldsOfTheKernelClassInDeclarationOrderWithCanonicalTypes() {
+        HarnessModel model = build("Kernels.java", """
+                import uk.ac.manchester.tornado.api.annotations.Parallel;
+                import uk.ac.manchester.tornado.api.types.arrays.IntArray;
+
+                class Kernels {
+                    private static final int N = 4;
+                    private static final int M = N * 2;
+                    static final int SIZE = M + N;
+                    static IntArray LOOKUP;
+                    int instanceCount = 3;
+
+                    static void fill(IntArray a, int size) {
+                        for (@Parallel int i = 0; i < size; i++) { a.set(i, M); }
+                    }
+
+                    static class Other {
+                        static final int UNRELATED = 1;
+                    }
+
+                    Runnable task = new Runnable() {
+                        int anonymousField = 2;
+                        public void run() { }
+                    };
+                }""", "fill");
+
+        assertEquals(List.of("N", "M", "SIZE", "LOOKUP", "instanceCount", "task"), names(model.fields()));
+        assertEquals(new Field("private static final", "int", "M", "N * 2"), model.fields().get(1));
+        assertEquals(INT_ARRAY, model.fields().get(3).type());
+        // 'size' picks up the static SIZE constant
+        assertEquals(new Parameter("size", "int", false, "SIZE"), model.parameters().get(1));
+    }
+
+    public void testIntOverrideNeedsAStaticField() {
+        HarnessModel model = build("Kernels.java", """
+                import uk.ac.manchester.tornado.api.annotations.Parallel;
+                import uk.ac.manchester.tornado.api.types.arrays.IntArray;
+
+                class Kernels {
+                    int size = 16;
+                    static void fill(IntArray a, int size) {
+                        for (@Parallel int i = 0; i < size; i++) { a.set(i, 1); }
+                    }
+                }""", "fill");
+
+        assertEquals(new Parameter("size", "int", false, null), model.parameters().get(1));
+    }
+
+    public void testHelpersOfOtherClassesComeWithTheirFieldsAndImports() {
+        myFixture.addFileToProject("util/MathUtil.java", """
+                package util;
+
+                import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
+
+                public class MathUtil {
+                    static final int BASE = 2;
+                    static final int LIMIT = BASE * 50;
+                    static final int UNUSED = 7;
+
+                    public static int clamp(int x) { return Math.min(x, LIMIT); }
+                    public static float first(FloatArray a) { return a.get(0); }
+                    static int notCalled() { return UNUSED; }
+                }""");
+        HarnessModel model = build("Kernels.java", """
+                import uk.ac.manchester.tornado.api.annotations.Parallel;
+                import uk.ac.manchester.tornado.api.types.arrays.IntArray;
+                import util.MathUtil;
+
+                class Kernels {
+                    static final int SCALE = 3;
+
+                    static int twice(int x) { return 2 * MathUtil.clamp(x); }
+
+                    static void fill(IntArray a) {
+                        for (@Parallel int i = 0; i < a.getSize(); i++) { a.set(i, twice(i) * SCALE); }
+                    }
+                }""", "fill");
+
+        assertEquals(List.of("static int twice(int x) { return 2 * MathUtil.clamp(x); }",
+                        "public static int clamp(int x) { return Math.min(x, LIMIT); }"),
+                model.helperSources());
+        // BASE comes before LIMIT, whose initializer uses it; UNUSED is not copied
+        assertEquals(List.of("SCALE", "BASE", "LIMIT"), names(model.fields()));
+        assertTrue(model.imports().toString(),
+                model.imports().contains("import uk.ac.manchester.tornado.api.types.arrays.FloatArray;"));
+        assertEquals(model.imports().size(), new java.util.HashSet<>(model.imports()).size());
     }
 }
