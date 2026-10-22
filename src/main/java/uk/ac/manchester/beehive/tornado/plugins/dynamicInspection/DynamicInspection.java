@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,12 +18,13 @@
 package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
 
 import com.intellij.openapi.project.Project;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
 
 import java.io.IOException;
 import java.util.List;
 
 public class DynamicInspection {
-    public static void process(Project project, List<String> data){
+    public static void process(Project project, List<TaskEntry> data){
         try {
             CodeGenerator.fileCreationHandler(project, data);
         } catch (IOException e) {

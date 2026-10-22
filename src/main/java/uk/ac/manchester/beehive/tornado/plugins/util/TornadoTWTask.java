@@ -17,92 +17,31 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.util;
 
-import com.intellij.openapi.application.ModalityState;
-import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
-import com.intellij.util.concurrency.AppExecutorUtil;
 import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
 import uk.ac.manchester.beehive.tornado.plugins.inspector.KernelCallGraphAnalyzer;
 
-import javax.swing.*;
 import java.util.*;
 
 /**
  * A utility class for managing and working with ToolWindows about the TornadoVM Tasks.
  * <p>
  * This class provides functionality to detect, format, and validate TornadoVM Tasks/methods
- * within the tool window.
+ * within the tool window. It holds no state: every helper takes the file or methods it works
+ * on, and the tasks of the current file are kept per project by {@link TornadoTaskService}.
  * </p>
  */
 public class TornadoTWTask {
 
-    // Lists and Maps for storing tasks and their details
-    private static List<PsiMethod> taskList;
-    private static String importCodeBlock;
-    private static Map<String, PsiMethod> taskMap;
-    private static PsiFile psiFile;
-
     /**
-     * Adds TornadoVM Tasks to the given UI data model.
-     *
-     * @param project the IntelliJ project
-     * @param model the list model to which tasks should be added
+     * Returns the fields declared in {@code psiFile}, keyed by
+     * "&lt;modifiers&gt; &lt;type&gt; &lt;name&gt;", with their initializer text (or {@code null}).
      */
-    public static void refresh(Project project, VirtualFile virtualFile, DefaultListModel<String> model) {
-        // No isDumb() early return: inSmartMode() below defers the computation until
-        // indexing finishes, so a refresh requested during indexing is not lost
-        if (model == null) return;
-
-        ReadAction.nonBlocking(() -> {
-            DefaultListModel<String> newModel = new DefaultListModel<>();
-            List<PsiMethod> newTaskList = new ArrayList<>();
-            Map<String, PsiMethod> newTaskMap = new HashMap<>();
-
-            if (!virtualFile.isValid()) return null;
-            PsiFile file = PsiManager.getInstance(project).findFile(virtualFile);
-            if (file == null) return null;
-
-            List<PsiMethod> tasks = findSuitableMethods(file);
-            String imports = getImportCode(file);
-
-            if (tasks != null) {
-                for (PsiMethod task : tasks) {
-                    if (validateTask(task)) {
-                        String displayName = psiMethodFormat(task);
-                        newTaskList.add(task);
-                        newTaskMap.put(displayName, task);
-                        newModel.addElement(displayName);
-                    }
-                }
-            }
-
-            // Store global state
-            taskList = newTaskList;
-            taskMap = newTaskMap;
-            psiFile = file;
-            importCodeBlock = imports;
-
-            return newModel;
-
-        }).inSmartMode(project)
-        // A newer refresh cancels a pending one, so concurrent refreshes cannot race
-        .coalesceBy(project, TornadoTWTask.class)
-        .expireWith(project)
-        .finishOnUiThread(ModalityState.defaultModalityState(), newModel -> {
-            if (newModel != null) {
-                model.clear();
-                for (int i = 0; i < newModel.size(); i++) {
-                    model.addElement(newModel.get(i));
-                }
-            }
-        }).submit(AppExecutorUtil.getAppExecutorService());
-    }
-
-    public static Map<String, Object> getFields() {
+    public static Map<String, Object> getFields(PsiFile psiFile) {
         Map<String, Object> methodsAndFields = new HashMap<>();
 
         Collection<PsiField> allFields = PsiTreeUtil.findChildrenOfType(psiFile, PsiField.class);
@@ -211,7 +150,7 @@ public class TornadoTWTask {
      * constructors, TaskGraph-related, and @Override methods.
      * Retained for backward compatibility with code that needs file-local helpers.
      */
-    public static ArrayList<PsiMethod> getOtherMethods(ArrayList<PsiMethod> methods) {
+    public static ArrayList<PsiMethod> getOtherMethods(PsiFile psiFile, ArrayList<PsiMethod> methods) {
         Collection<PsiMethod> allMethods = PsiTreeUtil.findChildrenOfType(psiFile, PsiMethod.class);
         ArrayList<PsiMethod> allMethodsList = new ArrayList<>(allMethods);
         allMethodsList.removeAll(methods);
@@ -272,24 +211,9 @@ public class TornadoTWTask {
     }
 
     /**
-     * Retrieves a list of PsiMethod objects based on a list of method names.
-     *
-     * @param methodsList the list of method names
-     * @return a list of corresponding PsiMethod objects, or null if none found
+     * Returns the import statements of the given file, one per line, skipping JUnit imports.
      */
-    public static ArrayList<PsiMethod> getMethods(List<String> methodsList) {
-        if (methodsList == null || methodsList.isEmpty()) return null;
-        ArrayList<PsiMethod> psiMethodsList = new ArrayList<>();
-        for (Object method : methodsList) {
-            if (taskMap.containsKey(method.toString())) {
-                psiMethodsList.add(taskMap.get(method.toString()));
-            }
-        }
-        return psiMethodsList;
-    }
-
-    // Internal utility method to retrieve import code from the given PsiFile
-    private static String getImportCode(PsiFile file) {
+    public static String getImportCode(PsiFile file) {
         StringBuilder importCodeBlock = new StringBuilder();
         if (!(file instanceof PsiJavaFile javaFile)) {
             return importCodeBlock.toString();
@@ -310,8 +234,8 @@ public class TornadoTWTask {
         return importCodeBlock.toString();
     }
 
-    // Internal utility method to validate a given PsiMethod to ensure it's a valid TornadoVM task
-    private static boolean validateTask(PsiMethod method) {
+    // Validates a given PsiMethod to ensure it's a valid TornadoVM task
+    static boolean validateTask(PsiMethod method) {
         if (method == null) return false;
         PsiElement[] errorElements = PsiTreeUtil.collectElements(method,
                 element -> element instanceof PsiErrorElement);
@@ -320,19 +244,6 @@ public class TornadoTWTask {
         PsiType returnType = method.getReturnType();
         if (returnType != null && !PsiTypes.voidType().equals(returnType)) return false;
         return !ProblemMethods.getInstance().getMethodSet().contains(method.getText());
-    }
-
-    /**
-     * Returns the stored import code block.
-     *
-     * @return a string representing the import code block
-     */
-    public static String getImportCodeBlock() {
-        return importCodeBlock;
-    }
-
-    public static PsiFile getPsiFile() {
-        return psiFile;
     }
 
     private static boolean statementImportsJunit(String importStatement) {

@@ -36,7 +36,8 @@ import com.intellij.ui.content.ContentFactory;
 import uk.ac.manchester.beehive.tornado.plugins.message.TornadoTaskRefreshListener;
 import uk.ac.manchester.beehive.tornado.plugins.util.DataKeys;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
-import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -60,13 +61,13 @@ public class TornadoSideWindow implements ToolWindowFactory {
 
     private static class ToolWindowContent extends SimpleToolWindowPanel implements DataProvider {
 
-        JBList<String> TornadoList = new JBList<>();
+        JBList<TaskEntry> TornadoList = new JBList<>();
 
         public ToolWindowContent(Project project, ToolWindow toolWindow) {
             super(Boolean.TRUE, Boolean.TRUE);
             SimpleToolWindowPanel simpleToolWindowPanel = new SimpleToolWindowPanel(true, true);
 
-            DefaultListModel<String> model = new DefaultListModel<>();
+            DefaultListModel<TaskEntry> model = new DefaultListModel<>();
             TornadoList.setModel(model);
             TornadoList.getEmptyText().setText(MessageBundle.message("ui.toolwindow.defaultText"));
             simpleToolWindowPanel.add(TornadoList);
@@ -110,8 +111,8 @@ public class TornadoSideWindow implements ToolWindowFactory {
             return null;
         }
 
-        public DefaultListModel<String> getModel() {
-            return (DefaultListModel<String>) TornadoList.getModel();
+        public DefaultListModel<TaskEntry> getModel() {
+            return (DefaultListModel<TaskEntry>) TornadoList.getModel();
         }
 
         public void init(Project project, ToolWindow toolWindow) {
@@ -121,7 +122,7 @@ public class TornadoSideWindow implements ToolWindowFactory {
                 public void refresh() {
                     VirtualFile[] selectedFiles = FileEditorManager.getInstance(project).getSelectedFiles();
                     if (selectedFiles.length > 0) {
-                        TornadoTWTask.refresh(project, selectedFiles[0], getModel());
+                        TornadoTaskService.getInstance(project).refresh(selectedFiles[0], getModel());
                     } else {
                         LOG.debug("No file selected in editor for Tornado refresh");
                     }
@@ -129,7 +130,7 @@ public class TornadoSideWindow implements ToolWindowFactory {
 
                 @Override
                 public void refresh(Project project, VirtualFile newFile) {
-                    TornadoTWTask.refresh(project, newFile, getModel());
+                    TornadoTaskService.getInstance(project).refresh(newFile, getModel());
                 }
             });
         }
