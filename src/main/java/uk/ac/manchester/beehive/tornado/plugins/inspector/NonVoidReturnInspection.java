@@ -30,7 +30,7 @@ import java.util.Objects;
 
 /**
  * A custom inspection tool to check for non-void return types in methods that are
- * annotated with "Parallel" or "Reduce", or that have a KernelContext parameter.
+ * annotated with "Parallel" or "Reduce", or that have a KernelContext or TileContext parameter.
  * <p>
  * Methods registered as kernel entry points via .task() must return void. However,
  * non-void return types are valid when the method is inlined as a helper, so this
@@ -60,7 +60,7 @@ public class NonVoidReturnInspection extends AbstractBaseJavaLocalInspectionTool
 
                 for (PsiParameter parameter : method.getParameterList().getParameters()) {
                     PsiType type = parameter.getType();
-                    if (type.getCanonicalText().endsWith("KernelContext")) {
+                    if (KernelCallGraphAnalyzer.isKernelContextType(type)) {
                         checkReturnType(method);
                         break;
                     }

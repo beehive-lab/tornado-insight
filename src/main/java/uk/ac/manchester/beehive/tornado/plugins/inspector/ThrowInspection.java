@@ -84,7 +84,7 @@ public class ThrowInspection extends AbstractBaseJavaLocalInspectionTool {
 
                 for (PsiParameter parameter : method.getParameterList().getParameters()) {
                     PsiType type = parameter.getType();
-                    if (type.getCanonicalText().endsWith("KernelContext")) {
+                    if (KernelCallGraphAnalyzer.isKernelContextType(type)) {
                         KernelCallGraphAnalyzer.AnalysisScope scope =
                                 KernelCallGraphAnalyzer.resolve(method);
 

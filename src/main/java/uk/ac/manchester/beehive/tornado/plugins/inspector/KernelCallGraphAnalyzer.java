@@ -108,7 +108,7 @@ public final class KernelCallGraphAnalyzer {
      * all transitive helper method calls. Results are cached per kernel
      * method and invalidated on any PSI modification.
      *
-     * @param kernelMethod the {@code @Parallel}/{@code @Reduce}/KernelContext method
+     * @param kernelMethod the {@code @Parallel}/{@code @Reduce}/KernelContext/TileContext method
      * @return the analysis scope containing all inlineable method bodies
      *         and diagnostics for non-analyzable call sites
      */
@@ -252,6 +252,18 @@ public final class KernelCallGraphAnalyzer {
         String qName = annotation.getQualifiedName();
         return qName != null
                 && (qName.endsWith("Parallel") || qName.endsWith("Reduce"));
+    }
+
+    /**
+     * Checks whether the given type is one of the TornadoVM execution contexts that
+     * mark a method as a kernel entry point when used as a parameter.
+     *
+     * @param type the parameter type to check
+     * @return true if it is {@code KernelContext} or {@code TileContext}
+     */
+    public static boolean isKernelContextType(PsiType type) {
+        String typeName = type.getCanonicalText();
+        return typeName.endsWith("KernelContext") || typeName.endsWith("TileContext");
     }
 
     /**
