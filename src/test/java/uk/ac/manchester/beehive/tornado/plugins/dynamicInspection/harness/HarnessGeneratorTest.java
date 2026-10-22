@@ -91,4 +91,43 @@ public class HarnessGeneratorTest {
         assertEquals("static final float[] W = {1f, 2f}",
                 HarnessGenerator.fieldDeclaration(new Field("static final", "float[]", "W", "{1f, 2f}")));
     }
+
+    private static HarnessModel contextModel(TornadoKernels.Kind kind, TaskGraphDeclaration taskGraph) {
+        String context = kind == TornadoKernels.Kind.TILE_CONTEXT
+                ? "uk.ac.manchester.tornado.api.tile.TileContext" : "uk.ac.manchester.tornado.api.KernelContext";
+        return new HarnessModel("addAb12C", "add", kind, List.of(), List.of(),
+                "public static void add(Context context, FloatArray a) { }\n", List.of(),
+                List.of(new Parameter("context", context, false, null), new Parameter("a", "FloatArray", false, null)),
+                taskGraph);
+    }
+
+    @Test
+    public void kernelContextTaskGetsAWorkerGridOverTheTestData() throws Exception {
+        String source = HarnessGenerator.generate(contextModel(TornadoKernels.Kind.KERNEL_CONTEXT, null), 128, new Random(1));
+
+        assertTrue(source, source.contains("""
+                ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+                uk.ac.manchester.tornado.api.WorkerGrid1D insightWorkerGrid = new uk.ac.manchester.tornado.api.WorkerGrid1D(128);
+                uk.ac.manchester.tornado.api.GridScheduler insightGridScheduler = new uk.ac.manchester.tornado.api.GridScheduler("insightTaskGraphName.insightTaskName", insightWorkerGrid);
+                try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {
+                executionPlan.withGridScheduler(insightGridScheduler).withPreCompilation();
+                """));
+    }
+
+    @Test
+    public void tileContextTaskLaunchesOneTileBlock() throws Exception {
+        String declaration = "TaskGraph tile = new TaskGraph(\"tile\").task(\"add\", addAb12C::add, context, a);";
+        String source = HarnessGenerator.generate(contextModel(TornadoKernels.Kind.TILE_CONTEXT,
+                new TaskGraphDeclaration(declaration, "tile", "tile", "add")), 128, new Random(1));
+
+        assertTrue(source, source.contains("new uk.ac.manchester.tornado.api.WorkerGrid1D(1);"));
+        assertTrue(source, source.contains("new uk.ac.manchester.tornado.api.GridScheduler(\"tile.add\", insightWorkerGrid);"));
+        assertTrue(source, source.contains("executionPlan.withGridScheduler(insightGridScheduler).withPreCompilation();"));
+    }
+
+    @Test
+    public void loopKernelsAndUnnamedTasksGetNoGridScheduler() throws Exception {
+        assertEquals(-1, HarnessGenerator.generate(model(VADD_PARAMETERS, null), 16, new Random(1)).indexOf("GridScheduler"));
+        assertEquals("", HarnessGenerator.gridScheduler(contextModel(TornadoKernels.Kind.KERNEL_CONTEXT, null), null, "t0", 16));
+    }
 }

@@ -179,7 +179,9 @@ public final class HarnessModelBuilder {
      * the harness class, or {@code null} when it cannot be reused: when it has other
      * tasks (their kernels are not in the harness), when it passes anything but
      * distinct variables to the kernel, or when it uses local variables that are not
-     * kernel arguments. The harness then builds its own single-task graph.
+     * kernel arguments, or, for a KernelContext or TileContext kernel, when the graph
+     * or task name is not a string literal (the grid scheduler needs both). The
+     * harness then builds its own single-task graph.
      */
     private static @Nullable TaskGraphDeclaration reusableTaskGraph(TaskCall taskCall, PsiMethod kernel, String className) {
         PsiDeclarationStatement declaration = taskCall.declaration();
@@ -199,6 +201,15 @@ public final class HarnessModelBuilder {
             }
         }
 
+        String graphName = graphName(declaration);
+        String taskName = stringValue(taskCall.call().getArgumentList().getExpressions()[0]);
+        TornadoKernels.Kind kind = TornadoKernels.kind(kernel);
+        if ((kind == TornadoKernels.Kind.KERNEL_CONTEXT || kind == TornadoKernels.Kind.TILE_CONTEXT)
+                && (graphName == null || taskName == null)) {
+            // The grid scheduler is keyed by "<graph>.<task>"
+            return null;
+        }
+
         // Rewrite only the kernel reference of this task
         PsiExpression kernelReference = taskCall.call().getArgumentList().getExpressions()[1];
         int start = kernelReference.getTextRange().getStartOffset() - declaration.getTextRange().getStartOffset();
@@ -206,8 +217,7 @@ public final class HarnessModelBuilder {
         String rewritten = text.substring(0, start) + className + "::" + kernel.getName()
                 + text.substring(start + kernelReference.getTextLength());
 
-        return new TaskGraphDeclaration(rewritten, taskCall.variable().getName(), graphName(declaration),
-                stringValue(taskCall.call().getArgumentList().getExpressions()[0]));
+        return new TaskGraphDeclaration(rewritten, taskCall.variable().getName(), graphName, taskName);
     }
 
     /**

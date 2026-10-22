@@ -235,4 +235,27 @@ public class HarnessModelBuilderTest extends TornadoTestCase {
                 model.imports().contains("import uk.ac.manchester.tornado.api.types.arrays.FloatArray;"));
         assertEquals(model.imports().size(), new java.util.HashSet<>(model.imports()).size());
     }
+
+    public void testContextKernelGraphNeedsLiteralNamesToBeReused() {
+        String kernels = """
+                import uk.ac.manchester.tornado.api.KernelContext;
+                import uk.ac.manchester.tornado.api.TaskGraph;
+                import uk.ac.manchester.tornado.api.types.arrays.IntArray;
+
+                class Ctx {
+                    static final String GRAPH = "g";
+                    static void ones(KernelContext context, IntArray a) { a.set(context.globalIdx, 1); }
+                    void run(KernelContext context, IntArray a) {
+                        TaskGraph graph = new TaskGraph(%s).task("t0", Ctx::ones, context, a);
+                    }
+                }""";
+
+        HarnessModel literal = build("Ctx.java", kernels.formatted("\"g\""), "ones");
+        assertEquals(TornadoKernels.Kind.KERNEL_CONTEXT, literal.kind());
+        assertNotNull(literal.taskGraph());
+        assertEquals("g", literal.taskGraph().graphName());
+
+        HarnessModel constant = build("Ctx.java", kernels.formatted("GRAPH"), "ones");
+        assertNull(constant.taskGraph());
+    }
 }

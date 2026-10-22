@@ -18,9 +18,11 @@
 package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Field;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Parameter;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.TaskGraphDeclaration;
+import uk.ac.manchester.beehive.tornado.plugins.inspector.TornadoKernels;
 
 import java.util.Random;
 
@@ -42,6 +44,11 @@ public final class HarnessGenerator {
             import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
             import uk.ac.manchester.tornado.api.types.HalfFloat;
             """;
+
+    static final String SYNTHETIC_GRAPH = "insightTaskGraphName";
+    static final String SYNTHETIC_TASK = "insightTaskName";
+    static final String WORKER_GRID = "insightWorkerGrid";
+    static final String GRID_SCHEDULER = "insightGridScheduler";
 
     private HarnessGenerator() {
     }
@@ -76,7 +83,7 @@ public final class HarnessGenerator {
         for (String helper : model.helperSources()) {
             source.append(helper).append("\n");
         }
-        source.append(mainMethod(model, variableInit.toString()));
+        source.append(mainMethod(model, variableInit.toString(), parameterSize));
         source.append("}");
         return source.toString();
     }
@@ -93,20 +100,22 @@ public final class HarnessGenerator {
         return declaration.toString();
     }
 
-    private static String mainMethod(HarnessModel model, String variableInit) {
+    private static String mainMethod(HarnessModel model, String variableInit, int parameterSize) {
         String methodWithClass = model.className() + "::" + model.kernelName();
         TaskGraphDeclaration taskGraph = model.taskGraph();
         if (taskGraph != null) {
+            String grid = gridScheduler(model, taskGraph.graphName(), taskGraph.taskName(), parameterSize);
             return """
                     \n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {
                     %s
                     %s
                     ImmutableTaskGraph immutableTaskGraph = %s.snapshot();
-                    try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {
-                        executionPlan.withPreCompilation();
+                    %stry (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {
+                        executionPlan%s.withPreCompilation();
                     }
                     }
-                    """.formatted(variableInit, taskGraph.declaration(), taskGraph.variableName());
+                    """.formatted(variableInit, taskGraph.declaration(), taskGraph.variableName(),
+                    grid, grid.isEmpty() ? "" : ".withGridScheduler(" + GRID_SCHEDULER + ")");
         }
 
         // Build a TaskGraph with a single task for the kernel
@@ -118,18 +127,48 @@ public final class HarnessGenerator {
                 taskGraphParameters.append(", ").append(p.name());
             }
         }
+        String grid = gridScheduler(model, SYNTHETIC_GRAPH, SYNTHETIC_TASK, parameterSize);
         return "\n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {\n" + //
                 "\n" + //
                 variableInit + //
-                "TaskGraph taskGraph = new TaskGraph(\"insightTaskGraphName\") \n" + //
+                "TaskGraph taskGraph = new TaskGraph(\"" + SYNTHETIC_GRAPH + "\") \n" + //
                 ".transferToDevice(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ")\n" + //
-                ".task(\"insightTaskName\", " + methodWithClass + taskParameters + ") \n" + //
+                ".task(\"" + SYNTHETIC_TASK + "\", " + methodWithClass + taskParameters + ") \n" + //
                 ".transferToHost(DataTransferMode.EVERY_EXECUTION" + taskGraphParameters + ");\n" + //
                 "ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();\n" + //
+                grid + //
                 "try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {\n" + //
-                "executionPlan.withPreCompilation();\n" + //
+                "executionPlan" + (grid.isEmpty() ? "" : ".withGridScheduler(" + GRID_SCHEDULER + ")") + ".withPreCompilation();\n" + //
                 "        }\n" + //
                 "    }"; //
+    }
+
+    /**
+     * KernelContext and TileContext kernels have no {@code @Parallel} loop to derive
+     * the iteration space from, so they need a worker grid. A KernelContext kernel
+     * gets one thread per element of the test data. The worker grid of a TileContext
+     * kernel counts tile blocks and its local work is left to the tile compiler (as in
+     * TornadoVM's TileVectorAdd example); the harness cannot know the tile size, so it
+     * launches a single tile block, which stays within the test data.
+     *
+     * @return the statements declaring {@link #GRID_SCHEDULER}, or an empty string
+     *         when the kernel needs none or the task name is unknown
+     */
+    static @NotNull String gridScheduler(@NotNull HarnessModel model, @Nullable String graphName,
+                                         @Nullable String taskName, int parameterSize) {
+        TornadoKernels.Kind kind = model.kind();
+        if (kind != TornadoKernels.Kind.KERNEL_CONTEXT && kind != TornadoKernels.Kind.TILE_CONTEXT) {
+            return "";
+        }
+        if (graphName == null || taskName == null) {
+            return "";
+        }
+        int threads = kind == TornadoKernels.Kind.TILE_CONTEXT ? 1 : parameterSize;
+        return "uk.ac.manchester.tornado.api.WorkerGrid1D " + WORKER_GRID
+                + " = new uk.ac.manchester.tornado.api.WorkerGrid1D(" + threads + ");\n"
+                + "uk.ac.manchester.tornado.api.GridScheduler " + GRID_SCHEDULER
+                + " = new uk.ac.manchester.tornado.api.GridScheduler(\"" + graphName + "." + taskName + "\", "
+                + WORKER_GRID + ");\n";
     }
 
     // Scalars are passed by value; everything else is transferred to and from the device
