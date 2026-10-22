@@ -72,6 +72,9 @@ public class DataTypeInspection extends TornadoKernelInspection {
      */
     private static void checkVariable(PsiType type, String context, PsiElement anchor, KernelProblemSink sink) {
         if (anchor == null) return;
+        // A class that does not resolve (e.g. the TornadoVM API is not on the module's
+        // classpath) cannot be classified; the editor already reports it as an error
+        if (type.getDeepComponentType() instanceof PsiClassType classType && classType.resolve() == null) return;
         if (!type.equalsToText("int") && !type.equalsToText("boolean") && !type.equalsToText("double")
                 && !type.equalsToText("long") && !type.equalsToText("char") && !type.equalsToText("float")
                 && !type.equalsToText("byte") && !type.equalsToText("short")

@@ -57,9 +57,11 @@ public abstract class TornadoTestCase extends LightJavaCodeInsightFixtureTestCas
 
     /**
      * The light test project has no JDK classes, so stub the ones the kernel
-     * inspections recognise as system calls.
+     * inspections recognise as system calls, and String, which the tests use as an
+     * unsupported kernel data type (unresolved types are not classified).
      */
     protected void addSystemStubs() {
+        myFixture.addClass("package java.lang; public final class String { }");
         myFixture.addClass("package java.io; public class PrintStream { public void println(int x) { } }");
         myFixture.addClass("package java.lang; public final class System { public static final java.io.PrintStream out = null; }");
     }
