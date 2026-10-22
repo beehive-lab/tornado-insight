@@ -37,7 +37,6 @@ import java.io.FilenameFilter;
 @State(name = "TornadoVMSettingsState", storages = {@Storage(value = "TornadoSettings.xml")})
 public class TornadoSettingState implements PersistentStateComponent<TornadoSettingState> {
 
-    public boolean bytecodeVisualizerEnabled;
     // Default test-data size used by VariableInit when generating synthetic
     // inputs for dynamic inspection. Picked to be large enough that kernels
     // actually exercise real data, while staying within the Settings-dialog
@@ -47,7 +46,6 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
     public boolean isValid;
     public boolean saveFileEnabled;
     public String debugFileSaveLocation;
-    public String bytecodesFileSaveLocation;
 
     /**
      * Retrieves the singleton instance of the TornadoSetting.

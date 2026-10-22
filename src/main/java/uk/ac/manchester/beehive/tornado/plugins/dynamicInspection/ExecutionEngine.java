@@ -917,22 +917,10 @@ public class ExecutionEngine {
         commandLine.setExePath(resolveTornadoExe());
         configureEnvironmentVariables(commandLine);
         commandLine.addParameter("--printKernel");
-
-        // Add bytecode dump flag if enabled
-        if (TornadoSettingState.getInstance().bytecodeVisualizerEnabled) {
-            String bytecodeDir = TornadoSettingState.getInstance().bytecodesFileSaveLocation;
-            commandLine.addParameter("--jvm=-Dtornado.dump.bytecodes.dir=" + bytecodeDir);
-        }
-
         commandLine.addParameter("-jar");
         commandLine.addParameter(jarPath);
 
         return commandLine;
-    }
-
-    private String emitPrintBytecode() {
-        boolean bytecodeVisualizerEnabled = TornadoSettingState.getInstance().bytecodeVisualizerEnabled;
-        return (bytecodeVisualizerEnabled) ? (" --jvm=\"-Dtornado.dump.bytecodes.dir=" + TornadoSettingState.getInstance().bytecodesFileSaveLocation + "\" ") : (" ");
     }
 
     private void configureEnvironmentVariables(GeneralCommandLine commandLine) {
