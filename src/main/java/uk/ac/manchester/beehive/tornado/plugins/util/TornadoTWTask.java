@@ -27,6 +27,7 @@ import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
+import uk.ac.manchester.beehive.tornado.plugins.inspector.KernelCallGraphAnalyzer;
 
 import javax.swing.*;
 import java.util.*;
@@ -236,7 +237,7 @@ public class TornadoTWTask {
             if (!tornadoTask.contains(method)) {
                 PsiParameter[] parameterList = method.getParameterList().getParameters();
                 for (PsiParameter parameter: parameterList) {
-                    if (parameter.getType().getPresentableText().equals("KernelContext")) {
+                    if (KernelCallGraphAnalyzer.isKernelContextType(parameter.getType())) {
                         tornadoTask.add(method);
                     }
                 }

@@ -1,0 +1,40 @@
+/*
+ * Copyright (c) 2026, APT Group, Department of Computer Science,
+ *  The University of Manchester.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package uk.ac.manchester.beehive.tornado.plugins;
+
+import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase;
+
+/**
+ * Base class for fixture tests. Stubs the parts of the TornadoVM API the plugin resolves,
+ * so tests run without a TornadoVM SDK on the machine.
+ */
+public abstract class TornadoTestCase extends LightJavaCodeInsightFixtureTestCase {
+
+    protected void addTornadoApi() {
+        myFixture.addClass("package uk.ac.manchester.tornado.api; public class TaskGraph {}");
+        myFixture.addClass("package uk.ac.manchester.tornado.api; public class TornadoExecutionPlan {}");
+        myFixture.addClass("package uk.ac.manchester.tornado.api; public class KernelContext {}");
+        myFixture.addClass("package uk.ac.manchester.tornado.api.enums; public enum DataTransferMode { FIRST_EXECUTION, EVERY_EXECUTION }");
+        myFixture.addClass("package uk.ac.manchester.tornado.api.annotations; public @interface Parallel {}");
+        myFixture.addClass("package uk.ac.manchester.tornado.api.annotations; public @interface Reduce {}");
+    }
+
+    protected void addTileContext() {
+        myFixture.addClass("package uk.ac.manchester.tornado.api.tile; public class TileContext {}");
+    }
+}
