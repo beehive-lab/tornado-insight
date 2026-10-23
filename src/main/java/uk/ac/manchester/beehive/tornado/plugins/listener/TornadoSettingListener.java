@@ -28,7 +28,7 @@ import com.intellij.openapi.startup.ProjectActivity;
 import kotlin.coroutines.Continuation;
 import org.jetbrains.annotations.NotNull;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration;
-import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
+import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoNotifications;
 
 import java.util.concurrent.CompletableFuture;
@@ -41,15 +41,8 @@ public class TornadoSettingListener implements ProjectActivity {
 
     @Override
     public @NotNull CompletableFuture<Void> execute(@NotNull Project project, @NotNull Continuation<? super kotlin.Unit> continuation) {
-        TornadoSettingState settingState = TornadoSettingState.getInstance();
-
-        // Check if TORNADOVM_HOME environment variable is set
-        String tornadoVmHome = System.getenv("TORNADOVM_HOME");
-
-        if (tornadoVmHome == null || tornadoVmHome.isEmpty()) {
-            // Show warning notification when TORNADOVM_HOME is not set
-            settingState.isValid = false;
-
+        // Show warning notification when TORNADOVM_HOME is not set
+        if (!TornadoSdk.getInstance().isConfigured()) {
             Notification notification = TornadoNotifications.create(
                 "TornadoVM SDK Not Configured",
                 "<html>TORNADOVM_HOME environment variable is not set.<br><br>" +
@@ -62,8 +55,6 @@ public class TornadoSettingListener implements ProjectActivity {
 
             notification.addAction(new OpenTornadoDownloadsAction());
             Notifications.Bus.notify(notification, project);
-        } else {
-            settingState.isValid = true;
         }
 
         return CompletableFuture.completedFuture(null);

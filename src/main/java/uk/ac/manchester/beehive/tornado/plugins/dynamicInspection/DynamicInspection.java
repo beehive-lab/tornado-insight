@@ -20,15 +20,14 @@ package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
 import com.intellij.openapi.project.Project;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
 
-import java.io.IOException;
 import java.util.List;
 
 public class DynamicInspection {
-    public static void process(Project project, List<TaskEntry> data){
-        try {
-            CodeGenerator.fileCreationHandler(project, data);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    /**
+     * Starts dynamic inspection of the selected tasks. Called on the UI thread;
+     * the work itself runs as a cancellable background task.
+     */
+    public static void process(Project project, List<TaskEntry> data) {
+        DynamicInspectionPipeline.start(project, data);
     }
 }

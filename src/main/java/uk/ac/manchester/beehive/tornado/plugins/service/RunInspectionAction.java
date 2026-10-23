@@ -22,7 +22,7 @@ import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.DynamicInspection;
-import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
+import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
 import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.EmptySelectionWarningDialog;
 import uk.ac.manchester.beehive.tornado.plugins.util.DataKeys;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
@@ -44,7 +44,7 @@ public class RunInspectionAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {
         final Project project = e.getProject();
-        e.getPresentation().setEnabled(project != null && TornadoSettingState.getInstance().isValid);
+        e.getPresentation().setEnabled(project != null && TornadoSdk.getInstance().isConfigured());
     }
 
     @Override

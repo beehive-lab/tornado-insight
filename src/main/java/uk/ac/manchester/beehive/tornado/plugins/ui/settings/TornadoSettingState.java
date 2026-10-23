@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,10 +24,6 @@ import com.intellij.openapi.components.Storage;
 import com.intellij.util.xmlb.XmlSerializerUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
-
-import java.io.File;
-import java.io.FilenameFilter;
 
 /**
  * Represents the settings associated with the TornadoVM plugin, allowing
@@ -38,18 +34,17 @@ import java.io.FilenameFilter;
 public class TornadoSettingState implements PersistentStateComponent<TornadoSettingState> {
 
     // Exclusive upper bound for parameterSize, shared by the Settings-dialog
-    // validator, the runtime check in ExecutionEngine and the user-facing
+    // validator, the runtime check in DynamicInspectionPipeline and the user-facing
     // messages, so valid sizes are 1..MAX_PARAMETER_SIZE - 1.
     public static final int MAX_PARAMETER_SIZE = 65536;
 
-    // Default test-data size used by VariableInit when generating synthetic
+    // Default test-data size used by the harness generator for synthetic
     // inputs for dynamic inspection. Picked to be large enough that kernels
     // actually exercise real data, while staying within the Settings-dialog
     // validator (>0 and <MAX_PARAMETER_SIZE). Overridden when the user changes
     // the value in Settings.
     public static final int DEFAULT_PARAMETER_SIZE = 128;
     public int parameterSize = DEFAULT_PARAMETER_SIZE;
-    public boolean isValid;
     public boolean saveFileEnabled;
     public String debugFileSaveLocation;
 
@@ -83,69 +78,5 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
     @Override
     public void loadState(@NotNull TornadoSettingState state) {
         XmlSerializerUtil.copyBean(state,this);
-    }
-
-    /**
-     * Derives the TornadoVM root directory from TORNADOVM_HOME environment variable.
-     * TORNADOVM_HOME typically points to {TORNADO_ROOT}/bin/sdk
-     */
-    private String getTornadoRoot() {
-        String tornadoVmHome = EnvironmentVariable.getTornadoSdk();
-        if (tornadoVmHome == null) {
-            return null;
-        }
-        // TORNADOVM_HOME is typically {TORNADO_ROOT}/bin/sdk
-        // So we need to go up two levels
-        return tornadoVmHome.replaceAll("/bin/sdk/?$", "");
-    }
-
-    public String setVarsPath(){
-        String root = getTornadoRoot();
-        return root != null ? root + "/setvars.sh" : null;
-    }
-
-    /**
-     * Finds a JAR file in the TORNADOVM_HOME directory that matches the given prefix.
-     * Returns the first matching JAR file path, or null if not found.
-     */
-    private String findTornadoJar(String jarPrefix) {
-        String tornadoVmHome = EnvironmentVariable.getTornadoSdk();
-        if (tornadoVmHome == null || tornadoVmHome.isEmpty()) {
-            return null;
-        }
-
-        // Resolve the absolute path in case TORNADOVM_HOME is relative
-        File tornadoVmHomeFile = new File(tornadoVmHome);
-        if (!tornadoVmHomeFile.isAbsolute()) {
-            // Try to resolve it relative to user home
-            String userHome = System.getProperty("user.home");
-            tornadoVmHomeFile = new File(userHome, tornadoVmHome);
-        }
-
-        File tornadoJarDir = new File(tornadoVmHomeFile, "share/java/tornado");
-
-        if (!tornadoJarDir.exists() || !tornadoJarDir.isDirectory()) {
-            return null;
-        }
-
-        File[] matchingFiles = tornadoJarDir.listFiles((dir, name) -> name.startsWith(jarPrefix) && name.endsWith(".jar"));
-
-        if (matchingFiles != null && matchingFiles.length > 0) {
-            return matchingFiles[0].getAbsolutePath();
-        }
-
-        return null;
-    }
-
-    public String getMatricesPath(){
-        return findTornadoJar("tornado-matrices");
-    }
-
-    public String getApiPath(){
-        return findTornadoJar("tornado-api");
-    }
-
-    public String getUnitTestPath(){
-        return findTornadoJar("tornado-unittests");
     }
 }

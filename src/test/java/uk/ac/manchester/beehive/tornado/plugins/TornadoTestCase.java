@@ -26,7 +26,25 @@ import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase;
 public abstract class TornadoTestCase extends LightJavaCodeInsightFixtureTestCase {
 
     protected void addTornadoApi() {
-        myFixture.addClass("package uk.ac.manchester.tornado.api; public class TaskGraph {}");
+        myFixture.addClass("""
+                package uk.ac.manchester.tornado.api.common;
+                public interface TornadoFunctions {
+                    interface Task1<T1> { void apply(T1 arg1); }
+                    interface Task2<T1, T2> { void apply(T1 arg1, T2 arg2); }
+                    interface Task3<T1, T2, T3> { void apply(T1 arg1, T2 arg2, T3 arg3); }
+                }""");
+        myFixture.addClass("""
+                package uk.ac.manchester.tornado.api;
+                import uk.ac.manchester.tornado.api.common.TornadoFunctions.*;
+                import uk.ac.manchester.tornado.api.enums.DataTransferMode;
+                public class TaskGraph {
+                    public TaskGraph(String name) { }
+                    public TaskGraph transferToDevice(DataTransferMode mode, Object... objects) { return this; }
+                    public TaskGraph transferToHost(DataTransferMode mode, Object... objects) { return this; }
+                    public <T1> TaskGraph task(String id, Task1<T1> code, T1 arg1) { return this; }
+                    public <T1, T2> TaskGraph task(String id, Task2<T1, T2> code, T1 arg1, T2 arg2) { return this; }
+                    public <T1, T2, T3> TaskGraph task(String id, Task3<T1, T2, T3> code, T1 arg1, T2 arg2, T3 arg3) { return this; }
+                }""");
         myFixture.addClass("package uk.ac.manchester.tornado.api; public class TornadoExecutionPlan {}");
         myFixture.addClass("""
                 package uk.ac.manchester.tornado.api;
