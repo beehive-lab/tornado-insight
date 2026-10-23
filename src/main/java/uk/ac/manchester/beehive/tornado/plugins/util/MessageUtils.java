@@ -35,12 +35,12 @@ import com.intellij.ui.JBColor;
 import com.intellij.ui.awt.RelativePoint;
 import com.intellij.util.concurrency.annotations.RequiresEdt;
 import uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory;
-import org.apache.commons.lang3.time.DateFormatUtils;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Project service that owns the TornadoInsight console. The {@link ConsoleView}
@@ -49,6 +49,8 @@ import java.util.Date;
  */
 @Service(Service.Level.PROJECT)
 public final class MessageUtils implements Disposable {
+
+    private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
 
     private final Project project;
     private ConsoleView consoleView;
@@ -101,9 +103,9 @@ public final class MessageUtils implements Disposable {
 
     private void printTitle(String title, ConsoleViewContentType contentType) {
         if (title.equals("info") || title.equals("warning") || title.equals("error")) {
-            consoleView.print("> " + DateFormatUtils.format(new Date(), "yyyy/MM/dd' 'HH:mm:ss") + "\n", contentType);
+            consoleView.print("> " + TIMESTAMP.format(LocalDateTime.now()) + "\n", contentType);
         } else {
-            consoleView.print("> " + DateFormatUtils.format(new Date(), "yyyy/MM/dd' 'HH:mm:ss") + "\t" + title + "\n", contentType);
+            consoleView.print("> " + TIMESTAMP.format(LocalDateTime.now()) + "\t" + title + "\n", contentType);
         }
     }
 
