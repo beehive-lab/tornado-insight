@@ -55,9 +55,9 @@ public class TornadoSideWindow implements ToolWindowFactory {
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
         ToolWindowContent toolWindowContent = new ToolWindowContent(project, toolWindow);
         InspectorInfoPanel inspectorInfoPanel = new InspectorInfoPanel(toolWindow);
-        Content content = ContentFactory.getInstance().createContent(toolWindowContent, "TornadoVM Tasks", false);
+        Content content = ContentFactory.getInstance().createContent(toolWindowContent, MessageBundle.message("ui.toolwindow.tab.tasks"), false);
         toolWindow.getContentManager().addContent(content);
-        content = ContentFactory.getInstance().createContent(inspectorInfoPanel, "Inspector Guide", false);
+        content = ContentFactory.getInstance().createContent(inspectorInfoPanel, MessageBundle.message("ui.toolwindow.tab.guide"), false);
         toolWindow.getContentManager().addContent(content);
     }
 

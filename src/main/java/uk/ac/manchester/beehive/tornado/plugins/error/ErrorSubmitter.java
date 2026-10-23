@@ -35,6 +35,7 @@ import java.awt.*;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 public class ErrorSubmitter extends ErrorReportSubmitter {
 
@@ -43,7 +44,7 @@ public class ErrorSubmitter extends ErrorReportSubmitter {
     private final int stackTraceLen = 6500;
     @Override
     public @NlsActions.ActionText @NotNull String getReportActionText() {
-        return "Report to Vendor";
+        return MessageBundle.message("error.report.action");
     }
 
     @Override

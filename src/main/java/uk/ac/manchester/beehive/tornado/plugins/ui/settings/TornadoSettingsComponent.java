@@ -42,14 +42,15 @@ public class TornadoSettingsComponent {
 
     private final JPanel myMainPanel;
 
-    private final JCheckBox saveFileCheckbox = new JCheckBox("Save Internal Debug File (For Developer Use Only)");
+    private final JCheckBox saveFileCheckbox = new JCheckBox(MessageBundle.message("ui.settings.saveFile"));
 
     private final TextFieldWithBrowseButton debugFileSaveLocationField = new TextFieldWithBrowseButton();
 
     private final JBTextField myMaxArraySize = new JBTextField(4);
 
     public TornadoSettingsComponent() {
-        attachFolderChooser(debugFileSaveLocationField, "Save Location for Generated Code", "Choose the folder you want generated codes to be saved");
+        attachFolderChooser(debugFileSaveLocationField, MessageBundle.message("ui.settings.saveLocation.title"),
+                MessageBundle.message("ui.settings.saveLocation.description"));
 
         saveFileCheckbox.setSelected(false);
 
@@ -60,7 +61,7 @@ public class TornadoSettingsComponent {
             formBuilder.addComponent(warningPanel);
         }
 
-        JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
+        JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel(MessageBundle.message("ui.setting.label.size")), myMaxArraySize, 1)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.max.array.size", String.valueOf(TornadoSettingState.MAX_PARAMETER_SIZE - 1)) + "</div></html>"))
                 .getPanel();
 
@@ -68,7 +69,7 @@ public class TornadoSettingsComponent {
 
         JPanel debugPanel = FormBuilder.createFormBuilder().addComponent(saveFileCheckbox)
                 .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.comment.debug.file") + "</div></html>"))
-                .addLabeledComponent(new JBLabel("Save Location:"), debugFileSaveLocationField).getPanel();
+                .addLabeledComponent(new JBLabel(MessageBundle.message("ui.settings.label.saveLocation")), debugFileSaveLocationField).getPanel();
 
         debugPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.debugging")));
 
@@ -85,20 +86,20 @@ public class TornadoSettingsComponent {
         JPanel messagePanel = new JPanel();
         messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
 
-        JLabel titleLabel = new JLabel("<html><b>TORNADOVM_HOME environment variable is not set</b></html>");
+        JLabel titleLabel = new JLabel(MessageBundle.message("ui.settings.sdkMissing.title"));
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel instructionLabel = new JLabel("Please set the TORNADOVM_HOME environment variable and restart IntelliJ IDEA.");
+        JLabel instructionLabel = new JLabel(MessageBundle.message("ui.settings.sdkMissing.instruction"));
         instructionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JPanel linkPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         linkPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        linkPanel.add(new JLabel("Visit "));
-        LinkLabel<?> link = new LinkLabel<>("tornadovm.org/downloads", null, (aSource, aLinkData) ->
+        linkPanel.add(new JLabel(MessageBundle.message("ui.settings.sdkMissing.visit") + " "));
+        LinkLabel<?> link = new LinkLabel<>(MessageBundle.message("ui.settings.sdkMissing.link"), null, (aSource, aLinkData) ->
             BrowserUtil.browse("https://www.tornadovm.org/downloads")
         );
         linkPanel.add(link);
-        linkPanel.add(new JLabel(" for installation instructions."));
+        linkPanel.add(new JLabel(" " + MessageBundle.message("ui.settings.sdkMissing.instructions")));
 
         messagePanel.add(titleLabel);
         messagePanel.add(Box.createVerticalStrut(5));

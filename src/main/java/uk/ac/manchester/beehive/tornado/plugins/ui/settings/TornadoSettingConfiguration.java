@@ -24,6 +24,7 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.util.Objects;
+import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 /**
  * The instantiation of a generic Configurable implementation is documented in the interface file.
@@ -41,7 +42,7 @@ public class TornadoSettingConfiguration implements Configurable {
     @Nls(capitalization =  Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
-        return "TornadoInsight";
+        return MessageBundle.message("ui.settings.displayName");
     }
 
     @Override

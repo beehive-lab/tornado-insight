@@ -61,7 +61,7 @@ final class DynamicInspectionReporter {
     private void notifyError(String title, String content, boolean projectStructureAction) {
         Notification notification = TornadoNotifications.create(title, content, NotificationType.ERROR);
         if (projectStructureAction) {
-            notification.addAction(new NotificationAction("Open Project Structure") {
+            notification.addAction(new NotificationAction(MessageBundle.message("dynamic.action.projectStructure")) {
                 @Override
                 public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
                     ProjectSettingsService.getInstance(project).openProjectSettings();
@@ -78,40 +78,29 @@ final class DynamicInspectionReporter {
     }
 
     void noProjectJdk() {
-        notifyError("No Project JDK Configured",
-                "Please configure JDK 21 or newer in Project Structure (File > Project Structure > Project Settings > Project)",
-                true);
+        notifyError(MessageBundle.message("dynamic.error.noJdk.title"), MessageBundle.message("dynamic.error.noJdk.content"), true);
     }
 
     void projectJdkTooOld(@NotNull String current) {
-        notifyError("Incompatible JDK Version",
-                "TornadoVM requires JDK 21 or newer. Current project JDK: " + current
-                        + ". Please update your project JDK in Project Structure.",
-                true);
+        notifyError(MessageBundle.message("dynamic.error.jdkTooOld.title"), MessageBundle.message("dynamic.error.jdkTooOld.content", current), true);
     }
 
     void sdkDetected(@Nullable String homeValue) {
-        console().showInfoMsg("Info", "TORNADOVM_HOME detected: " + (homeValue != null ? homeValue : "NOT SET"));
+        console().showInfoMsg(MessageBundle.message("dynamic.info.infoTitle"),
+                MessageBundle.message("dynamic.info.sdkDetected", homeValue != null ? homeValue : MessageBundle.message("dynamic.info.sdkNotSet")));
     }
 
     void sdkNotConfigured() {
-        notifyError("TornadoVM SDK Not Configured",
-                "<html>TORNADOVM_HOME environment variable is not set.<br><br>" +
-                        "Please:<br>" +
-                        "1. Download and install TornadoVM from <a href='https://www.tornadovm.org/downloads'>tornadovm.org/downloads</a><br>" +
-                        "2. Set the TORNADOVM_HOME environment variable<br>" +
-                        "3. Restart your IntelliJ session</html>",
-                false);
+        notifyError(MessageBundle.message("notification.sdkNotConfigured.title"), MessageBundle.message("notification.sdkNotConfigured.content"), false);
     }
 
     void invalidParameterSize(int size, int maxSize) {
         String detail = size <= 0
-                ? "Current value is " + size + ", which would generate empty inputs and produce a misleading green run."
-                : "Current value is " + size + ", which exceeds the supported maximum (" + maxSize + ").";
+                ? MessageBundle.message("dynamic.error.parameterSize.empty", String.valueOf(size))
+                : MessageBundle.message("dynamic.error.parameterSize.tooLarge", String.valueOf(size), String.valueOf(maxSize));
         Notification notification = TornadoNotifications.create(
-                "Invalid Max Array Size",
-                "Set 'Max array size' in TornadoInsight settings to a value between 1 and " + maxSize + " (recommended: 128). "
-                        + detail,
+                MessageBundle.message("dynamic.error.parameterSize.title"),
+                MessageBundle.message("dynamic.error.parameterSize.content", String.valueOf(maxSize), detail),
                 NotificationType.ERROR
         );
         notification.addAction(new ChangeParameterSize());
@@ -119,35 +108,26 @@ final class DynamicInspectionReporter {
     }
 
     void jdkRequirement(@NotNull TornadoJdkContract contract, @NotNull String projectJdk) {
-        console().showInfoMsg("Info",
-                "TornadoVM requires " + contract.requirement() + " (from " + contract.source() + "); project JDK is "
-                        + projectJdk + ".");
+        console().showInfoMsg(MessageBundle.message("dynamic.info.infoTitle"),
+                MessageBundle.message("dynamic.info.jdkRequirement", contract.requirement(), contract.source(), projectJdk));
     }
 
     void incompatibleJdk(int projectJdk, @Nullable String sdkHome, @NotNull TornadoJdkContract contract) {
-        notifyError("Incompatible JDK for default TornadoVM",
-                "Current project JDK " + projectJdk +
-                        " is not compatible with the default TornadoVM at " + sdkHome +
-                        ", which requires " + contract.requirement() + "." +
-                        " Either change the project JDK in Project Structure, or point TORNADOVM_HOME at a" +
-                        " TornadoVM build that supports JDK " + projectJdk + ".",
+        notifyError(MessageBundle.message("dynamic.error.incompatibleJdk.title"),
+                MessageBundle.message("dynamic.error.incompatibleJdk.content",
+                        String.valueOf(projectJdk), String.valueOf(sdkHome), contract.requirement()),
                 true);
     }
 
     void graalVmJdk(@Nullable String jdkHome, @NotNull TornadoJdkContract contract) {
-        notifyError("Incompatible JDK distribution for default TornadoVM",
-                "The project JDK at " + jdkHome + " is a GraalVM build. TornadoVM 6.0.0 and" +
-                        " newer bundle their own Graal compiler and JVMCI, which collide with the modules a" +
-                        " GraalVM JDK already ships and abort the JVM (fatal error: HotSpotNmethod.profileDeopt)." +
-                        " Set the project JDK to a standard OpenJDK build (e.g. Eclipse Temurin or Oracle OpenJDK)," +
-                        " " + contract.requirement() + ", in Project Structure.",
+        notifyError(MessageBundle.message("dynamic.error.graalVm.title"),
+                MessageBundle.message("dynamic.error.graalVm.content", String.valueOf(jdkHome), contract.requirement()),
                 true);
     }
 
     void tornadoVersionFailure(@NotNull String detail) {
-        notifyError("TornadoVM installation check failed",
-                "<html>Could not determine the JDK that TornadoVM was built against.<br><br>" +
-                        detail.replace("\n", "<br>") + "</html>",
+        notifyError(MessageBundle.message("dynamic.error.versionCheck.title"),
+                MessageBundle.message("dynamic.error.versionCheck.content", detail.replace("\n", "<br>")),
                 false);
     }
 
@@ -156,29 +136,27 @@ final class DynamicInspectionReporter {
     // A task in the panel whose method (or file) was deleted or changed beyond
     // recognition since the last refresh
     void staleTask(@NotNull String task) {
-        console().showWarnMsg(title(),
-                "Task " + task + " no longer exists in the source. Refresh the TornadoVM panel and try again.");
+        console().showWarnMsg(title(), MessageBundle.message("dynamic.warn.staleTask", task));
     }
 
     void unsupportedParameter(@NotNull String task, @NotNull String message) {
-        console().showWarnMsg(title(), task + ": cannot generate test data, " + message
-                + ". This kernel cannot be dynamically inspected yet.");
+        console().showWarnMsg(title(), MessageBundle.message("dynamic.warn.unsupportedParameter", task, message));
     }
 
     void cancelled() {
-        console().showWarnMsg(title(), "Dynamic inspection was cancelled.");
+        console().showWarnMsg(title(), MessageBundle.message("dynamic.warn.cancelled"));
     }
 
     void failed(@NotNull String message) {
-        console().showErrorMsg(title(), "Dynamic inspection failed: " + message);
+        console().showErrorMsg(title(), MessageBundle.message("dynamic.error.failed", message));
     }
 
     void failedUnexpectedly(@NotNull Throwable error) {
-        console().showErrorMsg(title(), "Dynamic inspection failed unexpectedly: " + error);
+        console().showErrorMsg(title(), MessageBundle.message("dynamic.error.failedUnexpectedly", String.valueOf(error)));
     }
 
     void debugCopyFailed(@NotNull String target, @NotNull String message) {
-        console().showWarnMsg(title(), "Could not save the generated test code to " + target + ": " + message);
+        console().showWarnMsg(title(), MessageBundle.message("dynamic.warn.debugCopyFailed", target, message));
     }
 
     void compiling() {
@@ -186,13 +164,7 @@ final class DynamicInspectionReporter {
     }
 
     void missingJars(@NotNull String missingJars) {
-        String errorMsg = "Could not find required TornadoVM JARs in $TORNADOVM_HOME/share/java/tornado/\n" +
-                "Missing: " + missingJars + "\n\n" +
-                "Please check that:\n" +
-                "1. TORNADOVM_HOME environment variable points to the correct TornadoVM SDK directory\n" +
-                "2. The directory contains share/java/tornado/ with the required JAR files\n\n" +
-                "For installation instructions, visit: https://www.tornadovm.org/downloads";
-        console().showErrorMsg("TornadoVM JARs Not Found", errorMsg);
+        console().showErrorMsg(MessageBundle.message("dynamic.error.missingJars.title"), MessageBundle.message("dynamic.error.missingJars", missingJars));
     }
 
     void compileFailed(@NotNull JavacRunner.Result result) {
@@ -200,12 +172,11 @@ final class DynamicInspectionReporter {
             case LAUNCH_FAILED -> console().showErrorMsg(title(),
                     MessageBundle.message("dynamic.error.compile") + "\n" + result.detail());
             case TIMED_OUT -> console().showErrorMsg(title(),
-                    "Compiling the generated test code did not finish within "
-                            + Processes.describeTimeout(JavacRunner.TIMEOUT_MS) + " and was stopped.");
+                    MessageBundle.message("dynamic.error.compileTimeout", Processes.describeTimeout(JavacRunner.TIMEOUT_MS)));
             // A concise, human-readable summary instead of the raw javac output: a type
             // mismatch in the generated harness produces hundreds of lines of overload
             // candidates and type-variable declarations that bury the actual cause.
-            case ERRORS -> console().showWarnMsg("Generated code did not compile",
+            case ERRORS -> console().showWarnMsg(MessageBundle.message("dynamic.warn.compileErrors.title"),
                     CompilerOutputSummarizer.summarize(result.detail()));
             case OK -> {
             }
@@ -225,9 +196,9 @@ final class DynamicInspectionReporter {
     }
 
     void tornadoNotDetected() {
-        Notification notification = TornadoNotifications.create("TornadoVM not detected",
-                "TornadoVM is not properly installed or configured", NotificationType.ERROR);
-        notification.addAction(new NotificationAction("How to install and configure TornadoVM") {
+        Notification notification = TornadoNotifications.create(MessageBundle.message("dynamic.error.tornadoNotDetected.title"),
+                MessageBundle.message("dynamic.error.tornadoNotDetected.content"), NotificationType.ERROR);
+        notification.addAction(new NotificationAction(MessageBundle.message("dynamic.action.installTornado")) {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
                 BrowserUtil.browse("https://tornadovm.readthedocs.io/en/latest/installation.html#");
@@ -237,18 +208,16 @@ final class DynamicInspectionReporter {
     }
 
     void tornadoLaunchFailed(@NotNull String message) {
-        console().showErrorMsg(title(),
-                "TornadoVM is not properly installed or configured.\n\n" +
-                        "Error: " + message);
+        console().showErrorMsg(title(), MessageBundle.message("dynamic.error.tornadoLaunch", message));
     }
 
     void runLaunchFailed(@NotNull String task, @NotNull String message) {
-        console().showErrorMsg(title(), task + ": could not run TornadoVM: " + message);
+        console().showErrorMsg(title(), MessageBundle.message("dynamic.error.runLaunch", task, message));
     }
 
     void runTimedOut(@NotNull String task) {
-        console().showErrorMsg(title(), task + ": TornadoVM did not finish within "
-                + Processes.describeTimeout(TornadoRunner.RUN_TIMEOUT_MS) + "; the run was stopped.");
+        console().showErrorMsg(title(),
+                MessageBundle.message("dynamic.error.runTimeout", task, Processes.describeTimeout(TornadoRunner.RUN_TIMEOUT_MS)));
     }
 
     /**
@@ -267,7 +236,7 @@ final class DynamicInspectionReporter {
             // The kernel was generated correctly; it simply uses a
             // capability this device lacks (e.g. FP64). Report it as a
             // warning rather than a scary exception/stack trace.
-            console.showWarnMsg("Kernel not supported on this device", task + ": " + deviceLimitation);
+            console.showWarnMsg(MessageBundle.message("dynamic.warn.deviceLimitation.title"), task + ": " + deviceLimitation);
         } else {
             // Genuine error (including OpenCL compiler exceptions): keep
             // the raw diagnostic so it is not mistaken for a clean run.

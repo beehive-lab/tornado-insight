@@ -216,7 +216,7 @@ Enjoy and share your feedback!
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoSideWindow" id="TornadoVM" anchor="right" icon="TornadoIcons.TornadoIcon" />
         <applicationConfigurable instance="uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration"
                                  id="uk.ac.manchester.beehive.tornado.settings"
-                                 displayName="TornadoInsight"/>
+                                 key="ui.settings.displayName"/>
         <applicationService serviceImplementation="uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState"/>
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory" id="TornadoInsight Console" anchor="bottom"/>
         <errorHandler implementation="uk.ac.manchester.beehive.tornado.plugins.error.ErrorSubmitter"/>
@@ -232,15 +232,15 @@ Enjoy and share your feedback!
     </extensions>
     <actions>
         <group id="tornado.bar">
-            <action id="tornado.refresh" class="uk.ac.manchester.beehive.tornado.plugins.service.RefreshAction" text="Refresh" description="Refresh"
+            <action id="tornado.refresh" class="uk.ac.manchester.beehive.tornado.plugins.service.RefreshAction"
                     icon="AllIcons.Actions.Refresh"/>
             <action id="tornado.runInspection" class="uk.ac.manchester.beehive.tornado.plugins.service.RunInspectionAction"
-                    text="Run Dynamic Inspection" description="Run dynamic inspection" icon="AllIcons.Actions.Execute"/>
+                    icon="AllIcons.Actions.Execute"/>
             <separator/>
             <action id="tornado.settings" class="uk.ac.manchester.beehive.tornado.plugins.service.SettingsAction"
-                    text="Settings" description="Settings" icon="AllIcons.General.GearPlain"/>
+                    icon="AllIcons.General.GearPlain"/>
             <action id="tornado.doc" class="uk.ac.manchester.beehive.tornado.plugins.service.OpenTornadoDocsAction"
-                    text="TornadoVM Documentation" description="TornadoVM documentation" icon="AllIcons.Toolwindows.Documentation"/>
+                    icon="AllIcons.Toolwindows.Documentation"/>
         </group>
     </actions>
     <projectListeners>

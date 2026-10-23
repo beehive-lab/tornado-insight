@@ -136,7 +136,7 @@ public final class DynamicInspectionPipeline {
         TornadoSettingState settings = TornadoSettingState.getInstance();
         DynamicInspectionPipeline pipeline = new DynamicInspectionPipeline(project, reporter, sdk, jdk, tasks,
                 settings.parameterSize, settings.saveFileEnabled, settings.debugFileSaveLocation);
-        new Task.Backgroundable(project, "Running TornadoVM dynamic inspection", true) {
+        new Task.Backgroundable(project, MessageBundle.message("dynamic.progress.title"), true) {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
                 pipeline.run(indicator);
@@ -193,13 +193,13 @@ public final class DynamicInspectionPipeline {
         Path workDir = null;
         try {
             indicator.setIndeterminate(true);
-            indicator.setText("Checking the TornadoVM installation");
+            indicator.setText(MessageBundle.message("dynamic.progress.checkInstallation"));
             if (!validateJdkCompatibility(indicator)) {
                 return;
             }
 
             indicator.checkCanceled();
-            indicator.setText("Generating test code");
+            indicator.setText(MessageBundle.message("dynamic.progress.generating"));
             Batch batch = ReadAction.nonBlocking(() -> CodeGenerator.collect(tasks))
                     .inSmartMode(project)
                     .expireWhen(project::isDisposed)

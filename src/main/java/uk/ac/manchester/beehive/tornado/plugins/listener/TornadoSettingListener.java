@@ -32,6 +32,7 @@ import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoNotifications;
 
 import java.util.concurrent.CompletableFuture;
+import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 /**
  * Initializes TornadoVM settings on project open.
@@ -44,12 +45,8 @@ public class TornadoSettingListener implements ProjectActivity {
         // Show warning notification when TORNADOVM_HOME is not set
         if (!TornadoSdk.getInstance().isConfigured()) {
             Notification notification = TornadoNotifications.create(
-                "TornadoVM SDK Not Configured",
-                "<html>TORNADOVM_HOME environment variable is not set.<br><br>" +
-                    "Please:<br>" +
-                    "1. Download and install TornadoVM from <a href='https://www.tornadovm.org/downloads'>tornadovm.org/downloads</a><br>" +
-                    "2. Set the TORNADOVM_HOME environment variable<br>" +
-                    "3. Restart your IntelliJ session</html>",
+                MessageBundle.message("notification.sdkNotConfigured.title"),
+                MessageBundle.message("notification.sdkNotConfigured.content"),
                 NotificationType.WARNING
             );
 
@@ -65,7 +62,7 @@ public class TornadoSettingListener implements ProjectActivity {
      */
     static class OpenTornadoSettingAction extends NotificationAction {
         public OpenTornadoSettingAction() {
-            super("Configure TornadoVM");
+            super(MessageBundle.message("notification.action.configure"));
         }
 
         @Override
@@ -80,7 +77,7 @@ public class TornadoSettingListener implements ProjectActivity {
      */
     static class OpenTornadoDownloadsAction extends NotificationAction {
         public OpenTornadoDownloadsAction() {
-            super("View Installation Instructions");
+            super(MessageBundle.message("notification.action.installationInstructions"));
         }
 
         @Override
