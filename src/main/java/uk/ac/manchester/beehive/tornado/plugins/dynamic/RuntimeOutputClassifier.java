@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

@@ -15,10 +15,10 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic;
 
 import org.junit.Test;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.RuntimeOutputClassifier.Verdict;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.RuntimeOutputClassifier.Verdict;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

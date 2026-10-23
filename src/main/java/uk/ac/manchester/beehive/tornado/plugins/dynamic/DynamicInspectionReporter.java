@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic;
 
 import com.intellij.ide.BrowserUtil;
 import com.intellij.notification.Notification;
@@ -29,9 +29,9 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ui.configuration.ProjectSettingsService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.run.JavacRunner;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.run.Processes;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.run.TornadoRunner;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.JavacRunner;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.Processes;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.TornadoRunner;
 import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoJdkContract;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;

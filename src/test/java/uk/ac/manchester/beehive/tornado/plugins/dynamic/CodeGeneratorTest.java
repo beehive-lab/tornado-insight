@@ -15,13 +15,13 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic;
 
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.psi.PsiFile;
 import uk.ac.manchester.beehive.tornado.plugins.TornadoTestCase;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.CodeGenerator.Batch;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.CodeGenerator.Harness;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.CodeGenerator.Batch;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.CodeGenerator.Harness;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
 

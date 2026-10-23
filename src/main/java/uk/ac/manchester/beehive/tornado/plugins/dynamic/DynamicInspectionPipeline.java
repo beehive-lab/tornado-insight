@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic;
 
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.process.ProcessOutput;
@@ -32,12 +32,12 @@ import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.util.io.FileUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.CodeGenerator.Batch;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.CodeGenerator.Harness;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.UnsupportedParameterTypeException;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.run.JarPacker;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.run.JavacRunner;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.run.TornadoRunner;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.CodeGenerator.Batch;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.CodeGenerator.Harness;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.UnsupportedParameterTypeException;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.JarPacker;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.JavacRunner;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.TornadoRunner;
 import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoJdkContract;
 import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;

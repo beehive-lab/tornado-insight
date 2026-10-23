@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic;
 
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;

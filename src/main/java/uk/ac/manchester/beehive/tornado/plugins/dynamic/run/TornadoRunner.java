@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.run;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic.run;
 
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;

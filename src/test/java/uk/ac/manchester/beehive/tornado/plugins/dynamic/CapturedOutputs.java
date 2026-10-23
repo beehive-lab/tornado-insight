@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,7 +24,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Process outputs captured from real javac and tornado runs, stored under
- * src/test/resources/dynamicInspection.
+ * src/test/resources/dynamic.
  */
 final class CapturedOutputs {
 
@@ -32,7 +32,7 @@ final class CapturedOutputs {
     }
 
     static String load(String name) {
-        try (InputStream in = CapturedOutputs.class.getResourceAsStream("/dynamicInspection/" + name)) {
+        try (InputStream in = CapturedOutputs.class.getResourceAsStream("/dynamic/" + name)) {
             if (in == null) {
                 throw new IllegalArgumentException("missing test resource " + name);
             }

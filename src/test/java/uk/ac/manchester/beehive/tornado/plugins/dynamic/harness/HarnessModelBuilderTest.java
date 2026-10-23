@@ -15,13 +15,13 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic.harness;
 
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import uk.ac.manchester.beehive.tornado.plugins.TornadoTestCase;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Field;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Parameter;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Field;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Parameter;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 
 import java.util.List;

@@ -15,12 +15,12 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic.harness;
 
 import org.junit.Test;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Field;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Parameter;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.TaskGraphDeclaration;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Field;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Parameter;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.TaskGraphDeclaration;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 
 import java.util.List;

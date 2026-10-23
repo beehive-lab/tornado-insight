@@ -21,7 +21,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.DynamicInspectionPipeline;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.DynamicInspectionPipeline;
 import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
 import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.EmptySelectionWarningDialog;
 import uk.ac.manchester.beehive.tornado.plugins.util.DataKeys;

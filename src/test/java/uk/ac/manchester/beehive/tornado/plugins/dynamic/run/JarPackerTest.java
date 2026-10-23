@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.run;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic.run;
 
 import org.junit.Rule;
 import org.junit.Test;

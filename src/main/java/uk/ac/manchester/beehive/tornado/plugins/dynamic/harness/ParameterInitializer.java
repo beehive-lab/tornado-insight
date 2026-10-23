@@ -15,10 +15,10 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic.harness;
 
 import org.jetbrains.annotations.NotNull;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Parameter;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Parameter;
 
 import java.util.Map;
 import java.util.Random;

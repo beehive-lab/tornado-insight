@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic.harness;
 
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -45,10 +45,10 @@ import com.intellij.util.concurrency.annotations.RequiresReadLock;
 import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.LocalMemoryParameterAnalyzer;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Field;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Parameter;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.TaskGraphDeclaration;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.LocalMemoryParameterAnalyzer;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Field;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Parameter;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.TaskGraphDeclaration;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.KernelCallGraphAnalyzer;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;

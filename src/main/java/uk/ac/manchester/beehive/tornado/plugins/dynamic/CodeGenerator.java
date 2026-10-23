@@ -15,15 +15,15 @@
  * limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
+package uk.ac.manchester.beehive.tornado.plugins.dynamic;
 
 import com.intellij.psi.PsiMethod;
 import com.intellij.util.concurrency.annotations.RequiresReadLock;
 import org.jetbrains.annotations.NotNull;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessGenerator;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModelBuilder;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.UnsupportedParameterTypeException;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessGenerator;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModelBuilder;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.UnsupportedParameterTypeException;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
 
