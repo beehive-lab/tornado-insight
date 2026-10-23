@@ -51,7 +51,7 @@ import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Par
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.TaskGraphDeclaration;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.KernelCallGraphAnalyzer;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
-import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoTWTask;
 
 import java.util.ArrayList;
 import java.util.Arrays;

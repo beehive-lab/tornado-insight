@@ -15,21 +15,19 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.util;
+package uk.ac.manchester.beehive.tornado.plugins.kernel;
 
 import com.intellij.psi.*;
-import com.intellij.psi.util.PsiTreeUtil;
-import uk.ac.manchester.beehive.tornado.plugins.inspection.KernelValidator;
-import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 
 import java.util.*;
 
 /**
- * A utility class for managing and working with ToolWindows about the TornadoVM Tasks.
+ * Helpers to find the TornadoVM kernels of a file, format them for display and
+ * collect the file's imports for the generated test code.
  * <p>
- * This class provides functionality to detect, format, and validate TornadoVM Tasks/methods
- * within the tool window. It holds no state: every helper takes the file or methods it works
- * on, and the tasks of the current file are kept per project by {@link TornadoTaskService}.
+ * It holds no state: every helper takes the file or methods it works on, and the
+ * tasks of the current file are kept per project by
+ * {@link uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoTaskService}.
  * </p>
  */
 public class TornadoTWTask {
@@ -87,19 +85,6 @@ public class TornadoTWTask {
             }
         }
         return importCodeBlock.toString();
-    }
-
-    // Validates a given PsiMethod to ensure it's a valid TornadoVM task
-    static boolean validateTask(PsiMethod method) {
-        if (method == null) return false;
-        PsiElement[] errorElements = PsiTreeUtil.collectElements(method,
-                element -> element instanceof PsiErrorElement);
-        if (errorElements.length != 0) return false;
-        // Kernel entry points registered via .task() must return void
-        PsiType returnType = method.getReturnType();
-        if (returnType != null && !PsiTypes.voidType().equals(returnType)) return false;
-        // Computed from the inspections' own checks, not from whether they have run
-        return !KernelValidator.hasBlockingProblems(method);
     }
 
     private static boolean statementImportsJunit(String importStatement) {

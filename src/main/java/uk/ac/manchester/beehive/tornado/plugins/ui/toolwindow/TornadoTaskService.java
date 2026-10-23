@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.util;
+package uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow;
 
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
@@ -25,15 +25,22 @@ import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiErrorElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiType;
+import com.intellij.psi.PsiTypes;
 import com.intellij.psi.SmartPointerManager;
 import com.intellij.psi.SmartPsiElementPointer;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import com.intellij.util.concurrency.annotations.RequiresReadLock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import uk.ac.manchester.beehive.tornado.plugins.inspection.KernelValidator;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoTWTask;
 
 import javax.swing.*;
 import java.util.ArrayList;
@@ -159,18 +166,31 @@ public final class TornadoTaskService implements Disposable {
 
     /**
      * Computes the snapshot of {@code file}: the kernels that are valid TornadoVM
-     * tasks, with their display names, and the file's import code.
+     * tasks, with their display names.
      */
     @RequiresReadLock
     public static @NotNull TaskSnapshot computeSnapshot(@NotNull PsiFile file) {
         SmartPointerManager pointers = SmartPointerManager.getInstance(file.getProject());
         List<TaskEntry> entries = new ArrayList<>();
         for (PsiMethod task : TornadoTWTask.findSuitableMethods(file)) {
-            if (TornadoTWTask.validateTask(task)) {
+            if (validateTask(task)) {
                 entries.add(new TaskEntry(TornadoTWTask.psiMethodFormat(task), pointers.createSmartPsiElementPointer(task)));
             }
         }
         return new TaskSnapshot(pointers.createSmartPsiElementPointer(file), entries);
+    }
+
+    // Validates a given PsiMethod to ensure it's a valid TornadoVM task
+    private static boolean validateTask(PsiMethod method) {
+        if (method == null) return false;
+        PsiElement[] errorElements = PsiTreeUtil.collectElements(method,
+                element -> element instanceof PsiErrorElement);
+        if (errorElements.length != 0) return false;
+        // Kernel entry points registered via .task() must return void
+        PsiType returnType = method.getReturnType();
+        if (returnType != null && !PsiTypes.voidType().equals(returnType)) return false;
+        // Computed from the inspections' own checks, not from whether they have run
+        return !KernelValidator.hasBlockingProblems(method);
     }
 
     @Override

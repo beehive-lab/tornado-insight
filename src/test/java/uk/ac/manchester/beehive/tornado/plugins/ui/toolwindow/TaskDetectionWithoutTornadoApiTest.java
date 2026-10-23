@@ -15,13 +15,14 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.util;
+package uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow;
 
 import com.intellij.codeInsight.daemon.impl.HighlightInfo;
 import com.intellij.psi.PsiFile;
 import uk.ac.manchester.beehive.tornado.plugins.TornadoTestCase;
 import uk.ac.manchester.beehive.tornado.plugins.inspection.DataTypeInspection;
-import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
+import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoTaskService.TaskEntry;
+import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 import java.util.List;
 

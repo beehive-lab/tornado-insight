@@ -24,8 +24,8 @@ import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessGenerator
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModelBuilder;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.UnsupportedParameterTypeException;
-import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
-import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoTWTask;
+import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoTaskService.TaskEntry;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
