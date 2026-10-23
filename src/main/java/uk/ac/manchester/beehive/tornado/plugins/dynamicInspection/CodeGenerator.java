@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2025-2026, APT Group, Department of Computer Science,
  * The University of Manchester.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,14 +17,21 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
 
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import org.jetbrains.annotations.NotNull;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
+import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
+import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskSnapshot;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -53,31 +60,59 @@ public class CodeGenerator {
         return sb.toString();
     }
 
-    public static void fileCreationHandler(Project project, List<String> data) throws IOException {
-        HashMap<String, PsiMethod> methodFile = new HashMap<>();
-        ArrayList<PsiMethod> methods = TornadoTWTask.getMethods(data);
-        ArrayList<PsiMethod> others = TornadoTWTask.getCalledMethods(methods);
-        Map<String, Object> fields = TornadoTWTask.getFields();
-        String importCodeBlock = TornadoTWTask.getImportCodeBlock();
+    public static void fileCreationHandler(Project project, List<TaskEntry> data) throws IOException {
+        TaskSnapshot snapshot = TornadoTaskService.getInstance(project).getSnapshot();
         boolean saveFileEnabled = TornadoSettingState.getInstance().saveFileEnabled;
-
-        PsiFile psiFile = TornadoTWTask.getPsiFile();
-        List<TornadoTWTask.TaskGraphTransfer> transfers = TornadoTWTask.extractTaskGraphTransfers(psiFile);
-
         File dir = FileUtilRt.createTempDirectory("files", null);
-        for (PsiMethod method : methods) {
-            String fileName = method.getName() + randomAlphanumeric(5);
-            File file = createFile(method, others, fields, importCodeBlock, transfers, fileName, dir);
-            if (saveFileEnabled) {
-                saveFileToDisk(file, TornadoSettingState.getInstance().debugFileSaveLocation);
+
+        // Resolve the task pointers and read the PSI under one read action. (ReadAction.compute is
+        // deprecated on current platforms, and its replacement is missing on since-build 224.)
+        HashMap<String, PsiMethod> methodFile = ApplicationManager.getApplication().runReadAction((Computable<HashMap<String, PsiMethod>>) () -> {
+            HashMap<String, PsiMethod> generated = new HashMap<>();
+            PsiFile psiFile = snapshot == null ? null : snapshot.file().getElement();
+            if (psiFile == null) {
+                reportStaleTask(project, "the selected tasks");
+                return generated;
             }
-            methodFile.put(file.getAbsolutePath(), method);
+            ArrayList<PsiMethod> methods = new ArrayList<>();
+            for (TaskEntry entry : data) {
+                PsiMethod method = entry.resolve();
+                if (method == null || !method.isValid()) {
+                    reportStaleTask(project, "'" + entry.displayName() + "'");
+                } else {
+                    methods.add(method);
+                }
+            }
+            ArrayList<PsiMethod> others = TornadoTWTask.getCalledMethods(methods);
+            Map<String, Object> fields = TornadoTWTask.getFields(psiFile);
+            String importCodeBlock = snapshot.importCode();
+            List<TornadoTWTask.TaskGraphTransfer> transfers = TornadoTWTask.extractTaskGraphTransfers(psiFile);
+
+            for (PsiMethod method : methods) {
+                String fileName = method.getName() + randomAlphanumeric(5);
+                File file = createFile(psiFile, method, others, fields, importCodeBlock, transfers, fileName, dir);
+                if (saveFileEnabled) {
+                    saveFileToDisk(file, TornadoSettingState.getInstance().debugFileSaveLocation);
+                }
+                generated.put(file.getAbsolutePath(), method);
+            }
+            return generated;
+        });
+        if (methodFile.isEmpty()) {
+            return;
         }
         ExecutionEngine executionEngine = new ExecutionEngine(project, dir.getAbsolutePath(), methodFile);
         executionEngine.run();
     }
 
-    private static File createFile(PsiMethod method, ArrayList<PsiMethod> others, Map<String, Object> fields, String importCodeBlock, List<TornadoTWTask.TaskGraphTransfer> transfers, String filename,
+    // A task in the panel whose method (or file) was deleted or changed beyond
+    // recognition since the last refresh
+    private static void reportStaleTask(Project project, String task) {
+        MessageUtils.getInstance(project).showWarnMsg(MessageBundle.message("dynamic.info.title"),
+                "Task " + task + " no longer exists in the source. Refresh the TornadoVM panel and try again.");
+    }
+
+    private static File createFile(PsiFile psiFile, PsiMethod method, ArrayList<PsiMethod> others, Map<String, Object> fields, String importCodeBlock, List<TornadoTWTask.TaskGraphTransfer> transfers, String filename,
             File dir) {
         File javaFile;
         try {
@@ -103,8 +138,8 @@ public class CodeGenerator {
         // name; prefer the one whose .task(...) argument count matches the
         // kernel's parameter count so we don't pick a stale/unrelated TaskGraph.
         int kernelParamCount = method.getParameterList().getParametersCount();
-        Optional<String> maybeOriginalTaskGraph = TornadoTWTask.extractOriginalTaskGraphDeclaration(TornadoTWTask.getPsiFile(), method.getName(), methodWithClass, kernelParamCount);
-        Optional<List<TornadoTWTask.TaskParametersInfo>> taskParametersInfos = TornadoTWTask.extractTasksParameters(TornadoTWTask.getPsiFile(), method.getName(), kernelParamCount);
+        Optional<String> maybeOriginalTaskGraph = TornadoTWTask.extractOriginalTaskGraphDeclaration(psiFile, method.getName(), methodWithClass, kernelParamCount);
+        Optional<List<TornadoTWTask.TaskParametersInfo>> taskParametersInfos = TornadoTWTask.extractTasksParameters(psiFile, method.getName(), kernelParamCount);
         String taskParameters = getTaskParameters(method, taskParametersInfos, fields);
         String mainCode = getTaskGraphCode(method, maybeOriginalTaskGraph, taskParameters, methodWithClass);
 

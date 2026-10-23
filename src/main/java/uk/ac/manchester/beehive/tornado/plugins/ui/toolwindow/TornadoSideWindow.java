@@ -29,14 +29,17 @@ import com.intellij.openapi.ui.SimpleToolWindowPanel;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
+import com.intellij.psi.util.PsiModificationTracker;
 import com.intellij.ui.components.JBList;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
+import com.intellij.util.messages.MessageBusConnection;
 import uk.ac.manchester.beehive.tornado.plugins.message.TornadoTaskRefreshListener;
 import uk.ac.manchester.beehive.tornado.plugins.util.DataKeys;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
-import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -60,13 +63,13 @@ public class TornadoSideWindow implements ToolWindowFactory {
 
     private static class ToolWindowContent extends SimpleToolWindowPanel implements DataProvider {
 
-        JBList<String> TornadoList = new JBList<>();
+        JBList<TaskEntry> TornadoList = new JBList<>();
 
         public ToolWindowContent(Project project, ToolWindow toolWindow) {
             super(Boolean.TRUE, Boolean.TRUE);
             SimpleToolWindowPanel simpleToolWindowPanel = new SimpleToolWindowPanel(true, true);
 
-            DefaultListModel<String> model = new DefaultListModel<>();
+            DefaultListModel<TaskEntry> model = new DefaultListModel<>();
             TornadoList.setModel(model);
             TornadoList.getEmptyText().setText(MessageBundle.message("ui.toolwindow.defaultText"));
             simpleToolWindowPanel.add(TornadoList);
@@ -110,18 +113,19 @@ public class TornadoSideWindow implements ToolWindowFactory {
             return null;
         }
 
-        public DefaultListModel<String> getModel() {
-            return (DefaultListModel<String>) TornadoList.getModel();
+        public DefaultListModel<TaskEntry> getModel() {
+            return (DefaultListModel<TaskEntry>) TornadoList.getModel();
         }
 
         public void init(Project project, ToolWindow toolWindow) {
-            // Tie the subscription to the tool window so it is dropped with its content
-            project.getMessageBus().connect(toolWindow.getDisposable()).subscribe(TornadoTaskRefreshListener.REFRESH_TOPIC, new TornadoTaskRefreshListener() {
+            // Tie the subscriptions to the tool window so they are dropped with its content
+            MessageBusConnection connection = project.getMessageBus().connect(toolWindow.getDisposable());
+            TornadoTaskRefreshListener listener = new TornadoTaskRefreshListener() {
                 @Override
                 public void refresh() {
                     VirtualFile[] selectedFiles = FileEditorManager.getInstance(project).getSelectedFiles();
                     if (selectedFiles.length > 0) {
-                        TornadoTWTask.refresh(project, selectedFiles[0], getModel());
+                        TornadoTaskService.getInstance(project).refresh(selectedFiles[0], getModel());
                     } else {
                         LOG.debug("No file selected in editor for Tornado refresh");
                     }
@@ -129,7 +133,15 @@ public class TornadoSideWindow implements ToolWindowFactory {
 
                 @Override
                 public void refresh(Project project, VirtualFile newFile) {
-                    TornadoTWTask.refresh(project, newFile, getModel());
+                    TornadoTaskService.getInstance(project).refresh(newFile, getModel());
+                }
+            };
+            connection.subscribe(TornadoTaskRefreshListener.REFRESH_TOPIC, listener);
+            // Re-validate the listed kernels after code changes, so a kernel that gains or
+            // loses a blocking problem is hidden or shown again (refreshes are coalesced)
+            connection.subscribe(PsiModificationTracker.TOPIC, () -> {
+                if (toolWindow.isVisible()) {
+                    listener.refresh();
                 }
             });
         }

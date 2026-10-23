@@ -17,114 +17,74 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.inspector;
 
-import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
 import com.intellij.codeInspection.ProblemHighlightType;
-import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.*;
-import com.intellij.psi.util.PsiTreeUtil;
-import uk.ac.manchester.beehive.tornado.plugins.entity.ProblemMethods;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * This inspection tool identifies and highlights unsupported data types
- * within methods that are annotated with either "@Parallel" or "@Reduce".
+ * within TornadoVM kernels ({@code @Parallel}/{@code @Reduce}, KernelContext and
+ * TileContext kernels, see {@link TornadoKernels}).
  *
- * <p>Methods with either of these annotations should use data types that are
+ * <p>Kernels should use data types that are
  * supported by the TornadoVM. Any usage of unsupported data types will be
  * highlighted as an error in the IDE.</p>
  *
  * <p>The inspection follows method calls across class boundaries, analyzing all
  * helper methods that TornadoVM would inline at runtime.</p>
  */
-public class DataTypeInspection extends AbstractBaseJavaLocalInspectionTool {
+public class DataTypeInspection extends TornadoKernelInspection {
+
+    @Override
+    protected void checkKernel(@NotNull PsiMethod kernelMethod, @NotNull KernelCallGraphAnalyzer.AnalysisScope scope,
+                               @NotNull KernelProblemSink sink) {
+        for (PsiMethod method : scope.getAnalyzableMethods()) {
+            String context = KernelCallGraphAnalyzer.helperContext(method, kernelMethod);
+            method.accept(new JavaRecursiveElementVisitor() {
+                @Override
+                public void visitLocalVariable(PsiLocalVariable variable) {
+                    checkVariable(variable.getType(), context, scope.anchorFor(variable, method, sink.file()), sink);
+                }
+
+                @Override
+                public void visitField(PsiField field) {
+                    checkVariable(field.getType(), context, scope.anchorFor(field, method, sink.file()), sink);
+                }
+
+                @Override
+                public void visitParameter(PsiParameter parameter) {
+                    checkVariable(parameter.getType(), context, scope.anchorFor(parameter, method, sink.file()), sink);
+                }
+            });
+        }
+    }
 
     /**
-     * Constructs and returns a PsiElementVisitor that checks Java annotations for
-     * specific criteria and highlights problematic data types.
+     * Checks the type of a variable. If the type is unsupported, a problem is
+     * reported on {@code anchor}.
      *
-     * @param holder     Holds the problems identified during inspection.
-     * @param isOnTheFly Indicates whether the inspection is being run on-the-fly
-     *                   while the user is editing.
-     * @return A visitor to traverse and inspect Java elements.
+     * @param type    The type of the variable to be checked.
+     * @param context Helper context string for diagnostics.
+     * @param anchor  In-file element to register the problem on; null when
+     *                the finding cannot be anchored in the inspected file.
+     * @param sink    Receives the problem.
      */
-    @NotNull
-    @Override
-    public PsiElementVisitor buildVisitor(@NotNull final ProblemsHolder holder, boolean isOnTheFly) {
-        return new JavaElementVisitor() {
-            @Override
-            public void visitAnnotation(PsiAnnotation annotation) {
-                if (!KernelCallGraphAnalyzer.isKernelAnnotation(annotation)) return;
-
-                PsiMethod kernelMethod = PsiTreeUtil.getParentOfType(annotation, PsiMethod.class);
-                if (kernelMethod == null) return;
-
-                KernelCallGraphAnalyzer.AnalysisScope scope =
-                        KernelCallGraphAnalyzer.resolve(kernelMethod);
-
-                for (PsiMethod method : scope.getAnalyzableMethods()) {
-                    String context = KernelCallGraphAnalyzer.helperContext(method, kernelMethod);
-                    method.accept(new JavaRecursiveElementVisitor() {
-                        @Override
-                        public void visitLocalVariable(PsiLocalVariable variable) {
-                            checkVariable(variable.getType(), variable, context,
-                                    scope.anchorFor(variable, method, holder.getFile()));
-                        }
-
-                        @Override
-                        public void visitField(PsiField field) {
-                            checkVariable(field.getType(), field, context,
-                                    scope.anchorFor(field, method, holder.getFile()));
-                        }
-
-                        @Override
-                        public void visitParameter(PsiParameter parameter) {
-                            checkVariable(parameter.getType(), parameter, context,
-                                    scope.anchorFor(parameter, method, holder.getFile()));
-                        }
-                    });
-                }
-
-                for (var entry : scope.getNonAnalyzableCallSites().entrySet()) {
-                    holder.registerProblem(entry.getKey(),
-                            MessageBundle.message("inspection.helper.unresolvable")
-                                    + ": " + entry.getValue(),
-                            ProblemHighlightType.WEAK_WARNING);
-                }
-            }
-
-            /**
-             * Checks the type of the provided variable. If the type is unsupported,
-             * the variable is registered as a problem.
-             *
-             * @param type     The type of the variable to be checked.
-             * @param variable The variable itself.
-             * @param context  Helper context string for diagnostics.
-             * @param anchor   In-file element to register the problem on; null when
-             *                 the finding cannot be anchored in the inspected file.
-             */
-            private void checkVariable(PsiType type, PsiVariable variable, String context, PsiElement anchor) {
-                if (anchor == null) return;
-                if (!type.equalsToText("int") && !type.equalsToText("boolean") && !type.equalsToText("double")
-                        && !type.equalsToText("long") && !type.equalsToText("char") && !type.equalsToText("float")
-                        && !type.equalsToText("byte") && !type.equalsToText("short")
-                        && !type.getCanonicalText().startsWith("int[]") && !type.getCanonicalText().startsWith("boolean[]")
-                        && !type.getCanonicalText().startsWith("double[]") && !type.getCanonicalText().startsWith("long[]")
-                        && !type.getCanonicalText().startsWith("char[]") && !type.getCanonicalText().startsWith("float[]")
-                        && !type.getCanonicalText().startsWith("byte[]") && !type.getCanonicalText().startsWith("short[]")
-                        && !type.equalsToText("Int3") && !type.getCanonicalText().startsWith("uk.ac.manchester.tornado.api.")
-                        && !type.getCanonicalText().startsWith("java.util.concurrent.atomic.AtomicInteger")) {
-                    PsiMethod parentMethod = PsiTreeUtil.getParentOfType(anchor, PsiMethod.class);
-                    if (parentMethod != null) {
-                        ProblemMethods.getInstance().addMethod(holder.getProject(), holder.getFile(), parentMethod);
-                    }
-                    holder.registerProblem(
-                            anchor,
-                            MessageBundle.message("inspection.datatype") + context,
-                            ProblemHighlightType.ERROR
-                    );
-                }
-            }
-        };
+    private static void checkVariable(PsiType type, String context, PsiElement anchor, KernelProblemSink sink) {
+        if (anchor == null) return;
+        // A class that does not resolve (e.g. the TornadoVM API is not on the module's
+        // classpath) cannot be classified; the editor already reports it as an error
+        if (type.getDeepComponentType() instanceof PsiClassType classType && classType.resolve() == null) return;
+        if (!type.equalsToText("int") && !type.equalsToText("boolean") && !type.equalsToText("double")
+                && !type.equalsToText("long") && !type.equalsToText("char") && !type.equalsToText("float")
+                && !type.equalsToText("byte") && !type.equalsToText("short")
+                && !type.getCanonicalText().startsWith("int[]") && !type.getCanonicalText().startsWith("boolean[]")
+                && !type.getCanonicalText().startsWith("double[]") && !type.getCanonicalText().startsWith("long[]")
+                && !type.getCanonicalText().startsWith("char[]") && !type.getCanonicalText().startsWith("float[]")
+                && !type.getCanonicalText().startsWith("byte[]") && !type.getCanonicalText().startsWith("short[]")
+                && !type.equalsToText("Int3") && !type.getCanonicalText().startsWith("uk.ac.manchester.tornado.api.")
+                && !type.getCanonicalText().startsWith("java.util.concurrent.atomic.AtomicInteger")) {
+            sink.report(anchor, MessageBundle.message("inspection.datatype") + context, ProblemHighlightType.ERROR);
+        }
     }
 }

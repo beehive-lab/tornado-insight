@@ -214,12 +214,19 @@ Enjoy and share your feedback!
                          level="WARNING"
                          enabledByDefault="true"
                          implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspector.NonVoidReturnInspection"/>
+        <localInspection language="JAVA"
+                         displayName="Unanalysable helper check"
+                         groupPath="Java"
+                         groupName="Java issues"
+                         shortName="UnanalysableHelperInspection"
+                         level="WEAK WARNING"
+                         enabledByDefault="true"
+                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspector.UnanalysableHelperInspection"/>
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoSideWindow" id="TornadoVM" anchor="right" icon="TornadoIcons.TornadoIcon" />
         <applicationConfigurable instance="uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration"
                                  id="uk.ac.manchester.beehive.tornado.settings"
                                  displayName="TornadoInsight"/>
         <applicationService serviceImplementation="uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState"/>
-        <psi.treeChangeListener implementation="uk.ac.manchester.beehive.tornado.plugins.listener.PsiChangeListener"/>
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory" id="TornadoInsight Console" anchor="bottom"/>
         <errorHandler implementation="uk.ac.manchester.beehive.tornado.plugins.error.ErrorSubmitter"/>
         <notificationGroup id="TornadoInsight" displayType="BALLOON"/>

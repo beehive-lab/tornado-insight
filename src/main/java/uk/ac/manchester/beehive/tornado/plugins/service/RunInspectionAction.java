@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@ import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.DynamicInspect
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.EmptySelectionWarningDialog;
 import uk.ac.manchester.beehive.tornado.plugins.util.DataKeys;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService.TaskEntry;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -32,9 +33,8 @@ import java.util.List;
 public class RunInspectionAction extends AnAction {
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        List<String> data = e.getData(DataKeys.TORNADO_SELECTED_LIST);
-        assert data != null;
-        if (data.isEmpty()) {
+        List<TaskEntry> data = e.getData(DataKeys.TORNADO_SELECTED_LIST);
+        if (data == null || data.isEmpty()) {
             new EmptySelectionWarningDialog().show();
         }else {
             DynamicInspection.process(e.getProject(), data);

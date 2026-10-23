@@ -20,6 +20,7 @@ package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
+import uk.ac.manchester.beehive.tornado.plugins.inspector.TornadoKernels;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -97,13 +98,7 @@ public final class LocalMemoryParameterAnalyzer {
             return false;
         }
 
-        PsiType qualifierType = qualifier.getType();
-        if (qualifierType == null) {
-            return false;
-        }
-
-        String typeName = qualifierType.getCanonicalText();
-        return typeName != null && typeName.endsWith("KernelContext");
+        return TornadoKernels.isKernelContextType(qualifier.getType());
     }
 
     /**
