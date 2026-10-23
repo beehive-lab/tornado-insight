@@ -80,12 +80,10 @@ public final class TornadoTaskService implements Disposable {
      * The tasks found in one file, and the data that dynamic inspection reuses
      * from that file.
      *
-     * @param file       pointer to the file the tasks were found in
-     * @param tasks      the valid tasks, in the order they are listed
-     * @param importCode the file's import statements (JUnit imports removed)
+     * @param file  pointer to the file the tasks were found in
+     * @param tasks the valid tasks, in the order they are listed
      */
-    public record TaskSnapshot(@NotNull SmartPsiElementPointer<PsiFile> file, @NotNull List<TaskEntry> tasks,
-                               @NotNull String importCode) {
+    public record TaskSnapshot(@NotNull SmartPsiElementPointer<PsiFile> file, @NotNull List<TaskEntry> tasks) {
         public TaskSnapshot {
             tasks = List.copyOf(tasks);
         }
@@ -172,7 +170,7 @@ public final class TornadoTaskService implements Disposable {
                 entries.add(new TaskEntry(TornadoTWTask.psiMethodFormat(task), pointers.createSmartPsiElementPointer(task)));
             }
         }
-        return new TaskSnapshot(pointers.createSmartPsiElementPointer(file), entries, TornadoTWTask.getImportCode(file));
+        return new TaskSnapshot(pointers.createSmartPsiElementPointer(file), entries);
     }
 
     @Override

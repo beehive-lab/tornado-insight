@@ -59,7 +59,6 @@ public class TornadoTaskServiceTest extends TornadoTestCase {
         assertEquals(Set.of("mul", "ctx"), methodNames(secondSnapshot));
         assertEquals(first, firstSnapshot.file().getElement());
         assertEquals(second, secondSnapshot.file().getElement());
-        assertTrue(secondSnapshot.importCode().contains("import uk.ac.manchester.tornado.api.KernelContext;"));
         for (TaskEntry entry : secondSnapshot.tasks()) {
             assertEquals(entry.displayName(), entry.toString());
             assertEquals(TornadoTWTask.psiMethodFormat(entry.resolve()), entry.displayName());

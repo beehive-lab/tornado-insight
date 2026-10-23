@@ -21,7 +21,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
-import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.DynamicInspection;
+import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.DynamicInspectionPipeline;
 import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
 import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.EmptySelectionWarningDialog;
 import uk.ac.manchester.beehive.tornado.plugins.util.DataKeys;
@@ -37,7 +37,8 @@ public class RunInspectionAction extends AnAction {
         if (data == null || data.isEmpty()) {
             new EmptySelectionWarningDialog().show();
         }else {
-            DynamicInspection.process(e.getProject(), data);
+            // Runs as a cancellable background task
+            DynamicInspectionPipeline.start(e.getProject(), data);
         }
     }
 

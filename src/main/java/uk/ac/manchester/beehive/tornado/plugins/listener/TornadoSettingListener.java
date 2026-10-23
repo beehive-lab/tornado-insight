@@ -18,21 +18,16 @@
 package uk.ac.manchester.beehive.tornado.plugins.listener;
 
 import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationAction;
 import com.intellij.notification.NotificationType;
 import com.intellij.notification.Notifications;
-import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.startup.ProjectActivity;
 import kotlin.coroutines.Continuation;
 import org.jetbrains.annotations.NotNull;
-import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration;
 import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoNotifications;
 
 import java.util.concurrent.CompletableFuture;
-import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 /**
  * Initializes TornadoVM settings on project open.
@@ -49,20 +44,5 @@ public class TornadoSettingListener implements ProjectActivity {
         }
 
         return CompletableFuture.completedFuture(null);
-    }
-
-    /**
-     * Action to open TornadoVM plugin settings from the notification.
-     */
-    static class OpenTornadoSettingAction extends NotificationAction {
-        public OpenTornadoSettingAction() {
-            super(MessageBundle.message("notification.action.configure"));
-        }
-
-        @Override
-        public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
-            ShowSettingsUtil.getInstance().showSettingsDialog(e.getProject(), TornadoSettingConfiguration.class);
-            notification.expire();
-        }
     }
 }
