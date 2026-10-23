@@ -19,7 +19,6 @@ package uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow;
 
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionToolbar;
-import com.intellij.openapi.actionSystem.DataKey;
 import com.intellij.openapi.actionSystem.DataProvider;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.diagnostic.Logger;
@@ -45,7 +44,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
-import java.util.Objects;
 
 public class TornadoSideWindow implements ToolWindowFactory {
 
@@ -82,33 +80,13 @@ public class TornadoSideWindow implements ToolWindowFactory {
             init(project, toolWindow);
         }
 
-        public <T> @Nullable T getData(@NotNull DataKey<T> key) {
-            if (key == DataKeys.TORNADOINSIGHT_LIST_MODEL) {
-                return (T) getModel();
-            }
-            if (key == DataKeys.TORNADO_SELECTED_LIST) {
-                return (T) TornadoList.getSelectedValuesList();
-            }
-            if (key == DataKeys.TORNADO_LIST) {
-                return (T) TornadoList;
-            }
-            return null;
-        }
-
-        /**
-         * @deprecated Use {@link #getData(DataKey)} instead.
-         */
-        @Deprecated
+        // DataProvider rather than UiDataProvider, which needs 2024.2+ (sinceBuild is 231).
+        // On newer platforms SimpleToolWindowPanel bridges this method to its data snapshot.
+        @SuppressWarnings("deprecation")
         @Override
         public @Nullable Object getData(@NotNull @NonNls String dataId) {
-            if (DataKeys.TORNADOINSIGHT_LIST_MODEL.is(dataId)) {
-                return getModel();
-            }
             if (DataKeys.TORNADO_SELECTED_LIST.is(dataId)) {
                 return TornadoList.getSelectedValuesList();
-            }
-            if (DataKeys.TORNADO_LIST.is(dataId)) {
-                return TornadoList;
             }
             return null;
         }
