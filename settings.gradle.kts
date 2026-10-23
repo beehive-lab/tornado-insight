@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2025-2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,6 @@
  *  limitations under the License.
  */
 
-import org.gradle.api.initialization.resolve.RepositoriesMode
-
 pluginManagement {
     repositories {
         gradlePluginPortal()
@@ -27,14 +25,5 @@ pluginManagement {
         maven("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies")
     }
 }
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
-    repositories {
-        mavenCentral()
-        maven("https://cache-redirector.jetbrains.com/intellij-repository/releases")
-        maven("https://cache-redirector.jetbrains.com/intellij-repository/snapshots")
-        maven("https://cache-redirector.jetbrains.com/plugins-repository")
-        maven("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies")
-    }
-}
+
 rootProject.name = "TornadoInsight"
