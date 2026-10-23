@@ -1,0 +1,56 @@
+#
+# Copyright (c) 2026, APT Group, Department of Computer Science,
+#  The University of Manchester.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+# Data types accepted inside TornadoVM kernels by the DataTypeInspection, read by
+# uk.ac.manchester.beehive.tornado.plugins.kernel.SupportedKernelTypes.
+#
+# Format: one entry per line; blank lines and lines starting with '#' are ignored;
+# an entry is a single token without whitespace and belongs to the section header
+# ([names] or [prefixes]) above it. Both sections must be present and non-empty;
+# anything else is rejected as malformed.
+#
+#   [names]     a type is supported if PsiType#equalsToText(entry) holds
+#   [prefixes]  a type is supported if its canonical text starts with the entry
+#               (so "int[]" also accepts int[][], and the AtomicInteger entry
+#               also accepts AtomicIntegerArray)
+#
+# A type added here can also reach the dynamic inspection as a kernel parameter;
+# ParameterInitializerTest checks that the harness can generate test data for it.
+
+[names]
+int
+boolean
+double
+long
+char
+float
+byte
+short
+Int3
+
+[prefixes]
+# primitive arrays, of any dimension
+int[]
+boolean[]
+double[]
+long[]
+char[]
+float[]
+byte[]
+short[]
+# the TornadoVM API types (Panama arrays, vectors, matrices, images, contexts, ...)
+uk.ac.manchester.tornado.api.
+java.util.concurrent.atomic.AtomicInteger

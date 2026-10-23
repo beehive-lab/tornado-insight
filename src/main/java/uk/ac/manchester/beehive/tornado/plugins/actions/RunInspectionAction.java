@@ -25,7 +25,7 @@ import uk.ac.manchester.beehive.tornado.plugins.dynamic.DynamicInspectionPipelin
 import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
 import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.EmptySelectionWarningDialog;
 import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.DataKeys;
-import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoTaskService.TaskEntry;
+import uk.ac.manchester.beehive.tornado.plugins.sync.TornadoTaskService.TaskEntry;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;

@@ -22,10 +22,9 @@ import com.intellij.psi.*;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.KernelCallGraphAnalyzer;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.KernelProblemSink;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.SupportedKernelTypes;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
 
 /**
  * This inspection tool identifies and highlights unsupported data types
@@ -34,22 +33,13 @@ import java.util.List;
  *
  * <p>Kernels should use data types that are
  * supported by the TornadoVM. Any usage of unsupported data types will be
- * highlighted as an error in the IDE.</p>
+ * highlighted as an error in the IDE. The supported types are listed in a
+ * resource file, see {@link SupportedKernelTypes}.</p>
  *
  * <p>The inspection follows method calls across class boundaries, analyzing all
  * helper methods that TornadoVM would inline at runtime.</p>
  */
 public class DataTypeInspection extends TornadoKernelInspection {
-
-    // Types accepted by name (PsiType#equalsToText): the primitives, and Int3
-    private static final List<String> SUPPORTED_TYPES = List.of(
-            "int", "boolean", "double", "long", "char", "float", "byte", "short", "Int3");
-
-    // Types accepted by the start of their canonical text: primitive arrays (of any
-    // dimension), the TornadoVM API types and AtomicInteger
-    private static final List<String> SUPPORTED_PREFIXES = List.of(
-            "int[]", "boolean[]", "double[]", "long[]", "char[]", "float[]", "byte[]", "short[]",
-            "uk.ac.manchester.tornado.api.", "java.util.concurrent.atomic.AtomicInteger");
 
     @Override
     protected void checkKernel(@NotNull PsiMethod kernelMethod, @NotNull KernelCallGraphAnalyzer.AnalysisScope scope,
@@ -90,19 +80,8 @@ public class DataTypeInspection extends TornadoKernelInspection {
         // A class that does not resolve (e.g. the TornadoVM API is not on the module's
         // classpath) cannot be classified; the editor already reports it as an error
         if (type.getDeepComponentType() instanceof PsiClassType classType && classType.resolve() == null) return;
-        if (!isSupported(type)) {
+        if (!SupportedKernelTypes.get().isSupported(type)) {
             sink.report(anchor, MessageBundle.message("inspection.datatype") + context, ProblemHighlightType.ERROR);
         }
-    }
-
-    static boolean isSupported(PsiType type) {
-        for (String name : SUPPORTED_TYPES) {
-            if (type.equalsToText(name)) return true;
-        }
-        String text = type.getCanonicalText();
-        for (String prefix : SUPPORTED_PREFIXES) {
-            if (text.startsWith(prefix)) return true;
-        }
-        return false;
     }
 }

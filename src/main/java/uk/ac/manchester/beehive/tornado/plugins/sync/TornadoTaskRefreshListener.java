@@ -15,19 +15,18 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.listeners;
+package uk.ac.manchester.beehive.tornado.plugins.sync;
 
-import com.intellij.openapi.wm.ToolWindow;
-import com.intellij.openapi.wm.ex.ToolWindowManagerListener;
-import org.jetbrains.annotations.NotNull;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.util.messages.Topic;
 
-public class ToolWindowOpen implements ToolWindowManagerListener {
+public interface TornadoTaskRefreshListener {
+    @Topic.ProjectLevel
+    Topic<TornadoTaskRefreshListener> REFRESH_TOPIC =
+            Topic.create("Tornado task update", TornadoTaskRefreshListener.class);
 
-    @Override
-    public void toolWindowShown(@NotNull ToolWindow toolWindow) {
-        ToolWindowManagerListener.super.toolWindowShown(toolWindow);
-        if (toolWindow.getId().equals("TornadoVM")) {
-            toolWindow.getProject().getMessageBus().syncPublisher(TornadoTaskRefreshListener.REFRESH_TOPIC).refresh();
-        }
-    }
+    void refresh();
+
+    void refresh(Project project, VirtualFile newFile);
 }

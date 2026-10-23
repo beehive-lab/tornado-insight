@@ -22,8 +22,8 @@ import com.intellij.psi.PsiFile;
 import uk.ac.manchester.beehive.tornado.plugins.TornadoTestCase;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.CodeGenerator.Batch;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.CodeGenerator.Harness;
-import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoTaskService;
-import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoTaskService.TaskEntry;
+import uk.ac.manchester.beehive.tornado.plugins.sync.TornadoTaskService;
+import uk.ac.manchester.beehive.tornado.plugins.sync.TornadoTaskService.TaskEntry;
 
 import java.util.List;
 
