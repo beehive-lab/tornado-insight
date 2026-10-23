@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.entity;
+package uk.ac.manchester.beehive.tornado.plugins.kernel;
 
 public enum RestrictedClasses {
     JAVA_LANG_SYSTEM("java.lang.System"),

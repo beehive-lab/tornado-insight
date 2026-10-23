@@ -20,7 +20,7 @@ package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
-import uk.ac.manchester.beehive.tornado.plugins.inspector.TornadoKernels;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 
 import java.util.Collections;
 import java.util.HashSet;

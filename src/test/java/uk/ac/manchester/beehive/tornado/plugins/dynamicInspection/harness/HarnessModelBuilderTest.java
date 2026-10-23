@@ -22,7 +22,7 @@ import com.intellij.psi.PsiMethod;
 import uk.ac.manchester.beehive.tornado.plugins.TornadoTestCase;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Field;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Parameter;
-import uk.ac.manchester.beehive.tornado.plugins.inspector.TornadoKernels;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 
 import java.util.List;
 

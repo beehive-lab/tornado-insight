@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.inspector;
+package uk.ac.manchester.beehive.tornado.plugins.kernel;
 
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.psi.PsiElement;
@@ -23,7 +23,7 @@ import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Receives the problems that a {@link TornadoKernelInspection} finds in a kernel.
+ * Receives the problems that a {@link uk.ac.manchester.beehive.tornado.plugins.inspection.TornadoKernelInspection} finds in a kernel.
  * The inspection itself forwards them to its {@code ProblemsHolder}; other callers
  * can collect them without running the inspection framework.
  */

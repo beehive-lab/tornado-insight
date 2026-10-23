@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.inspector;
+package uk.ac.manchester.beehive.tornado.plugins.inspection;
 
 import com.intellij.codeInspection.LocalInspectionEP;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;

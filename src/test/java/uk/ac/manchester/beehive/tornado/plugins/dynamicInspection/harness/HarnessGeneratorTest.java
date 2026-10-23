@@ -21,7 +21,7 @@ import org.junit.Test;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Field;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Parameter;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.TaskGraphDeclaration;
-import uk.ac.manchester.beehive.tornado.plugins.inspector.TornadoKernels;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 
 import java.util.List;
 import java.util.Random;

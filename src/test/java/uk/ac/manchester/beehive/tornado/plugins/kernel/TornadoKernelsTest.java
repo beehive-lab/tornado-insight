@@ -15,13 +15,13 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.inspector;
+package uk.ac.manchester.beehive.tornado.plugins.kernel;
 
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.util.PsiTreeUtil;
 import uk.ac.manchester.beehive.tornado.plugins.TornadoTestCase;
-import uk.ac.manchester.beehive.tornado.plugins.inspector.TornadoKernels.Kind;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels.Kind;
 
 import java.util.List;
 

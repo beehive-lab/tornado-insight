@@ -19,8 +19,8 @@ package uk.ac.manchester.beehive.tornado.plugins.util;
 
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
-import uk.ac.manchester.beehive.tornado.plugins.inspector.KernelValidator;
-import uk.ac.manchester.beehive.tornado.plugins.inspector.TornadoKernels;
+import uk.ac.manchester.beehive.tornado.plugins.inspection.KernelValidator;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 
 import java.util.*;
 

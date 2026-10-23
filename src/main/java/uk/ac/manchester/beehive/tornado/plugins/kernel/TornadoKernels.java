@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.inspector;
+package uk.ac.manchester.beehive.tornado.plugins.kernel;
 
 import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiClass;

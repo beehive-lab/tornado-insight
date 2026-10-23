@@ -15,11 +15,14 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.inspector;
+package uk.ac.manchester.beehive.tornado.plugins.inspection;
 
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.psi.*;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.KernelCallGraphAnalyzer;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.KernelProblemSink;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;

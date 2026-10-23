@@ -19,7 +19,7 @@ package uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import uk.ac.manchester.beehive.tornado.plugins.inspector.TornadoKernels;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 
 import java.util.List;
 

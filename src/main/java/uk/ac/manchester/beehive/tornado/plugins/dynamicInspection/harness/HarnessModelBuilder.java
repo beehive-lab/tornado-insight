@@ -49,8 +49,8 @@ import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.LocalMemoryPar
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Field;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.Parameter;
 import uk.ac.manchester.beehive.tornado.plugins.dynamicInspection.harness.HarnessModel.TaskGraphDeclaration;
-import uk.ac.manchester.beehive.tornado.plugins.inspector.KernelCallGraphAnalyzer;
-import uk.ac.manchester.beehive.tornado.plugins.inspector.TornadoKernels;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.KernelCallGraphAnalyzer;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
 
 import java.util.ArrayList;
