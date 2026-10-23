@@ -44,13 +44,7 @@ public class TornadoSettingListener implements ProjectActivity {
     public @NotNull CompletableFuture<Void> execute(@NotNull Project project, @NotNull Continuation<? super kotlin.Unit> continuation) {
         // Show warning notification when TORNADOVM_HOME is not set
         if (!TornadoSdk.getInstance().isConfigured()) {
-            Notification notification = TornadoNotifications.create(
-                MessageBundle.message("notification.sdkNotConfigured.title"),
-                MessageBundle.message("notification.sdkNotConfigured.content"),
-                NotificationType.WARNING
-            );
-
-            notification.addAction(new OpenTornadoDownloadsAction());
+            Notification notification = TornadoNotifications.sdkNotConfigured(NotificationType.WARNING);
             Notifications.Bus.notify(notification, project);
         }
 
@@ -68,21 +62,6 @@ public class TornadoSettingListener implements ProjectActivity {
         @Override
         public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
             ShowSettingsUtil.getInstance().showSettingsDialog(e.getProject(), TornadoSettingConfiguration.class);
-            notification.expire();
-        }
-    }
-
-    /**
-     * Action to open TornadoVM downloads page in browser.
-     */
-    static class OpenTornadoDownloadsAction extends NotificationAction {
-        public OpenTornadoDownloadsAction() {
-            super(MessageBundle.message("notification.action.installationInstructions"));
-        }
-
-        @Override
-        public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
-            com.intellij.ide.BrowserUtil.browse("https://www.tornadovm.org/downloads");
             notification.expire();
         }
     }

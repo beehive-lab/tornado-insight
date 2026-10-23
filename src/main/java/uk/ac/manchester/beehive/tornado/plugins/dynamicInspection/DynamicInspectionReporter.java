@@ -91,7 +91,7 @@ final class DynamicInspectionReporter {
     }
 
     void sdkNotConfigured() {
-        notifyError(MessageBundle.message("notification.sdkNotConfigured.title"), MessageBundle.message("notification.sdkNotConfigured.content"), false);
+        Notifications.Bus.notify(TornadoNotifications.sdkNotConfigured(NotificationType.ERROR), project);
     }
 
     void invalidParameterSize(int size, int maxSize) {
