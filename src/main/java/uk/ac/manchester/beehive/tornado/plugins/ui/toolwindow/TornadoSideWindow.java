@@ -149,7 +149,7 @@ public class TornadoSideWindow implements ToolWindowFactory {
 
     private static class InspectorInfoPanel extends SimpleToolWindowPanel {
 
-        JScrollPane scrollPane = new JBScrollPane(InspectorInfoKt.inspectorPane());
+        JScrollPane scrollPane = new JBScrollPane(InspectorInfo.inspectorPane());
 
         public InspectorInfoPanel(ToolWindow toolWindow) {
             super(Boolean.TRUE, Boolean.TRUE);
