@@ -35,6 +35,7 @@ import java.awt.*;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 public class ErrorSubmitter extends ErrorReportSubmitter {
 
@@ -43,7 +44,7 @@ public class ErrorSubmitter extends ErrorReportSubmitter {
     private final int stackTraceLen = 6500;
     @Override
     public @NlsActions.ActionText @NotNull String getReportActionText() {
-        return "Report to Vendor";
+        return MessageBundle.message("error.report.action");
     }
 
     @Override
@@ -76,8 +77,8 @@ public class ErrorSubmitter extends ErrorReportSubmitter {
         if (additionalInfo != null) template.append(additionalInfo).append("\n");
         template.append("\n");
         template.append("### Stacktrace\n").append(stacktrace).append("\n");
-        template.append("### Version and Enviroment Details\n")
-                .append("Operation system: ").append(SystemInfo.getOsNameAndVersion()).append("\n")
+        template.append("### Version and Environment Details\n")
+                .append("Operation system: ").append(SystemInfo.OS_NAME + " " + SystemInfo.OS_VERSION).append("\n")
                 .append("IDE version: ").append(ideaVersion).append("\n")
                 .append("Plugin version: ").append(pluginVersion).append("\n");
         Charset utf8 = StandardCharsets.UTF_8;

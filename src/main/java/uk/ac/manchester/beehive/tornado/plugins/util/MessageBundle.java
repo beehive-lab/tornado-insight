@@ -17,43 +17,38 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.util;
 
+import com.intellij.DynamicBundle;
+import org.jetbrains.annotations.Nls;
+import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
-
-import java.text.MessageFormat;
-import java.util.Locale;
-import java.util.ResourceBundle;
+import org.jetbrains.annotations.PropertyKey;
 
 /**
- * Utility class to retrieve localized messages from a resource bundle.
- * Default language is set to English (en).
+ * The plugin's message bundle, {@code messages/TornadoInsightBundle.properties}.
+ * <p>
+ * Messages without parameters are returned as written. Messages with parameters
+ * are formatted with {@link java.text.MessageFormat}, so a literal single quote in
+ * such a message is written as {@code ''}.
+ * </p>
  */
-public class MessageBundle {
-    static String langCode = "en";
+public final class MessageBundle {
+    public static final @NonNls String BUNDLE = "messages.TornadoInsightBundle";
 
-    // Private constructor to prevent instantiation of utility class
+    private static final DynamicBundle INSTANCE = new DynamicBundle(MessageBundle.class, BUNDLE);
+
     private MessageBundle() {
     }
 
     /**
-     * Retrieves a localized message for the provided key.
-     *
-     * @param key The key for which the message is desired.
-     * @return Localized message for the provided key.
-     */
-    public static @NotNull String message(String key) {
-        return ResourceBundle.getBundle("messages.plugin", Locale.forLanguageTag(langCode)).getString(key);
-    }
-
-    /**
-     * Retrieves a localized message for the provided key and substitutes the
-     * {@code {0}}, {@code {1}}, ... placeholders with the given parameters
-     * (java.text.MessageFormat syntax).
+     * Retrieves the message for {@code key}, substituting the {@code {0}}, {@code {1}}, ...
+     * placeholders with {@code params} when there are any.
      *
      * @param key    The key for which the message is desired.
      * @param params The values substituted into the message placeholders.
-     * @return Localized, formatted message for the provided key.
+     * @return The localized message for the provided key.
      */
-    public static @NotNull String message(String key, Object... params) {
-        return MessageFormat.format(message(key), params);
+    public static @NotNull @Nls String message(@NotNull @PropertyKey(resourceBundle = BUNDLE) String key,
+                                               Object @NotNull ... params) {
+        return INSTANCE.getMessage(key, params);
     }
 }

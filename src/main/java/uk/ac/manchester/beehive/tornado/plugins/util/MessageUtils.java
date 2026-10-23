@@ -24,23 +24,15 @@ import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.ui.MessageType;
-import com.intellij.openapi.ui.popup.Balloon;
-import com.intellij.openapi.ui.popup.BalloonBuilder;
-import com.intellij.openapi.ui.popup.JBPopupFactory;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowManager;
-import com.intellij.ui.JBColor;
-import com.intellij.ui.awt.RelativePoint;
 import com.intellij.util.concurrency.annotations.RequiresEdt;
 import uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory;
-import org.apache.commons.lang3.time.DateFormatUtils;
 import org.jetbrains.annotations.NotNull;
 
-import javax.swing.*;
-import java.awt.*;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Project service that owns the TornadoInsight console. The {@link ConsoleView}
@@ -49,6 +41,8 @@ import java.util.Date;
  */
 @Service(Service.Level.PROJECT)
 public final class MessageUtils implements Disposable {
+
+    private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
 
     private final Project project;
     private ConsoleView consoleView;
@@ -61,18 +55,6 @@ public final class MessageUtils implements Disposable {
     @NotNull
     public static MessageUtils getInstance(Project project) {
         return project.getService(MessageUtils.class);
-    }
-
-
-    public static void showMsg(JComponent component, MessageType messageType, String title, String body) {
-        JBPopupFactory factory = JBPopupFactory.getInstance();
-        BalloonBuilder builder = factory.createHtmlTextBalloonBuilder(body, messageType, null);
-        builder.setTitle(title);
-        builder.setFillColor(JBColor.background());
-        Balloon b = builder.createBalloon();
-        Rectangle r = component.getBounds();
-        RelativePoint p = new RelativePoint(component, new Point(r.x + r.width, r.y + 30));
-        b.show(p, Balloon.Position.atRight);
     }
 
     public void showInfoMsg(String title, String body) {
@@ -101,9 +83,9 @@ public final class MessageUtils implements Disposable {
 
     private void printTitle(String title, ConsoleViewContentType contentType) {
         if (title.equals("info") || title.equals("warning") || title.equals("error")) {
-            consoleView.print("> " + DateFormatUtils.format(new Date(), "yyyy/MM/dd' 'HH:mm:ss") + "\n", contentType);
+            consoleView.print("> " + TIMESTAMP.format(LocalDateTime.now()) + "\n", contentType);
         } else {
-            consoleView.print("> " + DateFormatUtils.format(new Date(), "yyyy/MM/dd' 'HH:mm:ss") + "\t" + title + "\n", contentType);
+            consoleView.print("> " + TIMESTAMP.format(LocalDateTime.now()) + "\t" + title + "\n", contentType);
         }
     }
 
