@@ -76,6 +76,30 @@ public class KernelInspectionsTest extends TornadoTestCase {
         assertEquals("String s = \"x\";", info.getText());
     }
 
+    public void testSupportedAndUnsupportedDataTypes() {
+        myFixture.addClass("package java.util.concurrent.atomic; public class AtomicInteger { }");
+        myFixture.addClass("package java.lang; public final class Integer { }");
+        myFixture.addClass("public class Int3 { }");
+        configure("""
+                import java.util.concurrent.atomic.AtomicInteger;
+                class Demo {
+                    static void kernel(int[] a, FloatArray f) {
+                        for (@Parallel int i = 0; i < a.length; i++) {
+                            long l = 1L; char c = 'c'; boolean b = true; short s = 1; byte y = 1; double d = 1;
+                            int[][] grid = null; float[] fs = null; IntArray ia = null;
+                            AtomicInteger counter = null; Int3 v = null;
+                            Integer boxed = null;
+                            String[] names = null;
+                            Object o = null;
+                        }
+                    }
+                }""".replace("FloatArray f", "uk.ac.manchester.tornado.api.types.arrays.FloatArray f"));
+
+        List<String> flagged = problems("inspection.datatype").stream().map(HighlightInfo::getText).toList();
+        // Object does not resolve in the light test project, so it is not classified
+        assertEquals(List.of("Integer boxed = null;", "String[] names = null;"), flagged);
+    }
+
     public void testRecursiveHelper() {
         configure("""
                 class Demo {
