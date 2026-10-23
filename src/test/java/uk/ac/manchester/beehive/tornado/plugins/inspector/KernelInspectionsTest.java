@@ -87,13 +87,80 @@ public class KernelInspectionsTest extends TornadoTestCase {
                     }
                 }""");
 
-        // Reported for the call in the kernel and for the self-call inside the helper
+        // Reported once, on the self-call that closes the cycle
+        HighlightInfo info = assertOne("inspection.recursion");
+        assertEquals(HighlightSeverity.ERROR, info.getSeverity());
+        assertEquals("fact(n - 1)", info.getText());
+        assertTrue(info.getDescription().endsWith("(in helper 'Demo.fact' inlined into kernel)"));
+    }
+
+    public void testRecursiveKernel() {
+        configure("""
+                class Demo {
+                    static void kernel(int[] a, int n) {
+                        for (@Parallel int i = 0; i < a.length; i++) {
+                            a[i] = i;
+                        }
+                        if (n > 0) kernel(a, n - 1);
+                    }
+                }""");
+
+        HighlightInfo info = assertOne("inspection.recursion");
+        assertEquals("kernel(a, n - 1)", info.getText());
+        assertEquals(MessageBundle.message("inspection.recursion"), info.getDescription());
+    }
+
+    public void testMutualRecursionThroughHelpersIsReportedOnce() {
+        configure("""
+                class Demo {
+                    // Overridable instance methods: the IDE's own contract inference
+                    // would otherwise trip over the mutual recursion in tests
+                    int even(int n) { return n == 0 ? 1 : odd(n - 1); }
+                    int odd(int n) { return n == 0 ? 0 : even(n - 1); }
+                    void kernel(int[] a) {
+                        for (@Parallel int i = 0; i < a.length; i++) {
+                            a[i] = even(i) + odd(i) + even(a[i]);
+                        }
+                    }
+                }""");
+
+        // even is entered first from the kernel, so odd's call back to even closes the cycle
+        assertEquals("even(n - 1)", assertOne("inspection.recursion").getText());
+    }
+
+    public void testDiamondCallGraphIsNotRecursive() {
+        configure("""
+                class Demo {
+                    static int d(int x) { return x + 1; }
+                    static int b(int x) { return d(x) * 2; }
+                    static int c(int x) { return d(x) * 3; }
+                    static int a(int x) { return b(x) + c(x); }
+                    static void kernel(int[] arr) {
+                        for (@Parallel int i = 0; i < arr.length; i++) {
+                            arr[i] = a(i) + b(i) + d(i);
+                        }
+                    }
+                }""");
+
+        assertEmpty(problems("inspection.recursion"));
+        assertEmpty(tornadoProblems());
+    }
+
+    public void testRecursionInHelperCalledFromTwoKernelsIsReportedOnce() {
+        configure("""
+                class Demo {
+                    int f(int n) { return n <= 0 ? 0 : g(n - 1); }
+                    int g(int n) { return f(n); }
+                    void first(int[] a) { for (@Parallel int i = 0; i < a.length; i++) { a[i] = f(i); } }
+                    void second(int[] a) { for (@Parallel int i = 0; i < a.length; i++) { a[i] = g(i); } }
+                }""");
+
+        // The two kernels enter the cycle at different methods, so each reports its own
+        // closing call; the cycle is still reported once per kernel
         List<HighlightInfo> infos = problems("inspection.recursion");
         assertSize(2, infos);
-        for (HighlightInfo info : infos) {
-            assertEquals(HighlightSeverity.ERROR, info.getSeverity());
-            assertTrue(info.getText().startsWith("static int fact(int n)"));
-        }
+        assertEquals(List.of("f(n)", "g(n - 1)"),
+                infos.stream().map(HighlightInfo::getText).sorted().toList());
     }
 
     public void testThrowTryAndThrowsClause() {
