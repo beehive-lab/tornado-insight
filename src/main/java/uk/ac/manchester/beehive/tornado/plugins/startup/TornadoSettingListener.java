@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.listener;
+package uk.ac.manchester.beehive.tornado.plugins.startup;
 
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationType;

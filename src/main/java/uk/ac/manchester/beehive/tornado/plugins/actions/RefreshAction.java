@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,17 +15,20 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.service;
+package uk.ac.manchester.beehive.tornado.plugins.actions;
 
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.options.ShowSettingsUtil;
+import uk.ac.manchester.beehive.tornado.plugins.listeners.TornadoTaskRefreshListener;
 import org.jetbrains.annotations.NotNull;
-import uk.ac.manchester.beehive.tornado.plugins.settings.TornadoSettingConfiguration;
 
-public class SettingsAction extends AnAction {
+import java.util.Objects;
+
+public class RefreshAction extends AnAction{
+
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        ShowSettingsUtil.getInstance().showSettingsDialog(e.getProject(), TornadoSettingConfiguration.class);
+        Objects.requireNonNull(e.getProject()).getMessageBus().
+                syncPublisher(TornadoTaskRefreshListener.REFRESH_TOPIC).refresh();
     }
 }

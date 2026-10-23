@@ -34,7 +34,7 @@ import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
 import com.intellij.util.messages.MessageBusConnection;
-import uk.ac.manchester.beehive.tornado.plugins.message.TornadoTaskRefreshListener;
+import uk.ac.manchester.beehive.tornado.plugins.listeners.TornadoTaskRefreshListener;
 import uk.ac.manchester.beehive.tornado.plugins.util.DataKeys;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTaskService;

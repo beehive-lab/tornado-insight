@@ -221,7 +221,7 @@ Enjoy and share your feedback!
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory" id="TornadoInsight Console" anchor="bottom"/>
         <errorHandler implementation="uk.ac.manchester.beehive.tornado.plugins.error.ErrorSubmitter"/>
         <notificationGroup id="TornadoInsight" displayType="BALLOON" key="notification.group.name"/>
-        <postStartupActivity implementation="uk.ac.manchester.beehive.tornado.plugins.listener.TornadoSettingListener"/>
+        <postStartupActivity implementation="uk.ac.manchester.beehive.tornado.plugins.startup.TornadoSettingListener"/>
         <liveTemplateContext contextId="TORNADOVM_STATEMENT" baseContextId="JAVA_CODE"
                              implementation="uk.ac.manchester.beehive.tornado.plugins.templates.TornadoVMContextType$Statement"/>
         <liveTemplateContext contextId="TORNADOVM_DECLARATION" baseContextId="JAVA_CODE"
@@ -232,21 +232,21 @@ Enjoy and share your feedback!
     </extensions>
     <actions>
         <group id="tornado.bar">
-            <action id="tornado.refresh" class="uk.ac.manchester.beehive.tornado.plugins.service.RefreshAction"
+            <action id="tornado.refresh" class="uk.ac.manchester.beehive.tornado.plugins.actions.RefreshAction"
                     icon="AllIcons.Actions.Refresh"/>
-            <action id="tornado.runInspection" class="uk.ac.manchester.beehive.tornado.plugins.service.RunInspectionAction"
+            <action id="tornado.runInspection" class="uk.ac.manchester.beehive.tornado.plugins.actions.RunInspectionAction"
                     icon="AllIcons.Actions.Execute"/>
             <separator/>
-            <action id="tornado.settings" class="uk.ac.manchester.beehive.tornado.plugins.service.SettingsAction"
+            <action id="tornado.settings" class="uk.ac.manchester.beehive.tornado.plugins.actions.SettingsAction"
                     icon="AllIcons.General.GearPlain"/>
-            <action id="tornado.doc" class="uk.ac.manchester.beehive.tornado.plugins.service.OpenTornadoDocsAction"
+            <action id="tornado.doc" class="uk.ac.manchester.beehive.tornado.plugins.actions.OpenTornadoDocsAction"
                     icon="AllIcons.Toolwindows.Documentation"/>
         </group>
     </actions>
     <projectListeners>
-        <listener class="uk.ac.manchester.beehive.tornado.plugins.listener.ToolWindowOpen"
+        <listener class="uk.ac.manchester.beehive.tornado.plugins.listeners.ToolWindowOpen"
                   topic="com.intellij.openapi.wm.ex.ToolWindowManagerListener"/>
-        <listener class="uk.ac.manchester.beehive.tornado.plugins.listener.EditorSwitch"
+        <listener class="uk.ac.manchester.beehive.tornado.plugins.listeners.EditorSwitch"
                   topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
     </projectListeners>
 </idea-plugin>

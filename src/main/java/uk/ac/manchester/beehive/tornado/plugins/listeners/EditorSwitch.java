@@ -15,14 +15,13 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.listener;
+package uk.ac.manchester.beehive.tornado.plugins.listeners;
 
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent;
 import com.intellij.openapi.fileEditor.FileEditorManagerListener;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowManager;
-import uk.ac.manchester.beehive.tornado.plugins.message.TornadoTaskRefreshListener;
 import org.jetbrains.annotations.NotNull;
 
 public class EditorSwitch implements FileEditorManagerListener {

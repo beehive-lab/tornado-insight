@@ -15,20 +15,16 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.listener;
+package uk.ac.manchester.beehive.tornado.plugins.actions;
 
-import com.intellij.openapi.wm.ToolWindow;
-import com.intellij.openapi.wm.ex.ToolWindowManagerListener;
-import uk.ac.manchester.beehive.tornado.plugins.message.TornadoTaskRefreshListener;
+import com.intellij.ide.BrowserUtil;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
 import org.jetbrains.annotations.NotNull;
 
-public class ToolWindowOpen implements ToolWindowManagerListener {
-
+public class OpenTornadoDocsAction extends AnAction {
     @Override
-    public void toolWindowShown(@NotNull ToolWindow toolWindow) {
-        ToolWindowManagerListener.super.toolWindowShown(toolWindow);
-        if (toolWindow.getId().equals("TornadoVM")) {
-            toolWindow.getProject().getMessageBus().syncPublisher(TornadoTaskRefreshListener.REFRESH_TOPIC).refresh();
-        }
+    public void actionPerformed(@NotNull AnActionEvent e) {
+        BrowserUtil.browse("https://tornadovm.readthedocs.io/");
     }
 }
