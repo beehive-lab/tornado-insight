@@ -42,7 +42,7 @@ import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoJdkContract;
 import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
 import uk.ac.manchester.beehive.tornado.plugins.settings.TornadoSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
-import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoTaskService.TaskEntry;
+import uk.ac.manchester.beehive.tornado.plugins.sync.TornadoTaskService.TaskEntry;
 
 import java.io.IOException;
 import java.nio.file.Files;
