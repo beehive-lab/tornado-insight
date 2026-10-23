@@ -214,10 +214,10 @@ Enjoy and share your feedback!
                          enabledByDefault="true"
                          implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspection.UnanalysableHelperInspection"/>
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoSideWindow" id="TornadoVM" anchor="right" icon="TornadoIcons.TornadoIcon" />
-        <applicationConfigurable instance="uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration"
+        <applicationConfigurable instance="uk.ac.manchester.beehive.tornado.plugins.settings.TornadoSettingConfiguration"
                                  id="uk.ac.manchester.beehive.tornado.settings"
                                  key="ui.settings.displayName"/>
-        <applicationService serviceImplementation="uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState"/>
+        <applicationService serviceImplementation="uk.ac.manchester.beehive.tornado.plugins.settings.TornadoSettingState"/>
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory" id="TornadoInsight Console" anchor="bottom"/>
         <errorHandler implementation="uk.ac.manchester.beehive.tornado.plugins.error.ErrorSubmitter"/>
         <notificationGroup id="TornadoInsight" displayType="BALLOON" key="notification.group.name"/>

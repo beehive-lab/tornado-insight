@@ -21,7 +21,7 @@ import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import org.jetbrains.annotations.NotNull;
-import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration;
+import uk.ac.manchester.beehive.tornado.plugins.settings.TornadoSettingConfiguration;
 
 public class SettingsAction extends AnAction {
     @Override

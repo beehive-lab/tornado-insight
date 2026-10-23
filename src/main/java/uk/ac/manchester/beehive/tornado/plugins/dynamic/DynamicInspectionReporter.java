@@ -33,7 +33,7 @@ import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.JavacRunner;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.Processes;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.TornadoRunner;
 import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoJdkContract;
-import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration;
+import uk.ac.manchester.beehive.tornado.plugins.settings.TornadoSettingConfiguration;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoNotifications;

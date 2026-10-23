@@ -15,16 +15,16 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.ui.settings;
+package uk.ac.manchester.beehive.tornado.plugins.settings;
 
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.options.ConfigurationException;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
+import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 import javax.swing.*;
 import java.util.Objects;
-import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 /**
  * The instantiation of a generic Configurable implementation is documented in the interface file.
