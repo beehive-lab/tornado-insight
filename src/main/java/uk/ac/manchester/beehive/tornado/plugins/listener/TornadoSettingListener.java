@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, APT Group, Department of Computer Science,
+ * Copyright (c) 2023, 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +27,9 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.startup.ProjectActivity;
 import kotlin.coroutines.Continuation;
 import org.jetbrains.annotations.NotNull;
+import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoNotifications;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -48,8 +50,7 @@ public class TornadoSettingListener implements ProjectActivity {
             // Show warning notification when TORNADOVM_HOME is not set
             settingState.isValid = false;
 
-            Notification notification = new Notification(
-                "Print",
+            Notification notification = TornadoNotifications.create(
                 "TornadoVM SDK Not Configured",
                 "<html>TORNADOVM_HOME environment variable is not set.<br><br>" +
                     "Please:<br>" +
@@ -78,7 +79,7 @@ public class TornadoSettingListener implements ProjectActivity {
 
         @Override
         public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
-            ShowSettingsUtil.getInstance().showSettingsDialog(e.getProject(), "TornadoVM");
+            ShowSettingsUtil.getInstance().showSettingsDialog(e.getProject(), TornadoSettingConfiguration.class);
             notification.expire();
         }
     }

@@ -19,7 +19,6 @@ package uk.ac.manchester.beehive.tornado.plugins.util;
 
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.application.ReadAction;
-import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -54,13 +53,16 @@ public class TornadoTWTask {
      * @param model the list model to which tasks should be added
      */
     public static void refresh(Project project, VirtualFile virtualFile, DefaultListModel<String> model) {
-        if (DumbService.isDumb(project) || model == null) return;
+        // No isDumb() early return: inSmartMode() below defers the computation until
+        // indexing finishes, so a refresh requested during indexing is not lost
+        if (model == null) return;
 
         ReadAction.nonBlocking(() -> {
             DefaultListModel<String> newModel = new DefaultListModel<>();
             List<PsiMethod> newTaskList = new ArrayList<>();
             Map<String, PsiMethod> newTaskMap = new HashMap<>();
 
+            if (!virtualFile.isValid()) return null;
             PsiFile file = PsiManager.getInstance(project).findFile(virtualFile);
             if (file == null) return null;
 
@@ -87,6 +89,8 @@ public class TornadoTWTask {
             return newModel;
 
         }).inSmartMode(project)
+        // A newer refresh cancels a pending one, so concurrent refreshes cannot race
+        .coalesceBy(project, TornadoTWTask.class)
         .expireWith(project)
         .finishOnUiThread(ModalityState.defaultModalityState(), newModel -> {
             if (newModel != null) {

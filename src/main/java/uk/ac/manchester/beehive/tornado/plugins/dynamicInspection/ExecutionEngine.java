@@ -38,9 +38,11 @@ import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.roots.ui.configuration.ProjectSettingsService;
 import com.intellij.psi.PsiMethod;
 import uk.ac.manchester.beehive.tornado.plugins.entity.EnvironmentVariable;
+import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration;
 import uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
+import uk.ac.manchester.beehive.tornado.plugins.util.TornadoNotifications;
 import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
 import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.NotNull;
@@ -155,8 +157,7 @@ public class ExecutionEngine {
         Sdk projectSdk = ProjectRootManager.getInstance(project).getProjectSdk();
 
         if (projectSdk == null) {
-            Notification notification = new Notification(
-                "Print",
+            Notification notification = TornadoNotifications.create(
                 "No Project JDK Configured",
                 "Please configure JDK 21 or newer in Project Structure (File > Project Structure > Project Settings > Project)",
                 NotificationType.ERROR
@@ -173,8 +174,7 @@ public class ExecutionEngine {
 
         JavaSdkVersion sdkVersion = JavaSdkVersion.fromVersionString(projectSdk.getVersionString());
         if (sdkVersion == null || sdkVersion.compareTo(JavaSdkVersion.JDK_21) < 0) {
-            Notification notification = new Notification(
-                "Print",
+            Notification notification = TornadoNotifications.create(
                 "Incompatible JDK Version",
                 "TornadoVM requires JDK 21 or newer. Current project JDK: " +
                     (sdkVersion != null ? sdkVersion.getDescription() : projectSdk.getVersionString()) +
@@ -203,8 +203,7 @@ public class ExecutionEngine {
 
         if (tornadoSdk == null || tornadoSdk.isEmpty()) {
             LOG.warn("TORNADOVM_HOME is not set or empty");
-            Notification notification = new Notification(
-                "Print",
+            Notification notification = TornadoNotifications.create(
                 "TornadoVM SDK Not Configured",
                 "<html>TORNADOVM_HOME environment variable is not set.<br><br>" +
                     "Please:<br>" +
@@ -232,17 +231,17 @@ public class ExecutionEngine {
      */
     private boolean validateParameterSize() {
         int size = TornadoSettingState.getInstance().parameterSize;
-        if (size > 0 && size < 65536) {
+        int maxSize = TornadoSettingState.MAX_PARAMETER_SIZE - 1;
+        if (size > 0 && size <= maxSize) {
             return true;
         }
 
         String detail = size <= 0
                 ? "Current value is " + size + ", which would generate empty inputs and produce a misleading green run."
-                : "Current value is " + size + ", which exceeds the supported maximum (65536).";
-        Notification notification = new Notification(
-                "Print",
+                : "Current value is " + size + ", which exceeds the supported maximum (" + maxSize + ").";
+        Notification notification = TornadoNotifications.create(
                 "Invalid Max Array Size",
-                "Set 'Max array size' in TornadoInsight settings to a value between 1 and 65536 (recommended: 128). "
+                "Set 'Max array size' in TornadoInsight settings to a value between 1 and " + maxSize + " (recommended: 128). "
                         + detail,
                 NotificationType.ERROR
         );
@@ -346,8 +345,7 @@ public class ExecutionEngine {
                         + describeProjectJdk(projectSdk, projectJdk) + ".");
 
         if (!contract.accepts(projectJdk)) {
-            Notification notification = new Notification(
-                "Print",
+            Notification notification = TornadoNotifications.create(
                 "Incompatible JDK for default TornadoVM",
                 "Current project JDK " + projectJdk +
                     " is not compatible with the default TornadoVM at " + System.getenv("TORNADOVM_HOME") +
@@ -367,8 +365,7 @@ public class ExecutionEngine {
         }
 
         if (contract.vendorsGraal() && isGraalVmDistribution(projectSdk)) {
-            Notification notification = new Notification(
-                "Print",
+            Notification notification = TornadoNotifications.create(
                 "Incompatible JDK distribution for default TornadoVM",
                 "The project JDK at " + projectSdk.getHomePath() + " is a GraalVM build. TornadoVM 6.0.0 and" +
                     " newer bundle their own Graal compiler and JVMCI, which collide with the modules a" +
@@ -514,8 +511,7 @@ public class ExecutionEngine {
 
     private void notifyTornadoVersionFailure(String detail) {
         LOG.warn("tornado --version check failed: " + detail);
-        Notification notification = new Notification(
-                "Print",
+        Notification notification = TornadoNotifications.create(
                 "TornadoVM installation check failed",
                 "<html>Could not determine the JDK that TornadoVM was built against.<br><br>" +
                         detail.replace("\n", "<br>") + "</html>",
@@ -776,7 +772,7 @@ public class ExecutionEngine {
             ProcessOutput output = handler.runProcess();
             if (output.getExitCode() != 0) {
                 // TornadoVM is not properly installed on the user's machine
-                Notification notification = new Notification("Print", "TornadoVM not detected",
+                Notification notification = TornadoNotifications.create("TornadoVM not detected",
                         "TornadoVM is not properly installed or configured", NotificationType.ERROR);
                 notification.addAction(new NotificationAction("How to install and configure TornadoVM") {
                     @Override
@@ -784,7 +780,7 @@ public class ExecutionEngine {
                         BrowserUtil.browse("https://tornadovm.readthedocs.io/en/latest/installation.html#");
                     }
                 });
-                Notifications.Bus.notify(notification);
+                Notifications.Bus.notify(notification, project);
                 return;
             }
         } catch (ExecutionException e) {
@@ -1068,7 +1064,7 @@ public class ExecutionEngine {
                 title = MessageBundle.message("dynamic.info.statistics.title");
                 type = NotificationType.INFORMATION;
             }
-            Notification notification = new Notification("Print", title,
+            Notification notification = TornadoNotifications.create(title,
                     MessageBundle.message("dynamic.info.statistics.body") + " " + runningTime + "ms", type);
             notification.addAction(new ChangeParameterSize());
             ApplicationManager.getApplication().invokeLater(() -> Notifications.Bus.notify(notification, project));
@@ -1090,7 +1086,7 @@ public class ExecutionEngine {
         }
         @Override
         public void actionPerformed(@NotNull AnActionEvent e, @NotNull Notification notification) {
-            ShowSettingsUtil.getInstance().showSettingsDialog(e.getProject(), "TornadoVM");
+            ShowSettingsUtil.getInstance().showSettingsDialog(e.getProject(), TornadoSettingConfiguration.class);
             notification.expire();
         }
     }

@@ -28,6 +28,7 @@ import com.intellij.ui.components.labels.LinkLabel;
 import com.intellij.util.ui.FormBuilder;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.util.ui.JBUI;
+import org.jetbrains.annotations.TestOnly;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 import javax.swing.*;
@@ -60,7 +61,7 @@ public class TornadoSettingsComponent {
         }
 
         JPanel dynamicInspectionPanel = FormBuilder.createFormBuilder().addLabeledComponent(new JBLabel("Max array size:"), myMaxArraySize, 1)
-                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.max.array.size") + "</div></html>"))
+                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.max.array.size", String.valueOf(TornadoSettingState.MAX_PARAMETER_SIZE - 1)) + "</div></html>"))
                 .getPanel();
 
         dynamicInspectionPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
@@ -129,15 +130,30 @@ public class TornadoSettingsComponent {
         return myMainPanel;
     }
 
+    /**
+     * Returns the max array size typed in the field. Never throws: empty, "0"
+     * or unparsable input yields the default, because isModified() polls this
+     * on every keystroke. isValidPath() is what reports invalid input on Apply.
+     */
     public int getMaxArraySize() {
-        if (myMaxArraySize.getText().isEmpty() || Objects.equals(myMaxArraySize.getText(), "0")) {
-            return 128;
+        String text = myMaxArraySize.getText().trim();
+        if (text.isEmpty() || Objects.equals(text, "0")) {
+            return TornadoSettingState.DEFAULT_PARAMETER_SIZE;
         }
-        return Integer.parseInt(myMaxArraySize.getText());
+        try {
+            return Integer.parseInt(text);
+        } catch (NumberFormatException e) {
+            return TornadoSettingState.DEFAULT_PARAMETER_SIZE;
+        }
     }
 
     public void setMaxArraySize(int size) {
         myMaxArraySize.setText(String.valueOf(size));
+    }
+
+    @TestOnly
+    void setMaxArraySizeText(String text) {
+        myMaxArraySize.setText(text);
     }
 
     public boolean isSaveFileEnabled() {
@@ -157,7 +173,7 @@ public class TornadoSettingsComponent {
     }
 
     public String isValidPath() {
-        String parameterSize = myMaxArraySize.getText();
+        String parameterSize = myMaxArraySize.getText().trim();
         if (isSaveFileEnabled()) {
             String saveLocation = debugFileSaveLocationField.getText();
             if (saveLocation.isEmpty()) {
@@ -176,11 +192,11 @@ public class TornadoSettingsComponent {
         }
         try {
             int size = Integer.parseInt(parameterSize);
-            if (size < 0 || size >= 16384) {
-                return MessageBundle.message("ui.settings.validation.invalidSize");
+            if (size < 0 || size >= TornadoSettingState.MAX_PARAMETER_SIZE) {
+                return MessageBundle.message("ui.settings.validation.invalidSize", String.valueOf(TornadoSettingState.MAX_PARAMETER_SIZE));
             }
         } catch (NumberFormatException e) {
-            return MessageBundle.message("ui.settings.validation.invalidSize");
+            return MessageBundle.message("ui.settings.validation.invalidSize", String.valueOf(TornadoSettingState.MAX_PARAMETER_SIZE));
         }
 
         return "";

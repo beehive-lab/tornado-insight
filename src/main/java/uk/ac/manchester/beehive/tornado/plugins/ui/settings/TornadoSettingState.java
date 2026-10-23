@@ -37,12 +37,18 @@ import java.io.FilenameFilter;
 @State(name = "TornadoVMSettingsState", storages = {@Storage(value = "TornadoSettings.xml")})
 public class TornadoSettingState implements PersistentStateComponent<TornadoSettingState> {
 
+    // Exclusive upper bound for parameterSize, shared by the Settings-dialog
+    // validator, the runtime check in ExecutionEngine and the user-facing
+    // messages, so valid sizes are 1..MAX_PARAMETER_SIZE - 1.
+    public static final int MAX_PARAMETER_SIZE = 65536;
+
     // Default test-data size used by VariableInit when generating synthetic
     // inputs for dynamic inspection. Picked to be large enough that kernels
     // actually exercise real data, while staying within the Settings-dialog
-    // validator (>0 and <16384). Overridden when the user changes the value
-    // in Settings.
-    public int parameterSize = 128;
+    // validator (>0 and <MAX_PARAMETER_SIZE). Overridden when the user changes
+    // the value in Settings.
+    public static final int DEFAULT_PARAMETER_SIZE = 128;
+    public int parameterSize = DEFAULT_PARAMETER_SIZE;
     public boolean isValid;
     public boolean saveFileEnabled;
     public String debugFileSaveLocation;
