@@ -32,10 +32,12 @@ import java.util.List;
  */
 public final class KernelValidator {
 
-    // The kernel inspections registered with level="ERROR" in plugin.xml. Not listed:
-    // NonVoidReturnInspection (WARNING; non-void kernels are rejected separately by the
-    // task panel), UnanalysableHelperInspection (WEAK WARNING) and
-    // StaticTaskGraphInspection (not kernel-scoped).
+    // The kernel inspections whose problems hide a kernel from the task panel. This list
+    // is kept explicit rather than derived from the plugin.xml levels:
+    // ExternalLibraryInspection is registered as WARNING (the severity it reports) but
+    // still blocks. Not listed: NonVoidReturnInspection (WARNING; non-void kernels are
+    // rejected separately by the task panel), UnanalysableHelperInspection (WEAK WARNING)
+    // and StaticTaskGraphInspection (not kernel-scoped).
     private static final List<TornadoKernelInspection> BLOCKING_CHECKS = List.of(
             new DataTypeInspection(),
             new RecursionInspection(),
