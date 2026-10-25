@@ -1,57 +1,53 @@
 # TornadoInsight: Unleashing the Power of TornadoVM in IntelliJ IDEA
 <img align="left" width="250" height="250" src="etc/figures/TornadoInsight.jpg">
 
-**TornadoInsight** is an open source IntelliJ plugin 
-that aims to enhance the experience of developers
-when working with [TornadoVM](https://github.com/beehive-lab/TornadoVM).
-It provides  a built-in on-the-fly static checker, empowering developers 
-to identify unsupported Java features in TornadoVM
- and understand the reasons behind these limitations. 
- Additionally, it introduces a dynamic testing framework 
- that enables developers to easily test individual TornadoVM tasks. 
- It automatically wraps TornadoVM tasks, invoking the native 
- TornadoVM runtime on the developers' machines for seamless debugging and testing. 
+**TornadoInsight** is an open source IntelliJ plugin that makes it easier to develop
+[TornadoVM](https://github.com/beehive-lab/TornadoVM) applications. It checks TornadoVM kernels
+for unsupported Java features as you type, runs individual kernels on your TornadoVM installation
+to show what TornadoVM generates for them, and writes TornadoVM boilerplate for you through live
+templates.
 
-## Key Features:
-### 1. On-the-Fly Static Checker
-TornadoInsight is equipped with an on-the-fly static checker. 
-This tool scans TornadoVM code in real time, pinpointing any 
-Java features that are not supported by TornadoVM. Through 
-instant notifications, developers gain immediate insights into 
-potential compatibility issues, allowing for proactive adjustments 
-and adherence to the TornadoVM guidelines. Currently, the static checker 
-performs checks for datatypes, Traps/Exceptions, recursion, native
-method calls, assert statements. 
+The plugin is described in *Dynamic and Static Code Analysis for Java Programs on Heterogeneous
+Hardware* (MPLR '25, [doi:10.1145/3759426.3760984](https://doi.org/10.1145/3759426.3760984)).
 
-TornadoInsight provides a tool window to view detailed information emerging from 
-the static inspection of TornadoInsight.
+<br clear="left"/>
 
-### 2. Dynamic Testing Framework
-TornadoInsight simplifies the testing process for individual TornadoVM tasks. 
-After creating a TornadoVM task, there is no need to write the main method
-or initialize the method parameters. You only need to select the method in 
-the tool window of TornadoInsight to test it. 
+## Features
 
-With its dynamic testing framework, developers can seamlessly conduct tests on
-specific tasks within their codebase. TornadoInsight dynamically generates a
-test file and automatically generates the Main method and the 
-TaskGraph required by TornadoVM. In turn, it automatically creates and initializes 
-the input/output variables according to the parameter types. Then, TornadoInsight invokes the 
-TornadoVM runtime on the developer's machine to run the generated Java class.
-This functionality streamlines the debugging process, making it convenient 
-for developers to identify and resolve issues in their TornadoVM applications.
-If a TornadoVM task is compatible with TornadoVM, the test will output the generated OpenCL
-kernel code for it, so that developers can test it. If it is not compatible, 
-it will output an exception. In addition, the elapsed time for running the checks
-is displayed in the bottom right corner.
+### Static checks
+While you edit a TornadoVM kernel (a method with `@Parallel`/`@Reduce` loops, or one that takes a
+`KernelContext` or `TileContext`), TornadoInsight underlines the Java features TornadoVM cannot
+compile and explains why in a tooltip. It checks the kernel and the helper methods it calls:
 
-### 3. Live Templates
+| Check | Flags |
+|---|---|
+| Data type | Variables, fields and parameters of types TornadoVM cannot compile to device code |
+| Recursion | Direct and indirect recursion |
+| Method throw | `throw`, `try`/`catch` and methods that declare exceptions |
+| Assert statement | `assert` statements |
+| System call | Native methods, and JDK system, I/O and reflection classes (e.g. `System`, `Thread`, `java.io`) |
+| External library | Calls into classes outside the JDK and the TornadoVM API |
+| Static TaskGraph | `TaskGraph` instances held in `static` fields |
+| Non-void return type | Kernel methods that return a value instead of `void` |
+| Unanalysable helper | Calls to helpers that cannot be checked: unresolved, native, or without source |
+
+The checks are listed under *Settings | Editor | Inspections | TornadoVM*, and the **Inspector Guide**
+tab of the TornadoVM tool window explains each restriction.
+
+### Dynamic inspection
+Some problems only show up when TornadoVM compiles and runs a kernel. Open the **TornadoVM** tool
+window, select one or more of the listed kernels, and click **Run**. TornadoInsight generates a small
+test program around each kernel (with test data sized by *Max array size*), compiles it, and runs it
+on your TornadoVM installation. The **TornadoInsight Console** shows whether the kernel ran and the
+kernel code TornadoVM generated for it (e.g. OpenCL C), or the error it hit.
+
+The tool window lists only kernels that pass the static checks.
+
+### Live templates
 TornadoInsight ships live templates that write the TornadoVM boilerplate for you. Type an
 abbreviation in a Java editor and press <kbd>Tab</kbd>; then press <kbd>Tab</kbd> again to move
-between the fields to fill in. The templates are offered in modules that use the TornadoVM API, and in any
-Java project when `TORNADOVM_HOME` points at a TornadoVM SDK (for projects that compile against the SDK's
-modules, which the IDE does not see as a library).
-The **Live Templates** tab of the TornadoVM tool window lists them, with a preview of the code each one inserts.
+between the fields to fill in. The **Live Templates** tab of the TornadoVM tool window lists them,
+with a preview of the code each one inserts.
 
 | Abbreviation | Inserts | Where it works |
 |---|---|---|
@@ -61,7 +57,7 @@ The **Live Templates** tab of the TornadoVM tool window lists them, with a previ
 | `tkernel` | A kernel method that takes a `KernelContext` | In a class body |
 | `ttile` | A kernel method that takes a `TileContext` | In a class body (TornadoVM 7.0.0+) |
 
-For example, `tg` followed by <kbd>Tab</kbd> inserts the following, with the cursor on the first field:
+For example, `tg` inserts:
 
 ```java
 TaskGraph taskGraph = new TaskGraph("s0")
@@ -70,86 +66,50 @@ TaskGraph taskGraph = new TaskGraph("s0")
         .transferToHost(DataTransferMode.EVERY_EXECUTION, OUTPUTS);
 ```
 
-and `tep` turns that graph into a running plan:
+The templates are offered in modules that use the TornadoVM API, and in any Java project when
+`TORNADOVM_HOME` points at a TornadoVM SDK. You can edit them in
+*Settings | Editor | Live Templates | TornadoVM*.
 
-```java
-try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(taskGraph.snapshot())) {
-    executionPlan.execute();
-}
-```
+## Getting started
 
-You can edit the templates in <i>Settings | Editor | Live Templates | TornadoVM</i>.
+### Requirements
+- IntelliJ IDEA 2023.1 or newer (or another JetBrains IDE with Java support)
+- A [TornadoVM](https://github.com/beehive-lab/TornadoVM) SDK 2.2.0 or newer, for dynamic inspection
+  (TornadoVM 6.0.0 and newer need TornadoInsight 1.6.0 or newer)
+- A JDK 21 or newer as the project JDK, matching the requirement of your TornadoVM SDK; a standard
+  OpenJDK build, not a GraalVM one
 
-## How to use TornadoInsight?
-This section covers the initial steps that are required in order to correctly setup the plugin project inside the IntelliJ IDE.
+### Install
+In *Settings | Plugins | Marketplace*, search for **TornadoInsight**, install it and restart the IDE.
 
-### Clone the repository
+You can install TornadoVM with [SDKMAN!](https://sdkman.io) (`sdk install tornadovm`) or from
+[tornadovm.org/downloads](https://www.tornadovm.org/downloads).
 
-```bash
-git clone https://github.com/beehive-lab/tornado-insight.git
-```
+### Point TornadoInsight at TornadoVM
+TornadoInsight finds TornadoVM through the `TORNADOVM_HOME` environment variable, which must be
+visible to the IDE process. IDEs started from a launcher, the Dock or JetBrains Toolbox do not read
+shell files such as `~/.bashrc`, so set it as follows (`which tornado` shows where your SDK is):
 
-### Folder layout
+- **Linux (systemd):** create `~/.config/environment.d/tornado.conf` containing
+  `TORNADOVM_HOME=/absolute/path/to/tornado-sdk`, then log out and back in.
+- **macOS:** run `launchctl setenv TORNADOVM_HOME /absolute/path/to/tornado-sdk`, then quit the IDE
+  (Cmd+Q) and start it again.
+- **Windows:** add a user variable `TORNADOVM_HOME=C:\path\to\tornado-sdk` under
+  *System Properties | Environment Variables*, then restart the IDE.
 
-The output of this folder is as follows:
-
-```
- idea
-   |-src
-     |-main
-       |-java (plugin sources)
-       |-resources (plugin resources - the plugin.xml file lives here)
-   |-build (where build files are stored)
-       |-distributions (where the plugin zip file is generated)   
-   |-build.gradle (the gradle build file)
-   |-gradle.properties (contains properties required to build this project)
-```
-
-### Building the plugin
-
-
-This plugin can be built with `gradle`. To build the plugin, simply run the following command from the `idea` folder:
-
-`sh gradlew clean build`
-This will download gradle and the required IntelliJ dependencies,
-will build the plugin and will place the results in
-the `build/distributions` folder.
-Once the build is configured correctly, the plugin can even be tested in a sandbox environment, as follows:
-
-`sh gradlew runIde`
-
-### Installing the plugin
-
-To install the plugin in your IDE, first you need to build a plugin module file (a `.zip` file), as described in the previous section.
-
-Once the plugin zip has been obtained, it can be installed in the IDE; go in `Help -> Find Action...`, and type `Install plugin from disk`, and then select the corresponding action from the drop down list. A new file dialog will pop up: point the IDE to the zip file you have created in the step above. The IDE will require a restart - once restart is completed the installation process is completed, and the plugin is ready to be used to run and debug jtreg tests.
-
-## Using TornadoInsight
-
-
-### Pre-requisites
-TornadoInsight invokes at runtime Java and TornadoVM on the developers' local machine, and therefore, developers need to make sure that they have installed those prior to using the plugin.
-- [TornadoVM](https://github.com/beehive-lab/TornadoVM) >= 1.0
-- JDK >= 21
-
-### Configuring TornadoInsight
-The dynamic inspection feature of TornadoInsight is configured after the installation of the plugin, as follows:
-- Navigate to "Preferences" or "Settings" depending on your operating system.
-- Select "TornadoInsight" from the menu.
-
-Developers should configure the TornadoVM root directory (i.e. the path to the TornadoVM cloned repository) and select a JDK which should be >= JDK 21. 
-Additionally, developers should indicate a tentative "array size" that can be used by TornadoInsight to  set the size of the input and output arrays of a TornadoVM task.
+### Configure
+*Settings | Other Settings | TornadoInsight* has one setting, **Max array size**: the length of the
+arrays (and the size of the other inputs) that dynamic inspection creates as test data. Dynamic
+inspection uses the project JDK from *File | Project Structure*.
 
 ## Limitations
-#### No support for non-JDK method invocations
-TornadoInsight, in its current state, lacks support for dynamic
-inspection of references. This limitation arises due to the nature
-of the dynamically generated Java code during the dynamic inspection
-process. The Java code is derived from a copy of the Tornado task method,
-and in this copying process, automatic handling of non-JDK method
-invocations and global variable replacements is not performed.
+- **Dynamic inspection runs a copy of the kernel.** The generated test program contains a copy of
+  the kernel and the helper methods it calls, but not calls into other libraries or the fields of
+  other classes, so such kernels cannot be inspected dynamically.
 
-
+## Developing TornadoInsight
+Building the plugin, running it in a sandbox IDE, the code layout, the tests and the developer tools
+are described in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Acknowledgments
 
@@ -161,4 +121,4 @@ This work is partially supported by the following EU & UKRI grants (most recent 
 - EU Horizon 2020 [ELEGANT 957286](https://www.elegant-h2020.eu/).
 
 ## License
-[![License: Apache 2](https://img.shields.io/badge/License-Apache%202.0-red.svg)](https://github.com/beehive-lab/tornadovm-intellij-plugin/blob/main/LICENSE)
+[![License: Apache 2](https://img.shields.io/badge/License-Apache%202.0-red.svg)](LICENSE)
