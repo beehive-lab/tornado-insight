@@ -1,0 +1,37 @@
+<!--
+  ~ Copyright (c) 2026, APT Group, Department of Computer Science,
+  ~  The University of Manchester.
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~  http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  -->
+
+<html>
+<body>
+<p>
+  Reports calls from a TornadoVM kernel (a method annotated with
+  <code>@Parallel</code> or <code>@Reduce</code>, or taking a
+  <code>KernelContext</code> or <code>TileContext</code> parameter) to a helper
+  method that TornadoInsight could not analyse: the call does not resolve, or
+  the helper is native, has no source, or lives outside the project's sources.
+</p>
+<p>
+  The other kernel inspections follow helper calls and check their bodies as if
+  they were inlined into the kernel. For the reported call sites they could not,
+  so problems inside those helpers are not reported.
+</p>
+<p>
+  <b>How to fix:</b> make sure the call resolves to a method with source in the
+  project, or check the helper by hand before running the kernel.
+</p>
+</body>
+</html>

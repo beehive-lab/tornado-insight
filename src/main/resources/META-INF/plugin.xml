@@ -144,86 +144,84 @@ Enjoy and share your feedback!
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.java</depends>
 
+    <resource-bundle>messages.TornadoInsightBundle</resource-bundle>
+
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
 
         <localInspection language="JAVA"
-                         displayName="Data type check"
-                         groupPath="Java"
-                         groupName="Java issues"
+                         key="inspection.displayName.DataTypeInspection"
+                         groupKey="inspection.group"
                          shortName="DataTypeInspection"
                          level="ERROR"
                          enabledByDefault="true"
-                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspector.DataTypeInspection"/>
+                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspection.DataTypeInspection"/>
         <localInspection language="JAVA"
-                         displayName="Recursion check"
-                         groupPath="Java"
-                         groupName="Java issues"
+                         key="inspection.displayName.RecursionInspection"
+                         groupKey="inspection.group"
                          shortName="RecursionInspection"
                          level="ERROR"
                          enabledByDefault="true"
-                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspector.RecursionInspection"/>
+                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspection.RecursionInspection"/>
         <localInspection language="JAVA"
-                         displayName="Method Throw check"
-                         groupPath="Java"
-                         groupName="Java issues"
+                         key="inspection.displayName.ThrowInspection"
+                         groupKey="inspection.group"
                          shortName="ThrowInspection"
                          level="ERROR"
                          enabledByDefault="true"
-                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspector.ThrowInspection"/>
+                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspection.ThrowInspection"/>
         <localInspection language="JAVA"
-                         displayName="System call check"
-                         groupPath="Java"
-                         groupName="Java issues"
+                         key="inspection.displayName.SystemCallInspection"
+                         groupKey="inspection.group"
                          shortName="SystemCallInspection"
                          level="ERROR"
                          enabledByDefault="true"
-                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspector.SystemCallInspection"/>
+                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspection.SystemCallInspection"/>
         <localInspection language="JAVA"
-                         displayName="Static Taskgraph check"
-                         groupPath="Java"
-                         groupName="Java issues"
+                         key="inspection.displayName.StaticTaskGraphInspection"
+                         groupKey="inspection.group"
                          shortName="StaticTaskGraphInspection"
                          level="ERROR"
                          enabledByDefault="true"
-                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspector.StaticTaskGraphInspection"/>
+                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspection.StaticTaskGraphInspection"/>
         <localInspection language="JAVA"
-                         displayName="Assert statement check"
-                         groupPath="Java"
-                         groupName="Java issues"
+                         key="inspection.displayName.AssertInspection"
+                         groupKey="inspection.group"
                          shortName="AssertInspection"
                          level="ERROR"
                          enabledByDefault="true"
-                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspector.AssertInspection"/>
-        <localInspection implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspector.ExternalLibraryInspection"
+                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspection.AssertInspection"/>
+        <localInspection implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspection.ExternalLibraryInspection"
                          language="JAVA"
-                         displayName="External library check"
-                         groupPath="Java"
-                         groupName="Java issues"
+                         key="inspection.displayName.ExternalInspection"
+                         groupKey="inspection.group"
                          shortName="ExternalInspection"
-                         level="ERROR"
-                         enabledByDefault="true">
-
-        </localInspection>
+                         level="WARNING"
+                         enabledByDefault="true"/>
         <localInspection language="JAVA"
-                         displayName="Non-void return type check"
-                         groupPath="Java"
-                         groupName="Java issues"
+                         key="inspection.displayName.NonVoidReturnInspection"
+                         groupKey="inspection.group"
                          shortName="NonVoidReturnInspection"
                          level="WARNING"
                          enabledByDefault="true"
-                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspector.NonVoidReturnInspection"/>
+                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspection.NonVoidReturnInspection"/>
+        <localInspection language="JAVA"
+                         key="inspection.displayName.UnanalysableHelperInspection"
+                         groupKey="inspection.group"
+                         shortName="UnanalysableHelperInspection"
+                         level="WEAK WARNING"
+                         enabledByDefault="true"
+                         implementationClass="uk.ac.manchester.beehive.tornado.plugins.inspection.UnanalysableHelperInspection"/>
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoSideWindow" id="TornadoVM" anchor="right" icon="TornadoIcons.TornadoIcon" />
-        <applicationConfigurable instance="uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingConfiguration"
+        <applicationConfigurable instance="uk.ac.manchester.beehive.tornado.plugins.settings.TornadoSettingConfiguration"
                                  id="uk.ac.manchester.beehive.tornado.settings"
-                                 displayName="TornadoInsight"/>
-        <applicationService serviceImplementation="uk.ac.manchester.beehive.tornado.plugins.ui.settings.TornadoSettingState"/>
-        <psi.treeChangeListener implementation="uk.ac.manchester.beehive.tornado.plugins.listener.PsiChangeListener"/>
+                                 key="ui.settings.displayName"/>
+        <applicationService serviceImplementation="uk.ac.manchester.beehive.tornado.plugins.settings.TornadoSettingState"/>
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory" id="TornadoInsight Console" anchor="bottom"/>
         <errorHandler implementation="uk.ac.manchester.beehive.tornado.plugins.error.ErrorSubmitter"/>
-        <notificationGroup id="TornadoInsight" displayType="BALLOON"/>
-        <postStartupActivity implementation="uk.ac.manchester.beehive.tornado.plugins.listener.TornadoSettingListener"/>
+        <notificationGroup id="TornadoInsight" displayType="BALLOON" key="notification.group.name"/>
+        <postStartupActivity implementation="uk.ac.manchester.beehive.tornado.plugins.startup.TornadoSettingListener"/>
         <liveTemplateContext contextId="TORNADOVM_STATEMENT" baseContextId="JAVA_CODE"
                              implementation="uk.ac.manchester.beehive.tornado.plugins.templates.TornadoVMContextType$Statement"/>
         <liveTemplateContext contextId="TORNADOVM_DECLARATION" baseContextId="JAVA_CODE"
@@ -234,21 +232,21 @@ Enjoy and share your feedback!
     </extensions>
     <actions>
         <group id="tornado.bar">
-            <action id="tornado.refresh" class="uk.ac.manchester.beehive.tornado.plugins.service.RefreshAction" text="Refresh" description="Refresh"
+            <action id="tornado.refresh" class="uk.ac.manchester.beehive.tornado.plugins.actions.RefreshAction"
                     icon="AllIcons.Actions.Refresh"/>
-            <action id="tornado.runInspection" class="uk.ac.manchester.beehive.tornado.plugins.service.RunInspectionAction"
-                    text="Run Dynamic Inspection" description="Run dynamic inspection" icon="AllIcons.Actions.Execute"/>
+            <action id="tornado.runInspection" class="uk.ac.manchester.beehive.tornado.plugins.actions.RunInspectionAction"
+                    icon="AllIcons.Actions.Execute"/>
             <separator/>
-            <action id="tornado.settings" class="uk.ac.manchester.beehive.tornado.plugins.service.SettingsAction"
-                    text="Settings" description="Settings" icon="AllIcons.General.GearPlain"/>
-            <action id="tornado.doc" class="uk.ac.manchester.beehive.tornado.plugins.service.OpenTornadoDocsAction"
-                    text="TornadoVM Documentation" description="TornadoVM documentation" icon="AllIcons.Toolwindows.Documentation"/>
+            <action id="tornado.settings" class="uk.ac.manchester.beehive.tornado.plugins.actions.SettingsAction"
+                    icon="AllIcons.General.GearPlain"/>
+            <action id="tornado.doc" class="uk.ac.manchester.beehive.tornado.plugins.actions.OpenTornadoDocsAction"
+                    icon="AllIcons.Toolwindows.Documentation"/>
         </group>
     </actions>
     <projectListeners>
-        <listener class="uk.ac.manchester.beehive.tornado.plugins.listener.ToolWindowOpen"
+        <listener class="uk.ac.manchester.beehive.tornado.plugins.listeners.ToolWindowOpen"
                   topic="com.intellij.openapi.wm.ex.ToolWindowManagerListener"/>
-        <listener class="uk.ac.manchester.beehive.tornado.plugins.listener.EditorSwitch"
+        <listener class="uk.ac.manchester.beehive.tornado.plugins.listeners.EditorSwitch"
                   topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
     </projectListeners>
 </idea-plugin>

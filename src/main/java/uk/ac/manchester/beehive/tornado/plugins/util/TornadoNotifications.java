@@ -17,7 +17,9 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.util;
 
+import com.intellij.ide.BrowserUtil;
 import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationAction;
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
 import org.jetbrains.annotations.NotNull;
@@ -29,6 +31,8 @@ import org.jetbrains.annotations.NotNull;
 public final class TornadoNotifications {
 
     public static final String GROUP_ID = "TornadoInsight";
+
+    public static final String DOWNLOADS_URL = "https://www.tornadovm.org/downloads";
 
     private TornadoNotifications() {
     }
@@ -42,5 +46,20 @@ public final class TornadoNotifications {
         return NotificationGroupManager.getInstance()
                 .getNotificationGroup(GROUP_ID)
                 .createNotification(title, content, type);
+    }
+
+    /**
+     * Creates (but does not show) the "TORNADOVM_HOME is not set" notification, with an
+     * action that opens the TornadoVM downloads page. Notification content cannot carry
+     * clickable links without the deprecated listener API, so the page is opened from
+     * the action instead.
+     */
+    public static @NotNull Notification sdkNotConfigured(@NotNull NotificationType type) {
+        Notification notification = create(MessageBundle.message("notification.sdkNotConfigured.title"),
+                MessageBundle.message("notification.sdkNotConfigured.content"), type);
+        notification.addAction(NotificationAction.createSimpleExpiring(
+                MessageBundle.message("notification.action.installationInstructions"),
+                () -> BrowserUtil.browse(DOWNLOADS_URL)));
+        return notification;
     }
 }

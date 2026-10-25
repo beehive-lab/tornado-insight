@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025, APT Group, Department of Computer Science,
+ * Copyright (c) 2024-2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,23 +17,22 @@
 
 plugins {
   id 'java'
-  id 'org.jetbrains.kotlin.jvm' version '2.2.0'
   id 'org.jetbrains.intellij.platform' version '2.9.0'
 }
 
 group = 'uk.ac.manchester.beehive.tornado.plugins'
 version = '1.6.0'
 
-// Repositories: keep them ONLY in settings (PREFER_SETTINGS)
-
 java {
   toolchain { languageVersion = JavaLanguageVersion.of(21) }
 }
 
+// Repositories for dependencies live here only; settings.gradle.kts declares
+// just the plugin repositories.
 repositories {
+  mavenCentral()
   // REQUIRED so 2.x can find the IDE + bundled modules
   intellijPlatform { defaultRepositories() }
-  mavenCentral()
 }
 
 dependencies {
@@ -54,12 +53,7 @@ dependencies {
   testImplementation 'org.opentest4j:opentest4j:1.3.0'
 }
 
-// Kotlin 2.2 compilerOptions (JVM 17 bytecode is safe & works on JBR21)
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-  compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
-}
-
-// Java bytecode 17 as well
+// Java bytecode 17 (safe & works on JBR21)
 tasks.withType(JavaCompile).configureEach {
   sourceCompatibility = '17'
   targetCompatibility = '17'
@@ -67,7 +61,17 @@ tasks.withType(JavaCompile).configureEach {
 
 // plugin.xml compatibility
 tasks.named('patchPluginXml') {
-  it.sinceBuild.set('224')
+  it.sinceBuild.set('231')
+}
+
+// ./gradlew verifyPlugin checks the plugin against the IDEs JetBrains recommends
+// for its since/until range (downloads those IDEs on first use)
+intellijPlatform {
+  pluginVerification {
+    ides {
+      recommended()
+    }
+  }
 }
 
 // optional: not needed on modern IDEs

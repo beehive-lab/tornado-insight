@@ -27,4 +27,13 @@ public class TornadoNotificationsTest extends BasePlatformTestCase {
         Notification notification = TornadoNotifications.create("title", "content", NotificationType.INFORMATION);
         assertEquals(TornadoNotifications.GROUP_ID, notification.getGroupId());
     }
+
+    public void testSdkNotConfiguredOffersTheDownloadsPageAsAnAction() {
+        Notification notification = TornadoNotifications.sdkNotConfigured(NotificationType.WARNING);
+        assertEquals(NotificationType.WARNING, notification.getType());
+        // Links in notification content are not clickable; the page is opened from the action
+        assertFalse(notification.getContent().contains("<a "));
+        assertSize(1, notification.getActions());
+        assertEquals("View Installation Instructions", notification.getActions().get(0).getTemplatePresentation().getText());
+    }
 }

@@ -19,7 +19,6 @@ package uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow;
 
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionToolbar;
-import com.intellij.openapi.actionSystem.DataKey;
 import com.intellij.openapi.actionSystem.DataProvider;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.diagnostic.Logger;
@@ -29,20 +28,20 @@ import com.intellij.openapi.ui.SimpleToolWindowPanel;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
+import com.intellij.psi.util.PsiModificationTracker;
 import com.intellij.ui.components.JBList;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
-import uk.ac.manchester.beehive.tornado.plugins.message.TornadoTaskRefreshListener;
-import uk.ac.manchester.beehive.tornado.plugins.util.DataKeys;
+import com.intellij.util.messages.MessageBusConnection;
+import uk.ac.manchester.beehive.tornado.plugins.listeners.TornadoTaskRefreshListener;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
-import uk.ac.manchester.beehive.tornado.plugins.util.TornadoTWTask;
+import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoTaskService.TaskEntry;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
-import java.util.Objects;
 
 public class TornadoSideWindow implements ToolWindowFactory {
 
@@ -52,21 +51,21 @@ public class TornadoSideWindow implements ToolWindowFactory {
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
         ToolWindowContent toolWindowContent = new ToolWindowContent(project, toolWindow);
         InspectorInfoPanel inspectorInfoPanel = new InspectorInfoPanel(toolWindow);
-        Content content = ContentFactory.getInstance().createContent(toolWindowContent, "TornadoVM Tasks", false);
+        Content content = ContentFactory.getInstance().createContent(toolWindowContent, MessageBundle.message("ui.toolwindow.tab.tasks"), false);
         toolWindow.getContentManager().addContent(content);
-        content = ContentFactory.getInstance().createContent(inspectorInfoPanel, "Inspector Guide", false);
+        content = ContentFactory.getInstance().createContent(inspectorInfoPanel, MessageBundle.message("ui.toolwindow.tab.guide"), false);
         toolWindow.getContentManager().addContent(content);
     }
 
     private static class ToolWindowContent extends SimpleToolWindowPanel implements DataProvider {
 
-        JBList<String> TornadoList = new JBList<>();
+        JBList<TaskEntry> TornadoList = new JBList<>();
 
         public ToolWindowContent(Project project, ToolWindow toolWindow) {
             super(Boolean.TRUE, Boolean.TRUE);
             SimpleToolWindowPanel simpleToolWindowPanel = new SimpleToolWindowPanel(true, true);
 
-            DefaultListModel<String> model = new DefaultListModel<>();
+            DefaultListModel<TaskEntry> model = new DefaultListModel<>();
             TornadoList.setModel(model);
             TornadoList.getEmptyText().setText(MessageBundle.message("ui.toolwindow.defaultText"));
             simpleToolWindowPanel.add(TornadoList);
@@ -79,49 +78,30 @@ public class TornadoSideWindow implements ToolWindowFactory {
             init(project, toolWindow);
         }
 
-        public <T> @Nullable T getData(@NotNull DataKey<T> key) {
-            if (key == DataKeys.TORNADOINSIGHT_LIST_MODEL) {
-                return (T) getModel();
-            }
-            if (key == DataKeys.TORNADO_SELECTED_LIST) {
-                return (T) TornadoList.getSelectedValuesList();
-            }
-            if (key == DataKeys.TORNADO_LIST) {
-                return (T) TornadoList;
-            }
-            return null;
-        }
-
-        /**
-         * @deprecated Use {@link #getData(DataKey)} instead.
-         */
-        @Deprecated
+        // DataProvider rather than UiDataProvider, which needs 2024.2+ (sinceBuild is 231).
+        // On newer platforms SimpleToolWindowPanel bridges this method to its data snapshot.
+        @SuppressWarnings("deprecation")
         @Override
         public @Nullable Object getData(@NotNull @NonNls String dataId) {
-            if (DataKeys.TORNADOINSIGHT_LIST_MODEL.is(dataId)) {
-                return getModel();
-            }
             if (DataKeys.TORNADO_SELECTED_LIST.is(dataId)) {
                 return TornadoList.getSelectedValuesList();
             }
-            if (DataKeys.TORNADO_LIST.is(dataId)) {
-                return TornadoList;
-            }
             return null;
         }
 
-        public DefaultListModel<String> getModel() {
-            return (DefaultListModel<String>) TornadoList.getModel();
+        public DefaultListModel<TaskEntry> getModel() {
+            return (DefaultListModel<TaskEntry>) TornadoList.getModel();
         }
 
         public void init(Project project, ToolWindow toolWindow) {
-            // Tie the subscription to the tool window so it is dropped with its content
-            project.getMessageBus().connect(toolWindow.getDisposable()).subscribe(TornadoTaskRefreshListener.REFRESH_TOPIC, new TornadoTaskRefreshListener() {
+            // Tie the subscriptions to the tool window so they are dropped with its content
+            MessageBusConnection connection = project.getMessageBus().connect(toolWindow.getDisposable());
+            TornadoTaskRefreshListener listener = new TornadoTaskRefreshListener() {
                 @Override
                 public void refresh() {
                     VirtualFile[] selectedFiles = FileEditorManager.getInstance(project).getSelectedFiles();
                     if (selectedFiles.length > 0) {
-                        TornadoTWTask.refresh(project, selectedFiles[0], getModel());
+                        TornadoTaskService.getInstance(project).refresh(selectedFiles[0], getModel());
                     } else {
                         LOG.debug("No file selected in editor for Tornado refresh");
                     }
@@ -129,7 +109,15 @@ public class TornadoSideWindow implements ToolWindowFactory {
 
                 @Override
                 public void refresh(Project project, VirtualFile newFile) {
-                    TornadoTWTask.refresh(project, newFile, getModel());
+                    TornadoTaskService.getInstance(project).refresh(newFile, getModel());
+                }
+            };
+            connection.subscribe(TornadoTaskRefreshListener.REFRESH_TOPIC, listener);
+            // Re-validate the listed kernels after code changes, so a kernel that gains or
+            // loses a blocking problem is hidden or shown again (refreshes are coalesced)
+            connection.subscribe(PsiModificationTracker.TOPIC, () -> {
+                if (toolWindow.isVisible()) {
+                    listener.refresh();
                 }
             });
         }
@@ -137,7 +125,7 @@ public class TornadoSideWindow implements ToolWindowFactory {
 
     private static class InspectorInfoPanel extends SimpleToolWindowPanel {
 
-        JScrollPane scrollPane = new JBScrollPane(InspectorInfoKt.inspectorPane());
+        JScrollPane scrollPane = new JBScrollPane(InspectorInfo.inspectorPane());
 
         public InspectorInfoPanel(ToolWindow toolWindow) {
             super(Boolean.TRUE, Boolean.TRUE);
