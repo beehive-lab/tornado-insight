@@ -38,7 +38,7 @@ public class TornadoVMTemplatesTest {
     @Test
     public void listsEveryShippedTemplateInFileOrder() {
         List<String> abbreviations = TornadoVMTemplates.all().stream().map(Template::abbreviation).toList();
-        assertEquals(List.of("tg", "tep", "kpar", "kctx", "ktile"), abbreviations);
+        assertEquals(List.of("tg", "tep", "tparallel", "tkernel", "ttile"), abbreviations);
         for (Template template : TornadoVMTemplates.all()) {
             assertFalse(template.abbreviation() + " has no description", template.description().isBlank());
             assertFalse(template.abbreviation() + " has no context", template.contexts().isEmpty());
@@ -61,7 +61,7 @@ public class TornadoVMTemplatesTest {
 
     @Test
     public void previewDropsTheEmptyEndLine() {
-        Template parallel = TornadoVMTemplates.all().stream().filter(t -> t.abbreviation().equals("kpar")).findFirst().orElseThrow();
+        Template parallel = TornadoVMTemplates.all().stream().filter(t -> t.abbreviation().equals("tparallel")).findFirst().orElseThrow();
         assertEquals("""
                 public static void compute(PARAMS) {
                     for (@Parallel int i = 0; i < SIZE; i++) {

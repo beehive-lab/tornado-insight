@@ -75,7 +75,7 @@ public class TornadoVMLiveTemplatesTest extends TornadoTestCase {
 
     public void testParallelKernel() {
         addTornadoApi();
-        expand("class Demo { kpar<caret> }");
+        expand("class Demo { tparallel<caret> }");
         assertExpanded("""
                 import uk.ac.manchester.tornado.api.annotations.Parallel;
 
@@ -90,7 +90,7 @@ public class TornadoVMLiveTemplatesTest extends TornadoTestCase {
 
     public void testKernelContextKernel() {
         addTornadoApi();
-        expand("class Demo { kctx<caret> }");
+        expand("class Demo { tkernel<caret> }");
         assertExpanded("""
                 import uk.ac.manchester.tornado.api.KernelContext;
 
@@ -104,7 +104,7 @@ public class TornadoVMLiveTemplatesTest extends TornadoTestCase {
     public void testTileContextKernel() {
         addTornadoApi();
         addTileContext();
-        expand("class Demo { ktile<caret> }");
+        expand("class Demo { ttile<caret> }");
         assertExpanded("""
                 import uk.ac.manchester.tornado.api.tile.TileContext;
 
@@ -122,7 +122,7 @@ public class TornadoVMLiveTemplatesTest extends TornadoTestCase {
 
     public void testTileTemplateNotOfferedWithoutTileContext() {
         addTornadoApi();
-        expand("class Demo { ktile<caret> }");
+        expand("class Demo { ttile<caret> }");
         assertFalse(myFixture.getEditor().getDocument().getText().contains("TileContext"));
     }
 
@@ -135,13 +135,13 @@ public class TornadoVMLiveTemplatesTest extends TornadoTestCase {
 
     public void testTileTemplateOfferedWhenTheSdkHasTileContext() throws IOException {
         useSdk(sdkWithApiJar("uk.ac.manchester.tornado.api.TaskGraph", "uk.ac.manchester.tornado.api.tile.TileContext"));
-        expand("class Demo { ktile<caret> }");
+        expand("class Demo { ttile<caret> }");
         assertTrue(myFixture.getEditor().getDocument().getText().contains("TileContext"));
     }
 
     public void testTileTemplateNotOfferedWhenTheSdkLacksTileContext() throws IOException {
         useSdk(sdkWithApiJar("uk.ac.manchester.tornado.api.TaskGraph"));
-        expand("class Demo { ktile<caret> }");
+        expand("class Demo { ttile<caret> }");
         assertFalse(myFixture.getEditor().getDocument().getText().contains("TileContext"));
     }
 

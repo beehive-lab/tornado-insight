@@ -27,7 +27,7 @@
             <option name="TORNADOVM_STATEMENT" value="true"/>
         </context>
     </template>
-    <template name="kpar"
+    <template name="tparallel"
               value="public static void $NAME$($PARAMS$) {&#10;    for (@uk.ac.manchester.tornado.api.annotations.Parallel int $I$ = 0; $I$ &lt; $SIZE$; $I$++) {&#10;        $END$&#10;    }&#10;}"
               description="New TornadoVM kernel method with a @Parallel loop"
               toReformat="true"
@@ -40,7 +40,7 @@
             <option name="TORNADOVM_DECLARATION" value="true"/>
         </context>
     </template>
-    <template name="kctx"
+    <template name="tkernel"
               value="public static void $NAME$(uk.ac.manchester.tornado.api.KernelContext $CONTEXT$, $PARAMS$) {&#10;    $END$&#10;}"
               description="New TornadoVM kernel method using KernelContext"
               toReformat="true"
@@ -52,7 +52,7 @@
             <option name="TORNADOVM_DECLARATION" value="true"/>
         </context>
     </template>
-    <template name="ktile"
+    <template name="ttile"
               value="public static void $NAME$(uk.ac.manchester.tornado.api.tile.TileContext $CONTEXT$, $PARAMS$) {&#10;    $END$&#10;}"
               description="New TornadoVM kernel method using TileContext"
               toReformat="true"
