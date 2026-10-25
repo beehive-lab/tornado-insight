@@ -19,7 +19,7 @@ package uk.ac.manchester.beehive.tornado.plugins.actions;
 
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import uk.ac.manchester.beehive.tornado.plugins.listeners.TornadoTaskRefreshListener;
+import uk.ac.manchester.beehive.tornado.plugins.sync.TornadoTaskRefreshListener;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;

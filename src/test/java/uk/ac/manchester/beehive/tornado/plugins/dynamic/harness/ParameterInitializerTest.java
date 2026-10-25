@@ -19,12 +19,14 @@ package uk.ac.manchester.beehive.tornado.plugins.dynamic.harness;
 
 import org.junit.Test;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Parameter;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.SupportedKernelTypes;
 
 import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -85,6 +87,15 @@ public class ParameterInitializerTest {
     private static final String[] UNSUPPORTED = {
             "java.lang.String", "Byte2", "Short4", "Int5", "Matrix8x8Float", "com.example.Particle", "int[][]", "Float"};
 
+    // Package prefixes of supported-kernel-types.txt: they accept an open set of types,
+    // whose test data is covered type by type in SUPPORTED above
+    private static final List<String> PACKAGE_PREFIXES = List.of(API);
+
+    // Accepted by the static rule through a prefix, but with no test data: the harness
+    // reports them as unsupported parameters instead of generating broken code
+    private static final List<String> NO_TEST_DATA = List.of(
+            "int[][]", "float[][]", "java.util.concurrent.atomic.AtomicIntegerArray");
+
     private static String declare(String type) throws UnsupportedParameterTypeException {
         return new ParameterInitializer(8, new Random(3)).declaration(new Parameter("p", type, false, null));
     }
@@ -106,6 +117,52 @@ public class ParameterInitializerTest {
             assertEquals(type, e.type());
             assertEquals("unsupported parameter type " + type + " (parameter 'p')", e.getMessage());
         }
+    }
+
+    @Test
+    public void everySupportedKernelTypeHasTestData() {
+        SupportedKernelTypes types = SupportedKernelTypes.get();
+        for (String name : types.names()) {
+            assertGenerates(name);
+        }
+        for (String prefix : types.prefixes()) {
+            if (prefix.endsWith(".")) {
+                assertTrue("package prefix " + prefix + " needs test data rows in SUPPORTED and an entry in PACKAGE_PREFIXES",
+                        PACKAGE_PREFIXES.contains(prefix));
+            } else {
+                assertGenerates(prefix);
+            }
+        }
+        for (String[] row : SUPPORTED) {
+            String type = row[0];
+            if (type.contains(".") || type.matches("[a-z]+(\\[])?")) {
+                assertTrue(type + " has test data but is not a supported kernel type", accepted(types, type));
+            }
+        }
+    }
+
+    @Test
+    public void typesWithoutTestDataAreRejected() {
+        SupportedKernelTypes types = SupportedKernelTypes.get();
+        for (String type : NO_TEST_DATA) {
+            assertTrue(type + " is not a supported kernel type; drop it from NO_TEST_DATA", accepted(types, type));
+            assertThrows(type, UnsupportedParameterTypeException.class, () -> declare(type));
+        }
+    }
+
+    private static void assertGenerates(String type) {
+        if (NO_TEST_DATA.contains(type)) return;
+        try {
+            assertFalse(type, declare(type).isEmpty());
+        } catch (UnsupportedParameterTypeException e) {
+            fail(type + " is a supported kernel type without test data: add a generator to ParameterInitializer"
+                    + " or list it in NO_TEST_DATA");
+        }
+    }
+
+    // The resource rule on canonical text (names match the whole text, prefixes its start)
+    private static boolean accepted(SupportedKernelTypes types, String type) {
+        return types.names().contains(type) || types.prefixes().stream().anyMatch(type::startsWith);
     }
 
     @Test

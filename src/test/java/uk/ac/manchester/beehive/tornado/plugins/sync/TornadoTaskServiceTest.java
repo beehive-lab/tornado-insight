@@ -15,14 +15,14 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow;
+package uk.ac.manchester.beehive.tornado.plugins.sync;
 
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import uk.ac.manchester.beehive.tornado.plugins.TornadoTestCase;
-import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoTaskService.TaskEntry;
-import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoTaskService.TaskSnapshot;
+import uk.ac.manchester.beehive.tornado.plugins.sync.TornadoTaskService.TaskEntry;
+import uk.ac.manchester.beehive.tornado.plugins.sync.TornadoTaskService.TaskSnapshot;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoTWTask;
 
 import java.util.List;

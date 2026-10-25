@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, APT Group, Department of Computer Science,
+ * Copyright (c) 2026, APT Group, Department of Computer Science,
  *  The University of Manchester.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,18 +15,13 @@
  *  limitations under the License.
  */
 
-package uk.ac.manchester.beehive.tornado.plugins.listeners;
-
-import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.util.messages.Topic;
-
-public interface TornadoTaskRefreshListener {
-    @Topic.ProjectLevel
-    Topic<TornadoTaskRefreshListener> REFRESH_TOPIC =
-            Topic.create("Tornado task update", TornadoTaskRefreshListener.class);
-
-    void refresh();
-
-    void refresh(Project project, VirtualFile newFile);
-}
+/**
+ * User Interface (§3.3 of the MPLR '25 paper, https://doi.org/10.1145/3759426.3760984): the
+ * TornadoInsight settings page.
+ * <p>
+ * {@link TornadoSettingConfiguration} is the configurable, {@link TornadoSettingsComponent} its
+ * form, and {@link TornadoSettingState} the persisted application-level settings (the array
+ * size of the generated test data, and where to save the generated harnesses).
+ * </p>
+ */
+package uk.ac.manchester.beehive.tornado.plugins.settings;

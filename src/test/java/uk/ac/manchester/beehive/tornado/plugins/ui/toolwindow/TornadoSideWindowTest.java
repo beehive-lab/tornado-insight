@@ -28,7 +28,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.intellij.toolWindow.ToolWindowHeadlessManagerImpl;
 import com.intellij.ui.components.JBList;
 import com.intellij.util.ui.UIUtil;
-import uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoTaskService.TaskEntry;
+import uk.ac.manchester.beehive.tornado.plugins.sync.TornadoTaskService.TaskEntry;
 
 import javax.swing.*;
 import java.util.List;

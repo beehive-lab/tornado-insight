@@ -27,7 +27,7 @@ import java.util.*;
  * <p>
  * It holds no state: every helper takes the file or methods it works on, and the
  * tasks of the current file are kept per project by
- * {@link uk.ac.manchester.beehive.tornado.plugins.ui.toolwindow.TornadoTaskService}.
+ * {@link uk.ac.manchester.beehive.tornado.plugins.sync.TornadoTaskService}.
  * </p>
  */
 public class TornadoTWTask {
