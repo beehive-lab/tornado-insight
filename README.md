@@ -45,6 +45,41 @@ kernel code for it, so that developers can test it. If it is not compatible,
 it will output an exception. In addition, the elapsed time for running the checks
 is displayed in the bottom right corner.
 
+### 3. Live Templates
+TornadoInsight ships live templates that write the TornadoVM boilerplate for you. Type an
+abbreviation in a Java editor and press <kbd>Tab</kbd>; then press <kbd>Tab</kbd> again to move
+between the fields to fill in. The templates are offered in modules that use the TornadoVM API, and in any
+Java project when `TORNADOVM_HOME` points at a TornadoVM SDK (for projects that compile against the SDK's
+modules, which the IDE does not see as a library).
+The **Live Templates** tab of the TornadoVM tool window lists them, with a preview of the code each one inserts.
+
+| Abbreviation | Inserts | Where it works |
+|---|---|---|
+| `tg` | A `TaskGraph` that transfers inputs, runs a task and transfers outputs back | Inside a method body |
+| `tep` | A `TornadoExecutionPlan` for a `TaskGraph`, in a try-with-resources block | Inside a method body |
+| `tparallel` | A kernel method with a `@Parallel` loop | In a class body |
+| `tkernel` | A kernel method that takes a `KernelContext` | In a class body |
+| `ttile` | A kernel method that takes a `TileContext` | In a class body (TornadoVM 7.0.0+) |
+
+For example, `tg` followed by <kbd>Tab</kbd> inserts the following, with the cursor on the first field:
+
+```java
+TaskGraph taskGraph = new TaskGraph("s0")
+        .transferToDevice(DataTransferMode.FIRST_EXECUTION, INPUTS)
+        .task("t0", CLASS::METHOD, ARGS)
+        .transferToHost(DataTransferMode.EVERY_EXECUTION, OUTPUTS);
+```
+
+and `tep` turns that graph into a running plan:
+
+```java
+try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(taskGraph.snapshot())) {
+    executionPlan.execute();
+}
+```
+
+You can edit the templates in <i>Settings | Editor | Live Templates | TornadoVM</i>.
+
 ## How to use TornadoInsight?
 This section covers the initial steps that are required in order to correctly setup the plugin project inside the IntelliJ IDE.
 

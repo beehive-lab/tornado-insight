@@ -19,8 +19,18 @@ package uk.ac.manchester.beehive.tornado.plugins.templates;
 
 import com.intellij.codeInsight.template.impl.TemplateManagerImpl;
 import com.intellij.codeInsight.template.impl.TemplateState;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
+import com.intellij.testFramework.ServiceContainerUtil;
 import uk.ac.manchester.beehive.tornado.plugins.TornadoTestCase;
+import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 public class TornadoVMLiveTemplatesTest extends TornadoTestCase {
 
@@ -28,6 +38,8 @@ public class TornadoVMLiveTemplatesTest extends TornadoTestCase {
     protected void setUp() throws Exception {
         super.setUp();
         TemplateManagerImpl.setTemplateTesting(getTestRootDisposable());
+        // Independent of the TORNADOVM_HOME of the machine running the tests
+        useSdk(null);
     }
 
     public void testTaskGraph() {
@@ -63,7 +75,7 @@ public class TornadoVMLiveTemplatesTest extends TornadoTestCase {
 
     public void testParallelKernel() {
         addTornadoApi();
-        expand("class Demo { kpar<caret> }");
+        expand("class Demo { tparallel<caret> }");
         assertExpanded("""
                 import uk.ac.manchester.tornado.api.annotations.Parallel;
 
@@ -78,7 +90,7 @@ public class TornadoVMLiveTemplatesTest extends TornadoTestCase {
 
     public void testKernelContextKernel() {
         addTornadoApi();
-        expand("class Demo { kctx<caret> }");
+        expand("class Demo { tkernel<caret> }");
         assertExpanded("""
                 import uk.ac.manchester.tornado.api.KernelContext;
 
@@ -92,7 +104,7 @@ public class TornadoVMLiveTemplatesTest extends TornadoTestCase {
     public void testTileContextKernel() {
         addTornadoApi();
         addTileContext();
-        expand("class Demo { ktile<caret> }");
+        expand("class Demo { ttile<caret> }");
         assertExpanded("""
                 import uk.ac.manchester.tornado.api.tile.TileContext;
 
@@ -110,8 +122,45 @@ public class TornadoVMLiveTemplatesTest extends TornadoTestCase {
 
     public void testTileTemplateNotOfferedWithoutTileContext() {
         addTornadoApi();
-        expand("class Demo { ktile<caret> }");
+        expand("class Demo { ttile<caret> }");
         assertFalse(myFixture.getEditor().getDocument().getText().contains("TileContext"));
+    }
+
+    /** A project that compiles against the SDK's modules: the API does not resolve, but TORNADOVM_HOME has it. */
+    public void testOfferedWithTheSdkOfTornadoVmHome() throws IOException {
+        useSdk(sdkWithApiJar("uk.ac.manchester.tornado.api.TaskGraph"));
+        expand("class Demo { void run() { tg<caret> } }");
+        assertTrue(myFixture.getEditor().getDocument().getText().contains("TaskGraph"));
+    }
+
+    public void testTileTemplateOfferedWhenTheSdkHasTileContext() throws IOException {
+        useSdk(sdkWithApiJar("uk.ac.manchester.tornado.api.TaskGraph", "uk.ac.manchester.tornado.api.tile.TileContext"));
+        expand("class Demo { ttile<caret> }");
+        assertTrue(myFixture.getEditor().getDocument().getText().contains("TileContext"));
+    }
+
+    public void testTileTemplateNotOfferedWhenTheSdkLacksTileContext() throws IOException {
+        useSdk(sdkWithApiJar("uk.ac.manchester.tornado.api.TaskGraph"));
+        expand("class Demo { ttile<caret> }");
+        assertFalse(myFixture.getEditor().getDocument().getText().contains("TileContext"));
+    }
+
+    private void useSdk(Path home) {
+        TornadoSdk sdk = TornadoSdk.forHome(home == null ? null : home.toString(), false);
+        ServiceContainerUtil.replaceService(ApplicationManager.getApplication(), TornadoSdk.class, sdk, getTestRootDisposable());
+    }
+
+    /** An SDK home whose share/java/tornado/tornado-api jar has an (empty) class file per name. */
+    private static Path sdkWithApiJar(String... classNames) throws IOException {
+        Path home = Files.createTempDirectory("tornado-sdk");
+        Path jars = Files.createDirectories(home.resolve("share/java/tornado"));
+        try (OutputStream out = Files.newOutputStream(jars.resolve("tornado-api-7.3.1.jar")); ZipOutputStream zip = new ZipOutputStream(out)) {
+            for (String className : classNames) {
+                zip.putNextEntry(new ZipEntry(className.replace('.', '/') + ".class"));
+                zip.closeEntry();
+            }
+        }
+        return home;
     }
 
     /** Compares the editor text with the expected code, ignoring formatting, which follows the user's code style. */

@@ -56,6 +56,8 @@ public class TornadoSideWindow implements ToolWindowFactory {
         toolWindow.getContentManager().addContent(content);
         content = ContentFactory.getInstance().createContent(inspectorInfoPanel, MessageBundle.message("ui.toolwindow.tab.guide"), false);
         toolWindow.getContentManager().addContent(content);
+        content = ContentFactory.getInstance().createContent(new LiveTemplatesPanel(), MessageBundle.message("ui.toolwindow.tab.templates"), false);
+        toolWindow.getContentManager().addContent(content);
     }
 
     private static class ToolWindowContent extends SimpleToolWindowPanel implements DataProvider {

@@ -24,20 +24,32 @@ import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.zip.ZipFile;
 
 /**
  * Live template contexts for the TornadoVM templates.
  * <p>
  * Each context reuses one of the Java contexts (statement or declaration) to decide where
- * in the code a template applies, and additionally requires a TornadoVM API class to be
- * resolvable from the file, so the templates are only offered in modules that depend on
- * TornadoVM and never expand into code that cannot compile.
+ * in the code a template applies, and additionally requires a TornadoVM API class: either
+ * resolvable from the file (the module depends on TornadoVM), or in the {@code tornado-api}
+ * jar of the SDK that {@code TORNADOVM_HOME} points at. The second case covers projects that
+ * compile against the SDK's modules through compiler arguments, which the IDE does not import
+ * as a library.
  * </p>
  */
 public abstract class TornadoVMContextType extends JavaCodeContextType {
 
     private static final String TASK_GRAPH = "uk.ac.manchester.tornado.api.TaskGraph";
     private static final String TILE_CONTEXT = "uk.ac.manchester.tornado.api.tile.TileContext";
+
+    /** "jar!class" to whether the jar contains the class; the SDK jars do not change while the IDE runs. */
+    private static final Map<String, Boolean> JAR_CONTAINS = new ConcurrentHashMap<>();
 
     private final JavaCodeContextType javaContext;
     private final String requiredClass;
@@ -50,7 +62,8 @@ public abstract class TornadoVMContextType extends JavaCodeContextType {
 
     @Override
     public boolean isInContext(@NotNull TemplateActionContext templateActionContext) {
-        return javaContext.isInContext(templateActionContext) && isResolvable(templateActionContext.getFile());
+        return javaContext.isInContext(templateActionContext)
+                && (isResolvable(templateActionContext.getFile()) || jarContains(TornadoSdk.getInstance().apiJar(), requiredClass));
     }
 
     @Override
@@ -62,6 +75,17 @@ public abstract class TornadoVMContextType extends JavaCodeContextType {
     private boolean isResolvable(PsiFile file) {
         if (DumbService.isDumb(file.getProject())) return false;
         return JavaPsiFacade.getInstance(file.getProject()).findClass(requiredClass, file.getResolveScope()) != null;
+    }
+
+    static boolean jarContains(@Nullable String jar, @NotNull String className) {
+        if (jar == null) return false;
+        return JAR_CONTAINS.computeIfAbsent(jar + "!" + className, key -> {
+            try (ZipFile zip = new ZipFile(jar)) {
+                return zip.getEntry(className.replace('.', '/') + ".class") != null;
+            } catch (IOException e) {
+                return false;
+            }
+        });
     }
 
     /** Statement positions in a TornadoVM module: TaskGraph and TornadoExecutionPlan templates. */
