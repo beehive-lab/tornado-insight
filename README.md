@@ -7,6 +7,11 @@ for unsupported Java features as you type, runs individual kernels on your Torna
 to show what TornadoVM generates for them, and writes TornadoVM boilerplate for you through live
 templates.
 
+TornadoInsight is available on the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/23309-tornadoinsight):
+install it from *Settings | Plugins | Marketplace* in IntelliJ IDEA.
+
+[![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/23309-tornadoinsight?label=JetBrains%20Marketplace)](https://plugins.jetbrains.com/plugin/23309-tornadoinsight)
+
 The plugin is described in *Dynamic and Static Code Analysis for Java Programs on Heterogeneous
 Hardware* (MPLR '25, [doi:10.1145/3759426.3760984](https://doi.org/10.1145/3759426.3760984)).
 
@@ -81,6 +86,7 @@ The templates are offered in modules that use the TornadoVM API, and in any Java
 
 ### Install
 In *Settings | Plugins | Marketplace*, search for **TornadoInsight**, install it and restart the IDE.
+The plugin's page is [plugins.jetbrains.com/plugin/23309-tornadoinsight](https://plugins.jetbrains.com/plugin/23309-tornadoinsight).
 
 You can install TornadoVM with [SDKMAN!](https://sdkman.io) (`sdk install tornadovm`) or from
 [tornadovm.org/downloads](https://www.tornadovm.org/downloads).
