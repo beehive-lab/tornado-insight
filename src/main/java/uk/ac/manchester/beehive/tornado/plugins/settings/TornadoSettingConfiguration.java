@@ -54,10 +54,7 @@ public class TornadoSettingConfiguration implements Configurable {
     @Override
     public boolean isModified() {
         TornadoSettingState settings = TornadoSettingState.getInstance();
-        boolean modified = mySettingsComponent.getMaxArraySize() != settings.parameterSize;
-        modified |= mySettingsComponent.isSaveFileEnabled() != settings.saveFileEnabled;
-        modified |= !mySettingsComponent.getDebugFileSaveLocation().equals(settings.debugFileSaveLocation);
-        return modified;
+        return mySettingsComponent.getMaxArraySize() != settings.parameterSize;
     }
 
     @Override
@@ -68,8 +65,6 @@ public class TornadoSettingConfiguration implements Configurable {
             throw new ConfigurationException(error);
         }
         settings.parameterSize = mySettingsComponent.getMaxArraySize();
-        settings.saveFileEnabled = mySettingsComponent.isSaveFileEnabled();
-        settings.debugFileSaveLocation = mySettingsComponent.getDebugFileSaveLocation();
     }
 
     //The method is invoked immediately after createComponent().
@@ -77,8 +72,6 @@ public class TornadoSettingConfiguration implements Configurable {
     public void reset() {
         TornadoSettingState settings = TornadoSettingState.getInstance();
         mySettingsComponent.setMaxArraySize(settings.parameterSize);
-        mySettingsComponent.setSaveFileEnabled(settings.saveFileEnabled);
-        mySettingsComponent.setDebugFileSaveLocation(settings.debugFileSaveLocation);
     }
 
     @Override

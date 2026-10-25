@@ -21,7 +21,7 @@
  * <p>
  * {@link TornadoSettingConfiguration} is the configurable, {@link TornadoSettingsComponent} its
  * form, and {@link TornadoSettingState} the persisted application-level settings (the array
- * size of the generated test data, and where to save the generated harnesses).
+ * size of the generated test data, and whether the internal debug dump is on).
  * </p>
  */
 package uk.ac.manchester.beehive.tornado.plugins.settings;

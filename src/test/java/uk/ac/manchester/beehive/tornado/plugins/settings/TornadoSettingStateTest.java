@@ -30,7 +30,8 @@ public class TornadoSettingStateTest {
 
     @Test
     public void settingsSavedByEarlierVersionsStillLoad() throws Exception {
-        // Earlier versions also persisted the derived 'isValid' flag
+        // Earlier versions also persisted the derived 'isValid' flag, and the debug-file
+        // options that the internal debug dump replaced
         Element saved = JDOMUtil.load("""
                 <TornadoVMSettingsState>
                   <option name="debugFileSaveLocation" value="/home/user/tornado-debug" />
@@ -42,20 +43,19 @@ public class TornadoSettingStateTest {
         TornadoSettingState state = XmlSerializer.deserialize(saved, TornadoSettingState.class);
 
         assertEquals(256, state.parameterSize);
-        assertTrue(state.saveFileEnabled);
-        assertEquals("/home/user/tornado-debug", state.debugFileSaveLocation);
+        assertFalse("the old debug-file option must not switch the dump on", state.debugDumpEnabled);
     }
 
     @Test
     public void onlyTheUserSettingsArePersisted() {
         TornadoSettingState state = new TornadoSettingState();
         state.parameterSize = 512;
-        state.debugFileSaveLocation = "/tmp/debug";
+        state.debugDumpEnabled = true;
 
         String xml = JDOMUtil.writeElement(XmlSerializer.serialize(state));
 
         assertTrue(xml, xml.contains("<option name=\"parameterSize\" value=\"512\" />"));
-        assertTrue(xml, xml.contains("<option name=\"debugFileSaveLocation\" value=\"/tmp/debug\" />"));
+        assertTrue(xml, xml.contains("<option name=\"debugDumpEnabled\" value=\"true\" />"));
         assertFalse(xml, xml.contains("isValid"));
     }
 }

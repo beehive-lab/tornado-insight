@@ -18,9 +18,6 @@
 package uk.ac.manchester.beehive.tornado.plugins.settings;
 
 import com.intellij.ide.BrowserUtil;
-import com.intellij.openapi.fileChooser.FileChooser;
-import com.intellij.openapi.fileChooser.FileChooserDescriptor;
-import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.ui.IdeBorderFactory;
 import com.intellij.ui.components.JBTextField;
@@ -35,25 +32,15 @@ import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import javax.swing.*;
 import java.awt.*;
 
-import java.io.File;
 import java.util.Objects;
 
 public class TornadoSettingsComponent {
 
     private final JPanel myMainPanel;
 
-    private final JCheckBox saveFileCheckbox = new JCheckBox(MessageBundle.message("ui.settings.saveFile"));
-
-    private final TextFieldWithBrowseButton debugFileSaveLocationField = new TextFieldWithBrowseButton();
-
     private final JBTextField myMaxArraySize = new JBTextField(4);
 
     public TornadoSettingsComponent() {
-        attachFolderChooser(debugFileSaveLocationField, MessageBundle.message("ui.settings.saveLocation.title"),
-                MessageBundle.message("ui.settings.saveLocation.description"));
-
-        saveFileCheckbox.setSelected(false);
-
         // Create warning banner if TORNADOVM_HOME is not set
         FormBuilder formBuilder = FormBuilder.createFormBuilder();
         if (!TornadoSdk.getInstance().isConfigured()) {
@@ -67,13 +54,7 @@ public class TornadoSettingsComponent {
 
         dynamicInspectionPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.dynamic")));
 
-        JPanel debugPanel = FormBuilder.createFormBuilder().addComponent(saveFileCheckbox)
-                .addLabeledComponent(new JBLabel(" "), new JLabel("<html><div style='width:400px; color:gray;'>" + MessageBundle.message("ui.settings.comment.debug.file") + "</div></html>"))
-                .addLabeledComponent(new JBLabel(MessageBundle.message("ui.settings.label.saveLocation")), debugFileSaveLocationField).getPanel();
-
-        debugPanel.setBorder(IdeBorderFactory.createTitledBorder(MessageBundle.message("ui.settings.group.debugging")));
-
-        myMainPanel = formBuilder.addComponent(dynamicInspectionPanel).addComponent(debugPanel).addComponentFillVertically(new JPanel(), 0).getPanel();
+        myMainPanel = formBuilder.addComponent(dynamicInspectionPanel).addComponentFillVertically(new JPanel(), 0).getPanel();
     }
 
     private JPanel createWarningPanel() {
@@ -113,20 +94,6 @@ public class TornadoSettingsComponent {
         return warningPanel;
     }
 
-    private void attachFolderChooser(TextFieldWithBrowseButton field, String title, String description) {
-        field.addActionListener(e -> {
-            FileChooserDescriptor descriptor = new FileChooserDescriptor(false, true, false, false, false, false);
-            descriptor.setTitle(title);
-            descriptor.setDescription(description);
-
-            FileChooser.chooseFile(descriptor, null, null, null, file -> {
-                if (file != null) {
-                    field.setText(file.getPath());
-                }
-            });
-        });
-    }
-
     public JPanel getPanel() {
         return myMainPanel;
     }
@@ -157,34 +124,8 @@ public class TornadoSettingsComponent {
         myMaxArraySize.setText(text);
     }
 
-    public boolean isSaveFileEnabled() {
-        return saveFileCheckbox.isSelected();
-    }
-
-    public void setSaveFileEnabled(boolean enabled) {
-        saveFileCheckbox.setSelected(enabled);
-    }
-
-    public String getDebugFileSaveLocation() {
-        return debugFileSaveLocationField.getText();
-    }
-
-    public void setDebugFileSaveLocation(String path) {
-        debugFileSaveLocationField.setText(path);
-    }
-
     public String isValidPath() {
         String parameterSize = myMaxArraySize.getText().trim();
-        if (isSaveFileEnabled()) {
-            String saveLocation = debugFileSaveLocationField.getText();
-            if (saveLocation.isEmpty()) {
-                return MessageBundle.message("ui.settings.validation.emptySave");
-            }
-            File saveDir = new File(saveLocation);
-            if (!saveDir.exists() || !saveDir.isDirectory() || !saveDir.canWrite()) {
-                return MessageBundle.message("ui.settings.validation.invalidSave");
-            }
-        }
 
         // Empty or "0" mean "use the default" - getMaxArraySize() substitutes 128 in
         // both cases, so the user can blank the field instead of typing a number.

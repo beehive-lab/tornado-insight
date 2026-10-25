@@ -17,6 +17,7 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.util;
 
+import com.intellij.execution.filters.HyperlinkInfo;
 import com.intellij.execution.filters.TextConsoleBuilderFactory;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.execution.ui.ConsoleViewContentType;
@@ -80,6 +81,18 @@ public final class MessageUtils implements Disposable {
             printTitle(title, ConsoleViewContentType.ERROR_OUTPUT);
             printBody(body, ConsoleViewContentType.ERROR_OUTPUT);
             consoleView.print("\n", ConsoleViewContentType.ERROR_OUTPUT);
+        });
+    }
+
+    /**
+     * Prints {@code text} followed by {@code linkText} as a link that runs {@code link} when clicked.
+     */
+    public void showLink(String title, String text, String linkText, HyperlinkInfo link) {
+        showConsole(() -> {
+            printTitle(title, ConsoleViewContentType.NORMAL_OUTPUT);
+            consoleView.print(text, ConsoleViewContentType.NORMAL_OUTPUT);
+            consoleView.printHyperlink(linkText, link);
+            consoleView.print("\n\n", ConsoleViewContentType.NORMAL_OUTPUT);
         });
     }
 

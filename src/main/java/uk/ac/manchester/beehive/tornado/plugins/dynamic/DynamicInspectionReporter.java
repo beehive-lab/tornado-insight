@@ -17,7 +17,9 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.dynamic;
 
+import com.intellij.execution.filters.OpenFileHyperlinkInfo;
 import com.intellij.ide.BrowserUtil;
+import com.intellij.ide.actions.RevealFileAction;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationAction;
 import com.intellij.notification.NotificationType;
@@ -27,8 +29,12 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ui.configuration.ProjectSettingsService;
+import com.intellij.openapi.vfs.LocalFileSystem;
+import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.nio.file.Path;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.JavacRunner;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.Processes;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.TornadoRunner;
@@ -155,8 +161,21 @@ final class DynamicInspectionReporter {
         console().showErrorMsg(title(), MessageBundle.message("dynamic.error.failedUnexpectedly", String.valueOf(error)));
     }
 
-    void debugCopyFailed(@NotNull String target, @NotNull String message) {
-        console().showWarnMsg(title(), MessageBundle.message("dynamic.warn.debugCopyFailed", target, message));
+    /** The debug dump folder; the link opens it in the file manager. */
+    void debugDumpFolder(@NotNull Path folder) {
+        console().showLink(MessageBundle.message("dynamic.debug.title"), MessageBundle.message("dynamic.debug.folder") + " ",
+                folder.toString(), p -> RevealFileAction.openDirectory(folder));
+    }
+
+    /** A dumped test or kernel; the link opens it in the editor. Called off the UI thread, which the VFS refresh needs. */
+    void debugDumped(@NotNull String task, @NotNull Path file) {
+        VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(file);
+        console().showLink(MessageBundle.message("dynamic.debug.title"), task + ": ", file.toString(),
+                virtualFile != null ? new OpenFileHyperlinkInfo(project, virtualFile, 0) : p -> RevealFileAction.openFile(file));
+    }
+
+    void debugDumpFailed(@NotNull String target, @NotNull String message) {
+        console().showWarnMsg(MessageBundle.message("dynamic.debug.title"), MessageBundle.message("dynamic.debug.failed", target, message));
     }
 
     void compiling() {
