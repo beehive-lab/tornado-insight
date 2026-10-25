@@ -254,6 +254,8 @@ Enjoy and share your feedback!
                     icon="AllIcons.Actions.Refresh"/>
             <action id="tornado.runInspection" class="uk.ac.manchester.beehive.tornado.plugins.actions.RunInspectionAction"
                     icon="AllIcons.Actions.Execute"/>
+            <action id="tornado.debugDump" class="uk.ac.manchester.beehive.tornado.plugins.actions.DebugDumpAction"
+                    icon="AllIcons.Actions.StartDebugger"/>
             <separator/>
             <action id="tornado.settings" class="uk.ac.manchester.beehive.tornado.plugins.actions.SettingsAction"
                     icon="AllIcons.General.GearPlain"/>

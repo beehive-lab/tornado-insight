@@ -19,6 +19,7 @@ package uk.ac.manchester.beehive.tornado.plugins.dynamic;
 
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.process.ProcessOutput;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.diagnostic.ControlFlowException;
 import com.intellij.openapi.diagnostic.Logger;
@@ -87,23 +88,21 @@ public final class DynamicInspectionPipeline {
     private final ProjectJdk jdk;
     private final List<TaskEntry> tasks;
     private final int parameterSize;
-    private final boolean saveFileEnabled;
-    private final String debugFileSaveLocation;
+    /** The internal debug dump, or {@code null} when it is off; cleared if it cannot be prepared. */
+    private @Nullable DebugDump dump;
 
     private boolean completed;
     private boolean hasRuntimeErrors;
 
     private DynamicInspectionPipeline(Project project, DynamicInspectionReporter reporter, TornadoSdk sdk, ProjectJdk jdk,
-                                      List<TaskEntry> tasks, int parameterSize, boolean saveFileEnabled,
-                                      String debugFileSaveLocation) {
+                                      List<TaskEntry> tasks, int parameterSize, @Nullable DebugDump dump) {
         this.project = project;
         this.reporter = reporter;
         this.sdk = sdk;
         this.jdk = jdk;
         this.tasks = List.copyOf(tasks);
         this.parameterSize = parameterSize;
-        this.saveFileEnabled = saveFileEnabled;
-        this.debugFileSaveLocation = debugFileSaveLocation;
+        this.dump = dump;
     }
 
     /**
@@ -134,8 +133,10 @@ public final class DynamicInspectionPipeline {
         }
 
         TornadoSettingState settings = TornadoSettingState.getInstance();
+        // The toggle is only shown in internal mode, so only honour it there
+        DebugDump dump = settings.debugDumpEnabled && ApplicationManager.getApplication().isInternal() ? DebugDump.inTemporaryFolder() : null;
         DynamicInspectionPipeline pipeline = new DynamicInspectionPipeline(project, reporter, sdk, jdk, tasks,
-                settings.parameterSize, settings.saveFileEnabled, settings.debugFileSaveLocation);
+                settings.parameterSize, dump);
         new Task.Backgroundable(project, MessageBundle.message("dynamic.progress.title"), true) {
             @Override
             public void run(@NotNull ProgressIndicator indicator) {
@@ -219,6 +220,7 @@ public final class DynamicInspectionPipeline {
             if (harnesses.isEmpty()) {
                 return;
             }
+            prepareDump();
 
             workDir = FileUtil.createTempDirectory("tornado-insight", null, false).toPath();
             Path sourceDir = Files.createDirectory(workDir.resolve("src"));
@@ -346,24 +348,46 @@ public final class DynamicInspectionPipeline {
             Path file = sourceDir.resolve(harness.className() + ".java");
             Files.writeString(file, harness.source());
             files.add(file.toString());
-            if (saveFileEnabled) {
-                saveFileToDisk(harness);
+            if (dump != null) {
+                Path test = dump.directory().resolve(harness.className() + ".java");
+                try {
+                    test = dump.writeTest(harness.className(), harness.source());
+                    reporter.debugDumped(harness.displayName(), test);
+                } catch (IOException e) {
+                    LOG.warn("Could not dump the generated test to " + test, e);
+                    reporter.debugDumpFailed(test.toString(), String.valueOf(e.getMessage()));
+                }
             }
         }
         return files;
     }
 
-    // Keeps a copy of the generated harness for debugging (Settings > Save Internal Debug File)
-    private void saveFileToDisk(Harness harness) {
-        if (debugFileSaveLocation == null || debugFileSaveLocation.isBlank()) {
+    /** Empties the debug dump folder of the previous run; turns the dump off for this run if it cannot. */
+    private void prepareDump() {
+        if (dump == null) {
             return;
         }
-        Path target = Path.of(debugFileSaveLocation, harness.className() + ".java");
         try {
-            Files.writeString(target, harness.source());
+            dump.clear();
+            reporter.debugDumpFolder(dump.directory());
         } catch (IOException e) {
-            LOG.warn("Could not save the generated test code to " + target, e);
-            reporter.debugCopyFailed(target.toString(), String.valueOf(e.getMessage()));
+            LOG.warn("Could not prepare the debug dump folder " + dump.directory(), e);
+            reporter.debugDumpFailed(dump.directory().toString(), String.valueOf(e.getMessage()));
+            dump = null;
+        }
+    }
+
+    private void dumpKernel(Harness harness, String kernelSource) {
+        if (dump == null || kernelSource.isBlank()) {
+            return;
+        }
+        Path kernel = dump.directory().resolve(harness.className() + ".kernel");
+        try {
+            kernel = dump.writeKernel(harness.className(), kernelSource);
+            reporter.debugDumped(harness.displayName(), kernel);
+        } catch (IOException e) {
+            LOG.warn("Could not dump the generated kernel to " + kernel, e);
+            reporter.debugDumpFailed(kernel.toString(), String.valueOf(e.getMessage()));
         }
     }
 
@@ -469,6 +493,7 @@ public final class DynamicInspectionPipeline {
                 RuntimeOutputClassifier.classify(output.getStdout(), output.getStderr(), output.getExitCode());
         hasRuntimeErrors |= verdict.failed();
         reporter.result(harness.displayName(), verdict, output.getStdout());
+        dumpKernel(harness, verdict.kernelSource());
     }
 
     // Removes the temporary directory; never throws, so it cannot mask the original outcome

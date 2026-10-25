@@ -45,8 +45,10 @@ public class TornadoSettingState implements PersistentStateComponent<TornadoSett
     // the value in Settings.
     public static final int DEFAULT_PARAMETER_SIZE = 128;
     public int parameterSize = DEFAULT_PARAMETER_SIZE;
-    public boolean saveFileEnabled;
-    public String debugFileSaveLocation;
+
+    // Internal mode only: keep each dynamic inspection run's generated tests and kernels
+    // in the OS temporary folder (see actions.DebugDumpAction and dynamic.DebugDump).
+    public boolean debugDumpEnabled;
 
     /**
      * Retrieves the singleton instance of the TornadoSetting.
