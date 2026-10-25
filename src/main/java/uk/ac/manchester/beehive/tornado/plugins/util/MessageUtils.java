@@ -28,7 +28,6 @@ import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.util.concurrency.annotations.RequiresEdt;
-import uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDateTime;
@@ -37,10 +36,13 @@ import java.time.format.DateTimeFormatter;
 /**
  * Project service that owns the TornadoInsight console. The {@link ConsoleView}
  * is created lazily, registered as a child of this service (so it is disposed
- * with the project), and embedded by {@link ConsoleWindowFactory}.
+ * with the project), and embedded by {@code ui.console.ConsoleWindowFactory}.
  */
 @Service(Service.Level.PROJECT)
 public final class MessageUtils implements Disposable {
+
+    /** Id of the console tool window; kept here so that util does not depend on ui.console. */
+    public static final String CONSOLE_TOOL_WINDOW_ID = "TornadoInsight Console";
 
     private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
 
@@ -114,7 +116,7 @@ public final class MessageUtils implements Disposable {
                 return;
             }
             if (toolWindow == null) {
-                toolWindow = ToolWindowManager.getInstance(project).getToolWindow(ConsoleWindowFactory.ID);
+                toolWindow = ToolWindowManager.getInstance(project).getToolWindow(CONSOLE_TOOL_WINDOW_ID);
             }
             if (toolWindow == null) {
                 return;

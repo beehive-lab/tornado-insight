@@ -21,7 +21,8 @@
  * <p>
  * {@link HarnessModelBuilder} reads a kernel from the PSI into a {@link HarnessModel}, and
  * {@link HarnessGenerator} renders it as Java source, with test data per parameter from
- * {@code ParameterInitializer}. A parameter type without test data raises
+ * {@code ParameterInitializer}; {@link LocalMemoryParameterAnalyzer} finds the parameters that size
+ * local-memory allocations, so they get small values. A parameter type without test data raises
  * {@link UnsupportedParameterTypeException}.
  * </p>
  */

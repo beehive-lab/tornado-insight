@@ -23,8 +23,7 @@
  * {@link DynamicInspectionPipeline} checks the project JDK and the SDK, then runs five stages
  * per task:
  * <ol>
- * <li>generate a test harness: {@link CodeGenerator} (with {@link LocalMemoryParameterAnalyzer}
- * and {@code dynamic.harness});</li>
+ * <li>generate a test harness: {@link CodeGenerator} and {@code dynamic.harness};</li>
  * <li>compile it with {@code javac}: {@code dynamic.run.JavacRunner};</li>
  * <li>package it as a jar: {@code dynamic.run.JarPacker};</li>
  * <li>run it with TornadoVM: {@code dynamic.run.TornadoRunner};</li>

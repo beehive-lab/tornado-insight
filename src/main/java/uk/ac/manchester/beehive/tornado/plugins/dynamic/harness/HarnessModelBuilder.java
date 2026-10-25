@@ -45,7 +45,6 @@ import com.intellij.util.concurrency.annotations.RequiresReadLock;
 import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import uk.ac.manchester.beehive.tornado.plugins.dynamic.LocalMemoryParameterAnalyzer;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Field;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Parameter;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.TaskGraphDeclaration;

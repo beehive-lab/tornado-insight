@@ -28,7 +28,7 @@ import uk.ac.manchester.beehive.tornado.plugins.util.MessageUtils;
 
 public class ConsoleWindowFactory implements ToolWindowFactory, DumbAware {
 
-        public static String ID = "TornadoInsight Console";
+        public static final String ID = MessageUtils.CONSOLE_TOOL_WINDOW_ID;
 
         @Override
         public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
