@@ -212,7 +212,14 @@ public final class DynamicInspectionPipeline {
             List<Harness> harnesses = new ArrayList<>();
             for (CodeGenerator.TaskModel task : batch.tasks()) {
                 try {
-                    harnesses.add(CodeGenerator.render(task, parameterSize));
+                    Harness harness = CodeGenerator.render(task, parameterSize);
+                    if (dump != null) {
+                        // Only the dump shows the test to anyone; format it there, before it is
+                        // compiled, so the kept file is the program that ran
+                        harness = new Harness(harness.displayName(), harness.className(),
+                                HarnessFormatter.format(project, harness.className(), harness.source()));
+                    }
+                    harnesses.add(harness);
                 } catch (UnsupportedParameterTypeException e) {
                     reporter.unsupportedParameter(task.displayName(), e.getMessage());
                 }
