@@ -38,7 +38,25 @@
     <li>TornadoInsight introduces a dynamic testing framework that enables developers to easily test individual TornadoVM tasks.
         It automatically wraps TornadoVM tasks, invoking the native TornadoVM runtime on the developers' machines for seamless
         debugging and testing.</li>
+    <li>TornadoInsight ships live templates that write TornadoVM boilerplate, such as TaskGraphs, execution plans
+        and kernel methods. The <i>Live Templates</i> tab of the TornadoVM tool window lists them.</li>
 </ul>
+
+<h3>Live templates</h3>
+Type an abbreviation in a Java editor and press <b>Tab</b>. The templates are offered in modules that use the
+TornadoVM API, and whenever <code>TORNADOVM_HOME</code> points at a TornadoVM SDK:
+<ul>
+    <li><code>tg</code>: a <code>TaskGraph</code> that transfers inputs, runs a task and transfers outputs back</li>
+    <li><code>tep</code>: a <code>TornadoExecutionPlan</code> for a <code>TaskGraph</code>, in a try-with-resources block</li>
+    <li><code>tparallel</code>: a kernel method with a <code>@Parallel</code> loop</li>
+    <li><code>tkernel</code>: a kernel method that takes a <code>KernelContext</code></li>
+    <li><code>ttile</code>: a kernel method that takes a <code>TileContext</code> (TornadoVM 7.0.0+)</li>
+</ul>
+For example, <code>tg</code> inserts:
+<pre>TaskGraph taskGraph = new TaskGraph("s0")
+        .transferToDevice(DataTransferMode.FIRST_EXECUTION, INPUTS)
+        .task("t0", CLASS::METHOD, ARGS)
+        .transferToHost(DataTransferMode.EVERY_EXECUTION, OUTPUTS);</pre>
 <br/>
 <h2>What's New in 1.6.0</h2>
 <b>TornadoInsight 1.6.0 adds compatibility with TornadoVM 6.0.0.</b> The plugin reads the JDK requirement that TornadoVM 6.0.0
