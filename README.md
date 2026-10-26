@@ -11,6 +11,7 @@ TornadoInsight is available on the [JetBrains Marketplace](https://plugins.jetbr
 install it from *Settings | Plugins | Marketplace* in IntelliJ IDEA.
 
 [![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/23309-tornadoinsight?label=JetBrains%20Marketplace)](https://plugins.jetbrains.com/plugin/23309-tornadoinsight)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/23309-tornadoinsight)](https://plugins.jetbrains.com/plugin/23309-tornadoinsight)
 
 The plugin is described in *Dynamic and Static Code Analysis for Java Programs on Heterogeneous
 Hardware* (MPLR '25, [doi:10.1145/3759426.3760984](https://doi.org/10.1145/3759426.3760984)).
