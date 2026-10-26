@@ -79,6 +79,8 @@ read them, run them yourself with `tornado`, or attach them to a bug report.
 The icon is hidden outside internal mode, and the dump is off there even if the icon was left
 pressed.
 
+<img src="https://github.com/user-attachments/assets/ba0ca7bb-5abc-404f-8f24-9ea664de76a7" alt="The Debug Dump (Internal) icon in the TornadoVM tool window toolbar, next to the Run button" width="800">
+
 ### What it keeps
 
 Each run empties `tornadoinsight/` in the system temporary folder (`/tmp` on Linux, `%TEMP%` on

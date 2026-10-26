@@ -48,6 +48,8 @@ kernel code TornadoVM generated for it (e.g. OpenCL C), or the error it hit.
 
 The tool window lists only kernels that pass the static checks.
 
+<img src="https://github.com/user-attachments/assets/9273b26b-92b4-4cbb-8669-ae28717e6afc" alt="A dynamic inspection result: the Run button in the TornadoVM tool window, the generated kernel in the TornadoInsight Console, and the notification with the inspection time" width="800">
+
 ### Live templates
 TornadoInsight ships live templates that write the TornadoVM boilerplate for you. Type an
 abbreviation in a Java editor and press <kbd>Tab</kbd>; then press <kbd>Tab</kbd> again to move
