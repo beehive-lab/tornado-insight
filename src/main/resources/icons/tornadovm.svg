@@ -1,26 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0.00 0.00 13.00 13.00">
-<path stroke="#402747" stroke-width="2.00" fill="none" stroke-linecap="butt" vector-effect="non-scaling-stroke" d="
-  M 8.48 6.50
-  A 1.99 1.99 0.0 0 0 6.49 4.51
-  A 1.99 1.99 0.0 0 0 4.50 6.50
-  A 1.99 1.99 0.0 0 0 6.49 8.49
-  A 1.99 1.99 0.0 0 0 8.48 6.50"
-/>
-<path fill="#804e8e" d="
-  M 12.41 6.50
-  A 5.91 5.91 0.0 0 1 6.50 12.41
-  A 5.91 5.91 0.0 0 1 0.59 6.50
-  A 5.91 5.91 0.0 0 1 6.50 0.59
-  A 5.91 5.91 0.0 0 1 12.41 6.50
-  Z
-  M 8.48 6.50
-  A 1.99 1.99 0.0 0 0 6.49 4.51
-  A 1.99 1.99 0.0 0 0 4.50 6.50
-  A 1.99 1.99 0.0 0 0 6.49 8.49
-  A 1.99 1.99 0.0 0 0 8.48 6.50
-  Z"
-/>
-<circle fill="#000000" cx="6.49" cy="6.50" r="1.99"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 1024 1024">
+<defs>
+  <linearGradient id="tornadoGradient" gradientUnits="userSpaceOnUse" x1="512" y1="512" x2="1024" y2="0" spreadMethod="reflect">
+    <stop offset="0" stop-color="#897BA8"/>
+    <stop offset="1" stop-color="#524268"/>
+  </linearGradient>
+</defs>
+<path fill="url(#tornadoGradient)" fill-rule="evenodd" d="
+  M 211 0 H 813 C 918.5 0 1024 105.5 1024 211 V 813 C 1024 918.5 918.5 1024 813 1024 H 211 C 105.5 1024 0 918.5 0 813 V 211 C 0 105.5 105.5 0 211 0 Z
+  M 320 172 C 238.6 172 172 238.6 172 320 V 704 C 172 785.4 238.6 852 320 852 H 704 C 785.4 852 852 785.4 852 704 V 320 C 852 238.6 785.4 172 704 172 Z"/>
 </svg>
