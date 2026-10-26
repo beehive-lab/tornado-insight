@@ -35,6 +35,23 @@ applications in IntelliJ IDEA. It checks TornadoVM kernels for unsupported Java 
 kernels on your TornadoVM installation to show what TornadoVM generates for them, and writes TornadoVM boilerplate for
 you through live templates.
 
+<h2>What's New in 2.0.0</h2>
+<ul>
+    <li><b>Live templates</b> for TaskGraphs, execution plans and kernels (<code>tg</code>, <code>tep</code>,
+        <code>tparallel</code>, <code>tkernel</code>, <code>ttile</code>), listed with a preview in the new
+        <i>Live Templates</i> tab of the TornadoVM tool window.</li>
+    <li><b>TileContext kernels</b> are recognised by the static checks, the task list and dynamic inspection.</li>
+    <li><b>Static checks:</b> two new checks (kernels that return a value, and helpers that cannot be checked),
+        a faster recursion check that reports each cycle once, and fewer false reports for your own helper
+        methods and for unresolved types.</li>
+    <li><b>Dynamic inspection</b> runs in the background with progress and Cancel, generates test data for every
+        supported parameter type, runs KernelContext and TileContext kernels with a GridScheduler, and reports
+        results more clearly.</li>
+    <li>New icons, matching the TornadoVM logo.</li>
+    <li><b>Removed:</b> the bytecode visualizer, and the debug options in the settings.
+        TornadoInsight now requires IntelliJ IDEA 2023.1 or newer.</li>
+</ul>
+
 <h2>Static checks</h2>
 While you edit a TornadoVM kernel (a method with <code>@Parallel</code>/<code>@Reduce</code> loops, or one that takes a
 <code>KernelContext</code> or <code>TileContext</code>), TornadoInsight underlines the Java features TornadoVM cannot compile
@@ -114,6 +131,38 @@ The plugin is described in <i>Dynamic and Static Code Analysis for Java Programs
     <!-- Change notes displayed in the plugin manager when users view updates.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#change-notes -->
     <change-notes><![CDATA[
+<h3>Version 2.0.0</h3>
+<ul>
+    <li><b>Live templates:</b> <code>tg</code> (TaskGraph), <code>tep</code> (TornadoExecutionPlan), and the kernel
+        templates <code>tparallel</code> (<code>@Parallel</code> loop), <code>tkernel</code> (<code>KernelContext</code>)
+        and <code>ttile</code> (<code>TileContext</code>, TornadoVM 7.0.0+). They are offered in modules that use the
+        TornadoVM API, and in any Java project when <code>TORNADOVM_HOME</code> points at a TornadoVM SDK.
+        A new <i>Live Templates</i> tab in the TornadoVM tool window lists them with a preview.</li>
+    <li><b>TileContext kernels</b> are detected as TornadoVM tasks.</li>
+    <li><b>Static checks:</b>
+        <ul>
+            <li>New: <i>Non-void return type</i> and <i>Unanalysable helper</i> checks.</li>
+            <li>The recursion check is faster, follows calls across classes, and reports each cycle once.</li>
+            <li>Calls to your own helper methods are no longer reported as external library calls, and
+                unresolved types are no longer reported as unsupported data types.</li>
+            <li>The inspections are grouped under <i>TornadoVM</i> in the inspection settings.</li>
+        </ul></li>
+    <li><b>Dynamic inspection:</b>
+        <ul>
+            <li>Runs as a background task with progress, Cancel and timeouts.</li>
+            <li>Generates test data for every supported kernel parameter type, and runs KernelContext and
+                TileContext kernels with a GridScheduler.</li>
+            <li>Clearer results: compile errors are summarised, and device limitations (e.g. no FP64) are
+                reported as warnings instead of errors.</li>
+        </ul></li>
+    <li><b>Task list:</b> kept per project, refreshed while you edit, and no longer lost while the IDE is indexing.</li>
+    <li><b>Fixes:</b> the Settings links open the TornadoInsight page, the max array size field no longer throws on
+        non-numeric input, error reports build a correct GitHub issue link, and notifications use their own group.</li>
+    <li>New icons, matching the TornadoVM logo.</li>
+    <li><b>Removed:</b> the TornadoVM bytecode visualizer, and the debug options in the settings.</li>
+    <li><b>Requires</b> IntelliJ IDEA 2023.1 or newer.</li>
+</ul>
+
 <h3>Version 1.6.0</h3>
 <ul>
     <li><b>TornadoVM 6.0.0 compatibility:</b> The JDK compatibility check now reads the <code>etc/tornado.jdk</code> contract that TornadoVM 6.0.0 ships (minimum JDK plus preview flag) instead of the removed <code>tornado --version</code> JDK marker, and accepts any project JDK at or above that minimum.</li>
