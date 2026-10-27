@@ -17,6 +17,7 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.inspection;
 
+import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.psi.*;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
@@ -48,7 +49,12 @@ public class AssertInspection extends TornadoKernelInspection {
                     super.visitAssertStatement(statement);
                     PsiElement anchor = scope.anchorFor(statement, method, sink.file());
                     if (anchor == null) return;
-                    sink.report(anchor, MessageBundle.message("inspection.assert") + context, ProblemHighlightType.ERROR);
+                    // An assert in another file's helper is reported on the kernel's call
+                    // into it; removing that call would be wrong, so it gets no fix
+                    LocalQuickFix[] fixes = anchor == statement
+                            ? new LocalQuickFix[]{new RemoveStatementFix("quickfix.removeAssert")}
+                            : LocalQuickFix.EMPTY_ARRAY;
+                    sink.report(anchor, MessageBundle.message("inspection.assert") + context, ProblemHighlightType.ERROR, fixes);
                 }
             });
         }
