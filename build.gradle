@@ -21,7 +21,7 @@ plugins {
 }
 
 group = 'uk.ac.manchester.beehive.tornado.plugins'
-version = '2.0.0'
+version = '2.0.1-dev'
 
 java {
   toolchain { languageVersion = JavaLanguageVersion.of(21) }
