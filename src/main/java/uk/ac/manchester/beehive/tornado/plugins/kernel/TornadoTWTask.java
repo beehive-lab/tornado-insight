@@ -22,8 +22,7 @@ import com.intellij.psi.*;
 import java.util.*;
 
 /**
- * Helpers to find the TornadoVM kernels of a file, format them for display and
- * collect the file's imports for the generated test code.
+ * Helpers to find the TornadoVM kernels of a file and format them for display.
  * <p>
  * It holds no state: every helper takes the file or methods it works on, and the
  * tasks of the current file are kept per project by
@@ -61,33 +60,4 @@ public class TornadoTWTask {
             }
         }
         return methodName + "(" + methodParameters + "): " + Objects.requireNonNull(method.getReturnType()).getCanonicalText();
-    }
-
-    /**
-     * Returns the import statements of the given file, one per line, skipping JUnit imports.
-     */
-    public static String getImportCode(PsiFile file) {
-        StringBuilder importCodeBlock = new StringBuilder();
-        if (!(file instanceof PsiJavaFile javaFile)) {
-            return importCodeBlock.toString();
-        }
-        PsiImportList importList = javaFile.getImportList();
-
-        if (importList != null) {
-            PsiImportStatement[] importStatements = importList.getImportStatements();
-            for (PsiImportStatement importStatement : importStatements) {
-                String importText = importStatement.getText();
-                if (statementImportsJunit(importText)) {
-                    continue;
-                }
-                importCodeBlock.append(importStatement.getText());
-                importCodeBlock.append("\n");
-            }
-        }
-        return importCodeBlock.toString();
-    }
-
-    private static boolean statementImportsJunit(String importStatement) {
-        return importStatement.contains("import org.junit.");
-    }
-}
+    }}

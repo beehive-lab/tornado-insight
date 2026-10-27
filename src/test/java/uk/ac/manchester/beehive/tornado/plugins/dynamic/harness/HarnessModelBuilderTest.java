@@ -226,7 +226,8 @@ public class HarnessModelBuilderTest extends TornadoTestCase {
                     }
                 }""", "fill");
 
-        assertEquals(List.of("static int twice(int x) { return 2 * MathUtil.clamp(x); }",
+        // The call loses its class qualifier: the copied clamp lives in the harness class
+        assertEquals(List.of("static int twice(int x) { return 2 * clamp(x); }",
                         "public static int clamp(int x) { return Math.min(x, LIMIT); }"),
                 model.helperSources());
         // BASE comes before LIMIT, whose initializer uses it; UNUSED is not copied
@@ -234,6 +235,121 @@ public class HarnessModelBuilderTest extends TornadoTestCase {
         assertTrue(model.imports().toString(),
                 model.imports().contains("import uk.ac.manchester.tornado.api.types.arrays.FloatArray;"));
         assertEquals(model.imports().size(), new java.util.HashSet<>(model.imports()).size());
+        // MathUtil is not on the harness classpath
+        assertFalse(model.imports().toString(), model.imports().contains("import util.MathUtil;"));
+    }
+
+    private void addMathUtil() {
+        myFixture.addFileToProject("util/MathUtil.java", """
+                package util;
+
+                public class MathUtil {
+                    public static final int LIMIT = 100;
+                    public static final int SCALE = 5;
+                    public static final int HALF = LIMIT / 2;
+
+                    public static int clamp(int x) { return Math.min(x, LIMIT); }
+                    public static int twice(int x) { return 2 * x; }
+                    public static float twice(float x) { return 2 * x; }
+                }""");
+    }
+
+    public void testQualifiedReferencesToCopiedMembersLoseTheirQualifier() {
+        addMathUtil();
+        HarnessModel model = build("Kernels.java", """
+                import uk.ac.manchester.tornado.api.annotations.Parallel;
+                import uk.ac.manchester.tornado.api.types.arrays.IntArray;
+                import util.*;
+
+                class Kernels {
+                    static final int OFFSET = MathUtil.HALF + 1;
+
+                    static void fill(IntArray a) {
+                        for (@Parallel int i = 0; i < a.getSize(); i++) {
+                            a.set(i, util.MathUtil.clamp(i) + MathUtil.LIMIT + Kernels.OFFSET + Math.max(i, 0));
+                        }
+                    }
+                }""", "fill");
+
+        assertTrue(model.kernelSource(), model.kernelSource().contains(
+                "a.set(i, clamp(i) + LIMIT + OFFSET + Math.max(i, 0));"));
+        // OFFSET comes after the fields its initializer uses
+        assertEquals(List.of("LIMIT", "HALF", "OFFSET"), names(model.fields()));
+        assertEquals(new Field("static final", "int", "OFFSET", "HALF + 1"), model.fields().get(2));
+        // 'import util.*;' names only project classes
+        assertFalse(model.imports().toString(), model.imports().contains("import util.*;"));
+        assertTrue(model.imports().toString(),
+                model.imports().contains("import uk.ac.manchester.tornado.api.types.arrays.IntArray;"));
+    }
+
+    public void testTheKernelClassQualifierIsDropped() {
+        HarnessModel model = build("Kernels.java", """
+                import uk.ac.manchester.tornado.api.annotations.Parallel;
+                import uk.ac.manchester.tornado.api.types.arrays.IntArray;
+
+                class Kernels {
+                    static final int SCALE = 3;
+                    static int twice(int x) { return 2 * x * Kernels.SCALE; }
+                    static void fill(IntArray a) {
+                        for (@Parallel int i = 0; i < a.getSize(); i++) { a.set(i, Kernels.twice(i)); }
+                    }
+                }""", "fill");
+
+        assertTrue(model.kernelSource(), model.kernelSource().contains("a.set(i, twice(i));"));
+        assertEquals(List.of("static int twice(int x) { return 2 * x * SCALE; }"), model.helperSources());
+    }
+
+    public void testClashingMembersOfOtherClassesAreRenamed() {
+        addMathUtil();
+        HarnessModel model = build("Kernels.java", """
+                import uk.ac.manchester.tornado.api.annotations.Parallel;
+                import uk.ac.manchester.tornado.api.types.arrays.IntArray;
+                import util.MathUtil;
+
+                class Kernels {
+                    static final int SCALE = 3;
+                    static int twice(int x) { return x + x; }
+                    static void fill(IntArray a) {
+                        for (@Parallel int i = 0; i < a.getSize(); i++) {
+                            a.set(i, twice(i) * SCALE + MathUtil.twice(i) * MathUtil.SCALE + (int) MathUtil.twice(1f));
+                        }
+                    }
+                }""", "fill");
+
+        // Each class keeps reading its own SCALE and calling its own twice(int);
+        // twice(float) is an overload, not a clash
+        assertTrue(model.kernelSource(), model.kernelSource().contains(
+                "a.set(i, twice(i) * SCALE + MathUtil_twice(i) * MathUtil_SCALE + (int) twice(1f));"));
+        assertEquals(List.of("SCALE", "MathUtil_SCALE"), names(model.fields()));
+        assertEquals(List.of("static int twice(int x) { return x + x; }",
+                        "public static int MathUtil_twice(int x) { return 2 * x; }",
+                        "public static float twice(float x) { return 2 * x; }"),
+                model.helperSources());
+    }
+
+    public void testATaskGraphNamingAProjectClassIsNotReused() {
+        String kernels = """
+                import uk.ac.manchester.tornado.api.TaskGraph;
+                import uk.ac.manchester.tornado.api.annotations.Parallel;
+                import uk.ac.manchester.tornado.api.types.arrays.IntArray;
+
+                class Kernels {
+                    static final String GRAPH = "s0";
+                    static void fill(IntArray a) {
+                        for (@Parallel int i = 0; i < a.getSize(); i++) { a.set(i, 1); }
+                    }
+                    void run(IntArray a) {
+                        TaskGraph graph = new TaskGraph(%s).task("t0", Kernels::fill, a);
+                    }
+                }""";
+
+        HarnessModel unqualified = build("Kernels.java", kernels.formatted("GRAPH"), "fill");
+        assertNotNull(unqualified.taskGraph());
+        assertTrue(unqualified.taskGraph().declaration(),
+                unqualified.taskGraph().declaration().contains(".task(\"t0\", fillAb12C::fill, a)"));
+
+        HarnessModel qualified = build("Kernels.java", kernels.formatted("Kernels.GRAPH"), "fill");
+        assertNull(qualified.taskGraph());
     }
 
     public void testContextKernelGraphNeedsLiteralNamesToBeReused() {
