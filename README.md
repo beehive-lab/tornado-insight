@@ -113,8 +113,9 @@ inspection uses the project JDK from *File | Project Structure*.
 
 ## Limitations
 - **Dynamic inspection runs a copy of the kernel.** The generated test program contains a copy of
-  the kernel and the helper methods it calls, but not calls into other libraries or the fields of
-  other classes, so such kernels cannot be inspected dynamically.
+  the kernel, the helper methods it calls and the fields they use, from any class of the project.
+  Kernels that use other project classes as types (as parameters, objects or enum constants), or
+  that call libraries other than the JDK and TornadoVM, cannot be inspected dynamically.
 
 ## Developing TornadoInsight
 Building the plugin, running it in a sandbox IDE, the code layout, the tests and the developer tools

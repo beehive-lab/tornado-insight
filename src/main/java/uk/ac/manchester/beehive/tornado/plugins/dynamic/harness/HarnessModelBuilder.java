@@ -22,13 +22,16 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.CommonClassNames;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiDeclarationStatement;
+import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiEnumConstant;
 import com.intellij.psi.PsiExpression;
 import com.intellij.psi.PsiExpressionList;
 import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiImportStatement;
 import com.intellij.psi.PsiJavaCodeReferenceElement;
+import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiLiteralExpression;
 import com.intellij.psi.PsiLocalVariable;
 import com.intellij.psi.PsiMember;
@@ -37,10 +40,13 @@ import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.PsiMethodReferenceExpression;
 import com.intellij.psi.PsiModifier;
 import com.intellij.psi.PsiNewExpression;
+import com.intellij.psi.PsiPackage;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.PsiReferenceExpression;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.psi.util.PsiUtil;
+import com.intellij.psi.util.PsiUtilCore;
+import com.intellij.psi.util.TypeConversionUtil;
 import com.intellij.util.concurrency.annotations.RequiresReadLock;
 import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NotNull;
@@ -50,13 +56,15 @@ import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Par
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.TaskGraphDeclaration;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.KernelCallGraphAnalyzer;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
-import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoTWTask;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -64,6 +72,8 @@ import java.util.Set;
  * action; the model it returns holds no PSI.
  */
 public final class HarnessModelBuilder {
+
+    private static final String TORNADO_API = "uk.ac.manchester.tornado.api.";
 
     private HarnessModelBuilder() {
     }
@@ -75,22 +85,23 @@ public final class HarnessModelBuilder {
     public static @NotNull HarnessModel build(@NotNull PsiMethod kernel, @NotNull String className) {
         PsiFile psiFile = kernel.getContainingFile();
         List<PsiMethod> helperMethods = helpers(kernel);
+        List<PsiField> psiFields = fields(kernel, helperMethods);
+        Map<PsiMember, String> names = harnessNames(kernel, helperMethods, psiFields);
         List<String> helpers = new ArrayList<>();
         for (PsiMethod helper : helperMethods) {
-            helpers.add(helper.getText());
+            helpers.add(harnessText(helper, names, className));
         }
-        List<PsiField> psiFields = fields(kernel, helperMethods);
         List<Field> fields = new ArrayList<>();
         for (PsiField field : psiFields) {
-            fields.add(toField(field));
+            fields.add(toField(field, names, className));
         }
 
         // The kernel file's imports, then those of the files helpers and fields come from
-        Set<String> imports = new LinkedHashSet<>(TornadoTWTask.getImportCode(psiFile).lines().toList());
+        Set<String> imports = new LinkedHashSet<>(imports(psiFile));
         for (PsiMember member : ContainerUtil.concat(helperMethods, psiFields)) {
             PsiFile file = member.getContainingFile();
             if (file != null && file != psiFile) {
-                imports.addAll(TornadoTWTask.getImportCode(file).lines().toList());
+                imports.addAll(imports(file));
             }
         }
 
@@ -101,7 +112,7 @@ public final class HarnessModelBuilder {
                 : parameters(kernel, null, fields);
 
         return new HarnessModel(className, kernel.getName(), TornadoKernels.kind(kernel),
-                new ArrayList<>(imports), fields, kernel.getText(), helpers,
+                new ArrayList<>(imports), fields, harnessText(kernel, names, className), helpers,
                 parameters, taskGraph);
     }
 
@@ -200,6 +211,17 @@ public final class HarnessModelBuilder {
             }
         }
 
+        // Project classes are not on the harness classpath, so a declaration naming one
+        // (e.g. 'new TaskGraph(Kernels.GRAPH)') would not compile; the harness then
+        // builds its own TaskGraph. The kernel reference is rewritten below.
+        PsiExpression kernelReference = taskCall.call().getArgumentList().getExpressions()[1];
+        for (PsiJavaCodeReferenceElement reference : PsiTreeUtil.findChildrenOfType(declaration, PsiJavaCodeReferenceElement.class)) {
+            if (!PsiTreeUtil.isAncestor(kernelReference, reference, false)
+                    && reference.resolve() instanceof PsiClass psiClass && isProjectClass(psiClass)) {
+                return null;
+            }
+        }
+
         String graphName = graphName(declaration);
         String taskName = stringValue(taskCall.call().getArgumentList().getExpressions()[0]);
         TornadoKernels.Kind kind = TornadoKernels.kind(kernel);
@@ -210,7 +232,6 @@ public final class HarnessModelBuilder {
         }
 
         // Rewrite only the kernel reference of this task
-        PsiExpression kernelReference = taskCall.call().getArgumentList().getExpressions()[1];
         int start = kernelReference.getTextRange().getStartOffset() - declaration.getTextRange().getStartOffset();
         String text = declaration.getText();
         String rewritten = text.substring(0, start) + className + "::" + kernel.getName()
@@ -275,7 +296,8 @@ public final class HarnessModelBuilder {
      * other project classes that the kernel or a helper uses, together with the
      * fields their initializers use. A field comes after the copied fields its
      * initializer refers to, and otherwise in declaration order, so the copy has no
-     * illegal forward reference. Of two fields with the same name the first is kept.
+     * illegal forward reference. Fields with the same name are renamed by
+     * {@link #harnessNames}.
      */
     private static List<PsiField> fields(PsiMethod kernel, List<PsiMethod> helpers) {
         Set<PsiField> candidates = new LinkedHashSet<>();
@@ -295,14 +317,7 @@ public final class HarnessModelBuilder {
         for (PsiField field : candidates) {
             addWithDependencies(field, ordered, new HashSet<>());
         }
-        List<PsiField> fields = new ArrayList<>();
-        Set<String> names = new HashSet<>();
-        for (PsiField field : ordered) {
-            if (names.add(field.getName())) {
-                fields.add(field);
-            }
-        }
-        return fields;
+        return new ArrayList<>(ordered);
     }
 
     private static void addWithDependencies(PsiField field, Set<PsiField> ordered, Set<PsiField> visiting) {
@@ -322,21 +337,166 @@ public final class HarnessModelBuilder {
     private static Set<PsiField> referencedFields(PsiElement scope) {
         Set<PsiField> fields = new LinkedHashSet<>();
         for (PsiReferenceExpression reference : PsiTreeUtil.findChildrenOfType(scope, PsiReferenceExpression.class)) {
-            if (reference.resolve() instanceof PsiField field && !(field instanceof PsiEnumConstant) && isProjectField(field)) {
+            if (reference.resolve() instanceof PsiField field && !(field instanceof PsiEnumConstant) && isProjectSource(field)) {
                 fields.add(field);
             }
         }
         return fields;
     }
 
-    private static boolean isProjectField(PsiField field) {
-        PsiFile file = field.getContainingFile();
-        VirtualFile virtualFile = file != null ? file.getVirtualFile() : null;
+    // Whether 'element' is in the project's sources (a class, member or package directory)
+    private static boolean isProjectSource(PsiElement element) {
+        VirtualFile virtualFile = PsiUtilCore.getVirtualFile(element);
         return virtualFile != null
-                && ProjectRootManager.getInstance(field.getProject()).getFileIndex().isInSourceContent(virtualFile);
+                && ProjectRootManager.getInstance(element.getProject()).getFileIndex().isInSourceContent(virtualFile);
     }
 
-    private static Field toField(PsiField field) {
+    // A class of the project's own code; the TornadoVM API is on the harness classpath
+    // even when it is in the sources (e.g. when working on TornadoVM itself)
+    private static boolean isProjectClass(PsiClass psiClass) {
+        String name = psiClass.getQualifiedName();
+        return isProjectSource(psiClass) && (name == null || !name.startsWith(TORNADO_API));
+    }
+
+    /**
+     * The import statements of {@code file} that the harness compiles with: all but
+     * JUnit's and those of project classes, which are not on the harness classpath
+     * (the members the harness uses are copied into it).
+     */
+    private static List<String> imports(PsiFile file) {
+        List<String> imports = new ArrayList<>();
+        if (!(file instanceof PsiJavaFile javaFile) || javaFile.getImportList() == null) {
+            return imports;
+        }
+        for (PsiImportStatement statement : javaFile.getImportList().getImportStatements()) {
+            String text = statement.getText();
+            if (!text.contains("import org.junit.") && !importsProjectSource(statement)) {
+                imports.add(text);
+            }
+        }
+        return imports;
+    }
+
+    private static boolean importsProjectSource(PsiImportStatement statement) {
+        PsiElement target = statement.resolve();
+        if (target instanceof PsiPackage psiPackage) {
+            PsiDirectory[] directories = psiPackage.getDirectories();
+            return !(psiPackage.getQualifiedName() + ".").startsWith(TORNADO_API) && directories.length > 0
+                    && Arrays.stream(directories).allMatch(HarnessModelBuilder::isProjectSource);
+        }
+        return target instanceof PsiClass psiClass && isProjectClass(psiClass);
+    }
+
+    /**
+     * The names of the copied methods and fields in the harness. A member keeps its
+     * name unless an earlier one took it (a field with the same name, a method with
+     * the same name and parameter types); it is then prefixed with its class, e.g.
+     * {@code MathUtil_clamp}. The kernel's class goes first, so the kernel and its
+     * class's members keep their names.
+     */
+    private static Map<PsiMember, String> harnessNames(PsiMethod kernel, List<PsiMethod> helpers, List<PsiField> fields) {
+        PsiClass kernelClass = kernel.getContainingClass();
+        Comparator<PsiMember> kernelClassFirst = Comparator.comparing(m -> m.getContainingClass() != kernelClass);
+        Map<PsiMember, String> names = new HashMap<>();
+
+        // main(String[]) is the harness's own
+        Set<String> methodSignatures = new HashSet<>(Set.of("main(java.lang.String[])"));
+        List<PsiMethod> methods = new ArrayList<>(ContainerUtil.prepend(helpers, kernel));
+        methods.sort(kernelClassFirst);
+        for (PsiMethod method : methods) {
+            StringBuilder parameterTypes = new StringBuilder("(");
+            for (PsiParameter parameter : method.getParameterList().getParameters()) {
+                if (parameterTypes.length() > 1) {
+                    parameterTypes.append(",");
+                }
+                parameterTypes.append(TypeConversionUtil.erasure(parameter.getType()).getCanonicalText());
+            }
+            names.put(method, harnessName(method, parameterTypes.append(")").toString(), methodSignatures));
+        }
+
+        Set<String> fieldNames = new HashSet<>();
+        List<PsiField> sortedFields = new ArrayList<>(fields);
+        sortedFields.sort(kernelClassFirst);
+        for (PsiField field : sortedFields) {
+            names.put(field, harnessName(field, "", fieldNames));
+        }
+        return names;
+    }
+
+    // The first of name, Class_name, Class_name2, ... whose key (name + suffix) is not taken
+    private static String harnessName(PsiMember member, String suffix, Set<String> taken) {
+        String name = member.getName();
+        if (taken.add(name + suffix)) {
+            return name;
+        }
+        PsiClass owner = member.getContainingClass();
+        String base = (owner != null && owner.getName() != null ? owner.getName() + "_" : "") + name;
+        String candidate = base;
+        for (int i = 2; !taken.add(candidate + suffix); i++) {
+            candidate = base + i;
+        }
+        return candidate;
+    }
+
+    /**
+     * Returns the source text of {@code element} as the harness copies it: references
+     * to copied members take the members' harness names, and lose a class qualifier
+     * ({@code MathUtil.clamp(x)} becomes {@code clamp(x)}, {@code Kernels.SCALE}
+     * becomes {@code SCALE}), since the copies all live in the harness class. A
+     * method reference keeps its form, with the harness class as qualifier.
+     */
+    private static String harnessText(PsiElement element, Map<PsiMember, String> names, String className) {
+        int base = element.getTextRange().getStartOffset();
+        List<TextEdit> edits = new ArrayList<>();
+        for (PsiReferenceExpression reference : PsiTreeUtil.collectElementsOfType(element, PsiReferenceExpression.class)) {
+            PsiElement nameElement = reference.getReferenceNameElement();
+            if (nameElement == null || !(reference.resolve() instanceof PsiMember target) || !names.containsKey(target)) {
+                continue;
+            }
+            String name = names.get(target);
+            PsiElement qualifier = reference.getQualifier();
+            boolean classQualified = qualifier instanceof PsiJavaCodeReferenceElement q && q.resolve() instanceof PsiClass;
+            int nameStart = nameElement.getTextRange().getStartOffset() - base;
+            int nameEnd = nameElement.getTextRange().getEndOffset() - base;
+            if (reference instanceof PsiMethodReferenceExpression) {
+                if (classQualified) {
+                    edits.add(new TextEdit(qualifier.getTextRange().getStartOffset() - base,
+                            qualifier.getTextRange().getEndOffset() - base, className));
+                }
+                if (!name.equals(target.getName())) {
+                    edits.add(new TextEdit(nameStart, nameEnd, name));
+                }
+            } else if (classQualified) {
+                edits.add(new TextEdit(reference.getTextRange().getStartOffset() - base, nameEnd, name));
+            } else if (!name.equals(target.getName())) {
+                edits.add(new TextEdit(nameStart, nameEnd, name));
+            }
+        }
+
+        if (element instanceof PsiMethod method && method.getNameIdentifier() != null
+                && !method.getName().equals(names.get(method))) {
+            edits.add(new TextEdit(method.getNameIdentifier().getTextRange().getStartOffset() - base,
+                    method.getNameIdentifier().getTextRange().getEndOffset() - base, names.get(method)));
+        }
+
+        StringBuilder text = new StringBuilder(element.getText());
+        int limit = text.length();
+        edits.sort(Comparator.comparingInt(TextEdit::start).reversed());
+        for (TextEdit edit : edits) {
+            // Edits never overlap (a class qualifier holds no member reference); skip one that would
+            if (edit.end() <= limit) {
+                text.replace(edit.start(), edit.end(), edit.text());
+                limit = edit.start();
+            }
+        }
+        return text.toString();
+    }
+
+    // Replaces [start, end) of an element's text
+    private record TextEdit(int start, int end, String text) {
+    }
+
+    private static Field toField(PsiField field, Map<PsiMember, String> names, String className) {
         List<String> modifiers = new ArrayList<>();
         for (String modifier : PsiModifier.MODIFIERS) {
             if (field.hasModifierProperty(modifier)) {
@@ -344,8 +504,8 @@ public final class HarnessModelBuilder {
             }
         }
         PsiExpression initializer = field.getInitializer();
-        return new Field(String.join(" ", modifiers), field.getType().getCanonicalText(false), field.getName(),
-                initializer != null ? initializer.getText() : null);
+        return new Field(String.join(" ", modifiers), field.getType().getCanonicalText(false), names.get(field),
+                initializer != null ? harnessText(initializer, names, className) : null);
     }
 
     /**
