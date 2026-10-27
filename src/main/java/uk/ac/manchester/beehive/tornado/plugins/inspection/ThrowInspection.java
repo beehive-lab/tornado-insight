@@ -17,8 +17,10 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.inspection;
 
+import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.psi.*;
+import com.intellij.psi.util.PsiTreeUtil;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 import org.jetbrains.annotations.NotNull;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.KernelCallGraphAnalyzer;
@@ -58,7 +60,12 @@ public class ThrowInspection extends TornadoKernelInspection {
                 super.visitThrowStatement(statement);
                 PsiElement anchor = scope.anchorFor(statement, method, sink.file());
                 if (anchor == null) return;
-                sink.report(anchor, MessageBundle.message("inspection.traps.throw") + context, ProblemHighlightType.ERROR);
+                // Removing a throw from a method that returns a value can leave a path without
+                // a return, so the fix is only offered in void methods
+                LocalQuickFix[] fixes = anchor == statement && inVoidMethod(statement)
+                        ? new LocalQuickFix[]{new RemoveStatementFix("quickfix.removeThrow")}
+                        : LocalQuickFix.EMPTY_ARRAY;
+                sink.report(anchor, MessageBundle.message("inspection.traps.throw") + context, ProblemHighlightType.ERROR, fixes);
             }
 
             @Override
@@ -66,17 +73,32 @@ public class ThrowInspection extends TornadoKernelInspection {
                 super.visitTryStatement(statement);
                 PsiElement anchor = scope.anchorFor(statement, method, sink.file());
                 if (anchor == null) return;
-                sink.report(anchor, MessageBundle.message("inspection.traps.tryCatch") + context, ProblemHighlightType.ERROR);
+                LocalQuickFix[] fixes = anchor == statement && UnwrapTryFix.isApplicable(statement)
+                        ? new LocalQuickFix[]{new UnwrapTryFix()}
+                        : LocalQuickFix.EMPTY_ARRAY;
+                sink.report(anchor, MessageBundle.message("inspection.traps.tryCatch") + context, ProblemHighlightType.ERROR, fixes);
             }
         });
 
         // Checking the method signature for thrown exceptions
+        boolean first = true;
         for (PsiClassType exception : method.getThrowsList().getReferencedTypes()) {
             PsiElement anchor = scope.anchorFor(method.getThrowsList(), method, sink.file());
             if (anchor == null) continue;
+            // One problem per exception, all on the throws list: the fix, which removes the
+            // whole clause, goes on the first so Alt+Enter offers it once
+            LocalQuickFix[] fixes = first && anchor == method.getThrowsList()
+                    ? new LocalQuickFix[]{new RemoveThrowsClauseFix()}
+                    : LocalQuickFix.EMPTY_ARRAY;
+            first = false;
             sink.report(anchor,
                     MessageBundle.message("inspection.traps.throws") + "\n" + exception.getCanonicalText() + context,
-                    ProblemHighlightType.ERROR);
+                    ProblemHighlightType.ERROR, fixes);
         }
+    }
+
+    private static boolean inVoidMethod(PsiThrowStatement statement) {
+        PsiElement owner = PsiTreeUtil.getParentOfType(statement, PsiMethod.class, PsiLambdaExpression.class, PsiClass.class);
+        return owner instanceof PsiMethod method && PsiTypes.voidType().equals(method.getReturnType());
     }
 }
