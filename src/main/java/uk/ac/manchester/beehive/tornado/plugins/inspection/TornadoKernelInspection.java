@@ -18,6 +18,7 @@
 package uk.ac.manchester.beehive.tornado.plugins.inspection;
 
 import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
+import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.JavaElementVisitor;
@@ -86,9 +87,10 @@ public abstract class TornadoKernelInspection extends AbstractBaseJavaLocalInspe
         }
 
         @Override
-        public void report(@NotNull PsiElement anchor, @NotNull String message, @NotNull ProblemHighlightType type) {
+        public void report(@NotNull PsiElement anchor, @NotNull String message, @NotNull ProblemHighlightType type,
+                           @NotNull LocalQuickFix @NotNull ... fixes) {
             if (reported.add(new Reported(anchor, message))) {
-                holder.registerProblem(anchor, message, type);
+                holder.registerProblem(anchor, message, type, fixes);
             }
         }
     }
