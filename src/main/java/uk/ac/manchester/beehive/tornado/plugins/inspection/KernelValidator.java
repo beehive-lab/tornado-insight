@@ -17,6 +17,7 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.inspection;
 
+import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -84,7 +85,8 @@ public final class KernelValidator {
         }
 
         @Override
-        public void report(@NotNull PsiElement anchor, @NotNull String message, @NotNull ProblemHighlightType type) {
+        public void report(@NotNull PsiElement anchor, @NotNull String message, @NotNull ProblemHighlightType type,
+                           @NotNull LocalQuickFix @NotNull ... fixes) {
             found = true;
         }
     }

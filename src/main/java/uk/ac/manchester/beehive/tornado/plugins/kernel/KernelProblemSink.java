@@ -17,6 +17,7 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.kernel;
 
+import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -36,7 +37,11 @@ public interface KernelProblemSink {
     @NotNull PsiFile file();
 
     /**
-     * Reports a problem on {@code anchor}, an element of {@link #file()}.
+     * Reports a problem on {@code anchor}, an element of {@link #file()}, with the
+     * fixes the editor offers for it (Alt+Enter). A fix acts on {@code anchor}, so
+     * pass one only when {@code anchor} is the problem itself, not the call site
+     * that stands in for a problem in another file.
      */
-    void report(@NotNull PsiElement anchor, @NotNull String message, @NotNull ProblemHighlightType type);
+    void report(@NotNull PsiElement anchor, @NotNull String message, @NotNull ProblemHighlightType type,
+                @NotNull LocalQuickFix @NotNull ... fixes);
 }

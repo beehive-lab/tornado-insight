@@ -17,6 +17,7 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.inspection;
 
+import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.psi.*;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.RestrictedClasses;
@@ -54,15 +55,25 @@ public class SystemCallInspection extends TornadoKernelInspection {
                     PsiMethod calledMethod = expression.resolveMethod();
                     PsiElement anchor = scope.anchorFor(expression, method, sink.file());
                     if (anchor == null) return;
+                    // Removable only when the call is a statement of its own (its value is
+                    // unused) and is reported where it is, not on the call into another
+                    // file's helper
+                    LocalQuickFix[] fixes = anchor == expression && RemoveStatementFix.statementOf(expression) != null
+                            ? new LocalQuickFix[]{new RemoveStatementFix("quickfix.removeCall")}
+                            : LocalQuickFix.EMPTY_ARRAY;
                     if (calledMethod != null && calledMethod.hasModifierProperty(PsiModifier.NATIVE)) {
-                        sink.report(anchor, MessageBundle.message("inspection.nativeCall") + context, ProblemHighlightType.ERROR);
+                        sink.report(anchor, MessageBundle.message("inspection.nativeCall") + context, ProblemHighlightType.ERROR,
+                                fixes);
+                        // A native method of a restricted class is reported twice; offer the fix once
+                        fixes = LocalQuickFix.EMPTY_ARRAY;
                     }
                     if (calledMethod == null) return;
                     // Anonymous and local classes have no qualified name, and are never restricted
                     PsiClass containingClass = calledMethod.getContainingClass();
                     String className = containingClass == null ? null : containingClass.getQualifiedName();
                     if (className != null && RestrictedClasses.isRestrictedClass(className)) {
-                        sink.report(anchor, MessageBundle.message("inspection.external") + context, ProblemHighlightType.ERROR);
+                        sink.report(anchor, MessageBundle.message("inspection.external") + context, ProblemHighlightType.ERROR,
+                                fixes);
                     }
                 }
             });

@@ -39,5 +39,10 @@
   and pass the resulting data into the kernel through TornadoVM array or vector
   types.
 </p>
+<p>
+  <b>Quick fix:</b> <i>Remove call</i>, when the call is a statement of its own
+  (its result is not used). It is not offered when the call is in a helper method
+  of another file, where the problem is shown on the kernel's call into that helper.
+</p>
 </body>
 </html>

@@ -40,6 +40,9 @@ compile and explains why in a tooltip. It checks the kernel and the helper metho
 The checks are listed under *Settings | Editor | Inspections | TornadoVM*, and the **Inspector Guide**
 tab of the TornadoVM tool window explains each restriction.
 
+Some problems have a quick fix: press **Alt+Enter** on an `assert` statement, or on a system or
+native call whose result is not used, to remove it.
+
 ### Dynamic inspection
 Some problems only show up when TornadoVM compiles and runs a kernel. Open the **TornadoVM** tool
 window, select one or more of the listed kernels, and click **Run**. TornadoInsight generates a small

@@ -33,5 +33,10 @@
   <b>How to fix:</b> remove the assertion, or move the precondition check into
   host code that runs before <code>TaskGraph.execute()</code>.
 </p>
+<p>
+  <b>Quick fix:</b> <i>Remove 'assert' statement</i>. It is not offered when the
+  assertion is in a helper method of another file, where the problem is shown on
+  the kernel's call into that helper.
+</p>
 </body>
 </html>
