@@ -25,6 +25,7 @@ import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.HarnessModel.Tas
 import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 
 import java.util.Random;
+import java.util.regex.Pattern;
 
 /**
  * Generates the Java source of a test harness from a {@link HarnessModel}: the
@@ -34,16 +35,7 @@ import java.util.Random;
  */
 public final class HarnessGenerator {
 
-    static final String DEFAULT_IMPORTS = """
-            import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
-            import uk.ac.manchester.tornado.api.TaskGraph;
-            import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
-            import uk.ac.manchester.tornado.api.annotations.Parallel;
-            import uk.ac.manchester.tornado.api.annotations.Reduce;
-            import uk.ac.manchester.tornado.api.enums.DataTransferMode;
-            import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
-            import uk.ac.manchester.tornado.api.types.HalfFloat;
-            """;
+    private static final String API = "uk.ac.manchester.tornado.api.";
 
     static final String SYNTHETIC_GRAPH = "insightTaskGraphName";
     static final String SYNTHETIC_TASK = "insightTaskName";
@@ -63,29 +55,63 @@ public final class HarnessGenerator {
      */
     public static @NotNull String generate(@NotNull HarnessModel model, int parameterSize, @NotNull Random random)
             throws UnsupportedParameterTypeException {
+        HarnessImports imports = new HarnessImports(model.imports());
+        requireApiImports(model, imports);
+
         ParameterInitializer initializer = new ParameterInitializer(parameterSize, random);
         StringBuilder variableInit = new StringBuilder();
         for (Parameter parameter : model.parameters()) {
-            variableInit.append(initializer.declaration(parameter)).append("\n");
+            Parameter simplified = new Parameter(parameter.name(), imports.use(parameter.type()),
+                    parameter.localMemorySize(), parameter.intOverride());
+            variableInit.append(initializer.declaration(simplified)).append("\n");
+        }
+        if (initializer.usesHalfFloat()) {
+            imports.require(API + "types.HalfFloat");
         }
 
-        StringBuilder source = new StringBuilder();
-        source.append(DEFAULT_IMPORTS);
-        for (String importStatement : model.imports()) {
-            source.append(importStatement).append("\n");
-        }
-        source.append("\n");
-        source.append("public class ").append(model.className()).append(" {\n");
+        StringBuilder body = new StringBuilder();
+        body.append("public class ").append(model.className()).append(" {\n");
         for (Field field : model.fields()) {
-            source.append(fieldDeclaration(field)).append(";\n");
+            Field simplified = new Field(field.modifiers(), imports.use(field.type()), field.name(), field.initializer());
+            body.append(fieldDeclaration(simplified)).append(";\n");
         }
-        source.append(model.kernelSource());
+        body.append(model.kernelSource());
         for (String helper : model.helperSources()) {
-            source.append(helper).append("\n");
+            body.append(helper).append("\n");
         }
-        source.append(mainMethod(model, variableInit.toString(), parameterSize));
-        source.append("}");
-        return source.toString();
+        body.append(mainMethod(model, variableInit.toString(), parameterSize, imports));
+        body.append("}\n");
+        return imports.source() + "\n" + body;
+    }
+
+    /**
+     * Imports the TornadoVM API types the harness uses: those of {@code main}, and
+     * the loop annotations if the copied code has them. The user's own imports
+     * usually cover the annotations already; the duplicates are dropped.
+     */
+    private static void requireApiImports(HarnessModel model, HarnessImports imports) {
+        imports.require(API + "ImmutableTaskGraph");
+        imports.require(API + "TornadoExecutionPlan");
+        imports.require(API + "exceptions.TornadoExecutionPlanException");
+        TaskGraphDeclaration taskGraph = model.taskGraph();
+        if (taskGraph == null || mentions(taskGraph.declaration(), "TaskGraph")) {
+            imports.require(API + "TaskGraph");
+        }
+        if (taskGraph == null || mentions(taskGraph.declaration(), "DataTransferMode")) {
+            imports.require(API + "enums.DataTransferMode");
+        }
+        String code = model.kernelSource() + String.join("\n", model.helperSources());
+        if (mentions(code, "@Parallel")) {
+            imports.require(API + "annotations.Parallel");
+        }
+        if (mentions(code, "@Reduce")) {
+            imports.require(API + "annotations.Reduce");
+        }
+    }
+
+    // Whether code uses the simple name unqualified, so it needs an import
+    private static boolean mentions(String code, String simpleName) {
+        return Pattern.compile("(?<![\\w.])" + Pattern.quote(simpleName) + "\\b").matcher(code).find();
     }
 
     static @NotNull String fieldDeclaration(@NotNull Field field) {
@@ -100,11 +126,12 @@ public final class HarnessGenerator {
         return declaration.toString();
     }
 
-    private static String mainMethod(HarnessModel model, String variableInit, int parameterSize) {
+    private static String mainMethod(HarnessModel model, String variableInit, int parameterSize,
+                                     HarnessImports imports) {
         String methodWithClass = model.className() + "::" + model.kernelName();
         TaskGraphDeclaration taskGraph = model.taskGraph();
         if (taskGraph != null) {
-            String grid = gridScheduler(model, taskGraph.graphName(), taskGraph.taskName(), parameterSize);
+            String grid = gridScheduler(model, taskGraph.graphName(), taskGraph.taskName(), parameterSize, imports);
             return """
                     \n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {
                     %s
@@ -127,7 +154,7 @@ public final class HarnessGenerator {
                 taskGraphParameters.append(", ").append(p.name());
             }
         }
-        String grid = gridScheduler(model, SYNTHETIC_GRAPH, SYNTHETIC_TASK, parameterSize);
+        String grid = gridScheduler(model, SYNTHETIC_GRAPH, SYNTHETIC_TASK, parameterSize, imports);
         return "\n\tpublic static void main(String[] args) throws TornadoExecutionPlanException {\n" + //
                 "\n" + //
                 variableInit + //
@@ -155,7 +182,8 @@ public final class HarnessGenerator {
      *         when the kernel needs none or the task name is unknown
      */
     static @NotNull String gridScheduler(@NotNull HarnessModel model, @Nullable String graphName,
-                                         @Nullable String taskName, int parameterSize) {
+                                         @Nullable String taskName, int parameterSize,
+                                         @NotNull HarnessImports imports) {
         TornadoKernels.Kind kind = model.kind();
         if (kind != TornadoKernels.Kind.KERNEL_CONTEXT && kind != TornadoKernels.Kind.TILE_CONTEXT) {
             return "";
@@ -164,11 +192,11 @@ public final class HarnessGenerator {
             return "";
         }
         int threads = kind == TornadoKernels.Kind.TILE_CONTEXT ? 1 : parameterSize;
-        return "uk.ac.manchester.tornado.api.WorkerGrid1D " + WORKER_GRID
-                + " = new uk.ac.manchester.tornado.api.WorkerGrid1D(" + threads + ");\n"
-                + "uk.ac.manchester.tornado.api.GridScheduler " + GRID_SCHEDULER
-                + " = new uk.ac.manchester.tornado.api.GridScheduler(\"" + graphName + "." + taskName + "\", "
-                + WORKER_GRID + ");\n";
+        String workerGrid = imports.use(API + "WorkerGrid1D");
+        String gridScheduler = imports.use(API + "GridScheduler");
+        return workerGrid + " " + WORKER_GRID + " = new " + workerGrid + "(" + threads + ");\n"
+                + gridScheduler + " " + GRID_SCHEDULER + " = new " + gridScheduler + "(\""
+                + graphName + "." + taskName + "\", " + WORKER_GRID + ");\n";
     }
 
     // Scalars are passed by value; everything else is transferred to and from the device

@@ -29,10 +29,11 @@ import java.util.regex.Pattern;
 /**
  * Generates the declaration, with test data, of one harness variable.
  * <p>
- * The type of a {@link Parameter} is its canonical text: fully qualified when it
- * resolves (e.g. {@code uk.ac.manchester.tornado.api.types.arrays.IntArray}), as
- * written otherwise. Values are chosen by the simple name; the declaration and the
- * constructor call use the type as given, so they compile without extra imports.
+ * The type of a {@link Parameter} is either a simple name the harness imports (e.g.
+ * {@code IntArray}) or a qualified name. Values are chosen by the simple name; the
+ * declaration and the constructor call use the type as given. A {@code HalfFloat}
+ * value is written by its simple name, so the harness must import it when
+ * {@link #usesHalfFloat()}.
  * A type without a known initialisation is rejected with
  * {@link UnsupportedParameterTypeException} rather than left uninitialised.
  * </p>
@@ -55,6 +56,7 @@ final class ParameterInitializer {
 
     private final int parameterSize;
     private final Random r;
+    private boolean usesHalfFloat;
 
     ParameterInitializer(int parameterSize, @NotNull Random random) {
         this.parameterSize = parameterSize;
@@ -70,6 +72,13 @@ final class ParameterInitializer {
         String name = parameter.name();
         String type = parameter.type();
         return "\t\t" + type + " " + name + initializer(type, name, parameter);
+    }
+
+    /**
+     * @return whether a declaration so far constructs a {@code HalfFloat} by its simple name
+     */
+    boolean usesHalfFloat() {
+        return usesHalfFloat;
     }
 
     static @NotNull String simpleName(@NotNull String type) {
@@ -260,7 +269,10 @@ final class ParameterInitializer {
             case "boolean" -> String.valueOf(r.nextBoolean());
             case "float" -> r.nextFloat(50) + "f";
             case "double" -> "" + r.nextDouble(50);
-            case "HalfFloat" -> "new HalfFloat(" + r.nextFloat(50) + "f)";
+            case "HalfFloat" -> {
+                usesHalfFloat = true;
+                yield "new HalfFloat(" + r.nextFloat(50) + "f)";
+            }
             default -> throw new IllegalArgumentException(primitive);
         };
     }
