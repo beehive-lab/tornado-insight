@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -157,6 +158,24 @@ public final class TornadoSdk {
         }
         Arrays.sort(matches);
         return matches[0].getAbsolutePath();
+    }
+
+    /**
+     * The jars in {@code TORNADOVM_HOME/share/java/tornado}, in name order: the
+     * TornadoVM API and the libraries the SDK ships with it (e.g. {@code tornado-mlx}).
+     *
+     * @return their absolute paths, or an empty list if there is no such directory
+     */
+    public @NotNull List<String> jars() {
+        if (home == null) {
+            return List.of();
+        }
+        File[] jars = home.resolve(Path.of("", JAR_DIRECTORY)).toFile().listFiles((dir, name) -> name.endsWith(".jar"));
+        if (jars == null) {
+            return List.of();
+        }
+        Arrays.sort(jars);
+        return Arrays.stream(jars).map(File::getAbsolutePath).toList();
     }
 
     public @Nullable String apiJar() {
