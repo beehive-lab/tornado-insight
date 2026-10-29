@@ -29,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -93,6 +94,15 @@ public class TornadoSdkTest {
         assertEquals(jars.resolve("tornado-matrices-7.3.1.jar").toString(), sdk.matricesJar());
         assertEquals(jars.resolve("tornado-unittests-7.3.1.jar").toString(), sdk.unitTestsJar());
         assertNull(sdk.findJar("tornado-cublas"));
+    }
+
+    @Test
+    public void jarsAreEveryJarOfTheSdk() {
+        Path jars = home.resolve("share/java/tornado");
+        assertEquals(Stream.of("tornado-annotation-7.3.1.jar", "tornado-api-7.3.1.jar", "tornado-matrices-7.3.1.jar",
+                        "tornado-unittests-7.3.1.jar").map(jar -> jars.resolve(jar).toString()).toList(),
+                TornadoSdk.forHome(home.toString(), false).jars());
+        assertEquals(List.of(), TornadoSdk.forHome(null, false).jars());
     }
 
     @Test

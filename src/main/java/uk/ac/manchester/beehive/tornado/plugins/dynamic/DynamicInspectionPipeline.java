@@ -50,8 +50,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Runs dynamic inspection for the selected tasks: checks the project JDK and the
@@ -416,8 +418,11 @@ public final class DynamicInspectionPipeline {
             return false;
         }
 
+        // The whole SDK, so that imports of the libraries it ships (e.g. tornado-mlx) resolve
+        Set<String> classpath = new LinkedHashSet<>(List.of(apiPath, matricesPath, unitTestPath));
+        classpath.addAll(sdk.jars());
         JavacRunner.Result result = JavacRunner.run(JavacRunner.commandLine(String.valueOf(jdk.homePath()),
-                JavacRunner.release(jdk.feature()), List.of(apiPath, matricesPath, unitTestPath), outputDir, javaFiles,
+                JavacRunner.release(jdk.feature()), new ArrayList<>(classpath), outputDir, javaFiles,
                 sdk.isWindows()), indicator);
         switch (result.status()) {
             case OK -> {
