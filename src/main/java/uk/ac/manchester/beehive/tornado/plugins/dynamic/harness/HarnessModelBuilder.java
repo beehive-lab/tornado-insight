@@ -17,12 +17,12 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.dynamic.harness;
 
-import com.intellij.openapi.roots.JdkOrderEntry;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.CommonClassNames;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiDeclarationStatement;
+import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiEnumConstant;
 import com.intellij.psi.PsiExpression;
@@ -74,7 +74,6 @@ import java.util.Set;
 public final class HarnessModelBuilder {
 
     private static final String TORNADO_API = "uk.ac.manchester.tornado.api.";
-    private static final String TORNADO_MATRIX = "uk.ac.manchester.tornado.matrix.";
 
     private HarnessModelBuilder() {
     }
@@ -360,10 +359,9 @@ public final class HarnessModelBuilder {
     }
 
     /**
-     * The import statements of {@code file} that the harness compiles with: those of
-     * the JDK and of the TornadoVM jars on the harness classpath. Project classes are
-     * not on it (the members the harness uses are copied into it), nor are other
-     * libraries, TornadoVM's own included (e.g. {@code tornado-mlx}).
+     * The import statements of {@code file} that the harness compiles with: all but
+     * JUnit's and those of project classes, which are not on the harness classpath
+     * (the members the harness uses are copied into it).
      */
     private static List<String> imports(PsiFile file) {
         List<String> imports = new ArrayList<>();
@@ -372,36 +370,21 @@ public final class HarnessModelBuilder {
         }
         for (PsiImportStatement statement : javaFile.getImportList().getImportStatements()) {
             String text = statement.getText();
-            if (onHarnessClasspath(statement.resolve())) {
+            if (!text.contains("import org.junit.") && !importsProjectSource(statement)) {
                 imports.add(text);
             }
         }
         return imports;
     }
 
-    private static boolean onHarnessClasspath(@Nullable PsiElement target) {
-        if (target instanceof PsiClass psiClass) {
-            String name = psiClass.getQualifiedName();
-            return name != null && isHarnessApi(name) || isInJdk(psiClass);
-        }
+    private static boolean importsProjectSource(PsiImportStatement statement) {
+        PsiElement target = statement.resolve();
         if (target instanceof PsiPackage psiPackage) {
-            return isHarnessApi(psiPackage.getQualifiedName() + ".")
-                    || Arrays.stream(psiPackage.getDirectories()).anyMatch(HarnessModelBuilder::isInJdk);
+            PsiDirectory[] directories = psiPackage.getDirectories();
+            return !(psiPackage.getQualifiedName() + ".").startsWith(TORNADO_API) && directories.length > 0
+                    && Arrays.stream(directories).allMatch(HarnessModelBuilder::isProjectSource);
         }
-        // Unresolved: it would not compile
-        return false;
-    }
-
-    // The packages of tornado-api and tornado-matrices, by name, so that they count
-    // also when they are in the sources (e.g. when working on TornadoVM itself)
-    private static boolean isHarnessApi(String qualifiedName) {
-        return qualifiedName.startsWith(TORNADO_API) || qualifiedName.startsWith(TORNADO_MATRIX);
-    }
-
-    private static boolean isInJdk(PsiElement element) {
-        VirtualFile virtualFile = PsiUtilCore.getVirtualFile(element);
-        return virtualFile != null && ProjectRootManager.getInstance(element.getProject()).getFileIndex()
-                .getOrderEntriesForFile(virtualFile).stream().anyMatch(JdkOrderEntry.class::isInstance);
+        return target instanceof PsiClass psiClass && isProjectClass(psiClass);
     }
 
     /**
