@@ -37,5 +37,10 @@
   <code>FloatArray</code>), unless the method is only ever called from another
   kernel as a helper.
 </p>
+<p>
+  <b>Quick fix:</b> <i>Make the kernel return 'void'</i>. It changes the return type and drops
+  the returned values; a returned call or assignment is kept as a statement. The result is then
+  lost: write it into an output parameter. Callers that use the returned value no longer compile.
+</p>
 </body>
 </html>

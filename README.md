@@ -40,8 +40,12 @@ compile and explains why in a tooltip. It checks the kernel and the helper metho
 The checks are listed under *Settings | Editor | Inspections | TornadoVM*, and the **Inspector Guide**
 tab of the TornadoVM tool window explains each restriction.
 
-Some problems have a quick fix: press **Alt+Enter** on an `assert` statement, or on a system or
-native call whose result is not used, to remove it.
+Some problems have a quick fix. Press **Alt+Enter** on:
+- an `assert` statement, or a system or native call whose result is not used, to remove it;
+- a `throw` statement in a `void` kernel, to remove it;
+- a `try` statement, to remove the `try/catch` and keep the body;
+- a `throws` clause, to remove it;
+- a non-`void` kernel's return type, to make the kernel return `void`.
 
 ### Dynamic inspection
 Some problems only show up when TornadoVM compiles and runs a kernel. Open the **TornadoVM** tool

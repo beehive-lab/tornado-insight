@@ -44,5 +44,20 @@
   <code>TaskGraph.execute()</code>, and write the kernel body so that every
   branch produces a defined result (e.g. clamp divisors, guard array indices).
 </p>
+<p>
+  <b>Quick fixes:</b>
+</p>
+<ul>
+  <li><i>Remove 'throw' statement</i>, in <code>void</code> methods only: in a method that
+      returns a value, removing it could leave a path without a <code>return</code>.</li>
+  <li><i>Remove 'try/catch', keep the body</i>: keeps the statements of the <code>try</code>
+      block, then those of the <code>finally</code> block. Not offered for try-with-resources.</li>
+  <li><i>Remove 'throws' clause</i>. A caller that catches one of the removed checked exceptions
+      may no longer compile.</li>
+</ul>
+<p>
+  They are not offered when the problem is in a helper method of another file, where it is shown
+  on the kernel's call into that helper.
+</p>
 </body>
 </html>

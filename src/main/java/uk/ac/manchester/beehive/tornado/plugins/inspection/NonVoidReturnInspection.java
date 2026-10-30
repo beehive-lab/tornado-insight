@@ -17,6 +17,7 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.inspection;
 
+import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.psi.*;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
@@ -44,8 +45,11 @@ public class NonVoidReturnInspection extends TornadoKernelInspection {
         if (returnType != null && !PsiTypes.voidType().equals(returnType)) {
             PsiTypeElement returnTypeElement = method.getReturnTypeElement();
             if (returnTypeElement != null) {
+                LocalQuickFix[] fixes = method.getBody() != null
+                        ? new LocalQuickFix[]{new MakeVoidFix()}
+                        : LocalQuickFix.EMPTY_ARRAY;
                 sink.report(returnTypeElement, MessageBundle.message("inspection.nonVoidReturn"),
-                        ProblemHighlightType.GENERIC_ERROR_OR_WARNING);
+                        ProblemHighlightType.GENERIC_ERROR_OR_WARNING, fixes);
             }
         }
     }
