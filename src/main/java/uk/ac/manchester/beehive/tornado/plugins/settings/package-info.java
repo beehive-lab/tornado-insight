@@ -23,5 +23,10 @@
  * form, and {@link TornadoSettingState} the persisted application-level settings (the array
  * size of the generated test data, and whether the internal debug dump is on).
  * </p>
+ * <p>
+ * {@link AiSettingsConfigurable}, {@link AiSettingsComponent} and {@link AiSettingState} are the
+ * <em>AI-Assisted Transformation</em> child page; {@link AiCredentials} keeps its API keys in the
+ * IDE password store and {@link AiProviders} creates the selected model provider.
+ * </p>
  */
 package uk.ac.manchester.beehive.tornado.plugins.settings;
