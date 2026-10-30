@@ -263,6 +263,11 @@ The plugin is described in <i>Dynamic and Static Code Analysis for Java Programs
                                  id="uk.ac.manchester.beehive.tornado.settings"
                                  key="ui.settings.displayName"/>
         <applicationService serviceImplementation="uk.ac.manchester.beehive.tornado.plugins.settings.TornadoSettingState"/>
+        <applicationConfigurable instance="uk.ac.manchester.beehive.tornado.plugins.settings.AiSettingsConfigurable"
+                                 id="uk.ac.manchester.beehive.tornado.settings.ai"
+                                 parentId="uk.ac.manchester.beehive.tornado.settings"
+                                 key="ai.settings.displayName"/>
+        <applicationService serviceImplementation="uk.ac.manchester.beehive.tornado.plugins.settings.AiSettingState"/>
         <toolWindow factoryClass="uk.ac.manchester.beehive.tornado.plugins.ui.console.ConsoleWindowFactory" id="TornadoInsight Console" anchor="bottom"/>
         <errorHandler implementation="uk.ac.manchester.beehive.tornado.plugins.error.ErrorSubmitter"/>
         <notificationGroup id="TornadoInsight" displayType="BALLOON" key="notification.group.name"/>
