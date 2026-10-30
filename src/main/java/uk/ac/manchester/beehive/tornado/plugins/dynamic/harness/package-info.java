@@ -25,5 +25,10 @@
  * local-memory allocations, so they get small values. A parameter type without test data raises
  * {@link UnsupportedParameterTypeException}.
  * </p>
+ * <p>
+ * For AI-assisted transformation, {@link VerificationHarnessGenerator} renders a {@link VerificationModel}
+ * as a harness that runs a candidate kernel and the original method on the same test data and
+ * compares their outputs, and can time both.
+ * </p>
  */
 package uk.ac.manchester.beehive.tornado.plugins.dynamic.harness;
