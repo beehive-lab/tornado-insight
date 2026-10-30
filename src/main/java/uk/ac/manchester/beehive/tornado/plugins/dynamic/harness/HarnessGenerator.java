@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
  */
 public final class HarnessGenerator {
 
-    private static final String API = "uk.ac.manchester.tornado.api.";
+    private static final String API = TornadoKernels.TORNADO_API;
 
     static final String SYNTHETIC_GRAPH = "insightTaskGraphName";
     static final String SYNTHETIC_TASK = "insightTaskName";
