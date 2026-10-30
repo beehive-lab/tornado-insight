@@ -68,7 +68,7 @@ public class TornadoToolchainTest {
         TornadoToolchain toolchain = new TornadoToolchain(sdk, jdk("temurin-25", "JAVA_VERSION=\"25\"\n"), 25);
         TornadoToolchain.JdkCheck check = toolchain.checkJdk(new EmptyProgressIndicator());
         assertEquals(TornadoToolchain.JdkFit.OK, check.fit());
-        assertNull(check.failure());
+        assertNull(check.problem(toolchain));
     }
 
     @Test
@@ -76,7 +76,8 @@ public class TornadoToolchainTest {
         TornadoToolchain toolchain = new TornadoToolchain(sdk, jdk("temurin-21", "JAVA_VERSION=\"21\"\n"), 21);
         TornadoToolchain.JdkCheck check = toolchain.checkJdk(new EmptyProgressIndicator());
         assertEquals(TornadoToolchain.JdkFit.INCOMPATIBLE, check.fit());
-        assertEquals("JDK 22 or newer", check.contract().requirement());
+        assertEquals("TornadoVM at " + home + " needs JDK 22 or newer, and the project JDK is JDK 21",
+                check.problem(toolchain));
     }
 
     @Test
@@ -85,7 +86,7 @@ public class TornadoToolchainTest {
         TornadoToolchain toolchain = new TornadoToolchain(sdk, graal, 25);
         TornadoToolchain.JdkCheck check = toolchain.checkJdk(new EmptyProgressIndicator());
         assertEquals(TornadoToolchain.JdkFit.GRAALVM, check.fit());
-        assertTrue(check.contract().vendorsGraal());
+        assertTrue(check.problem(toolchain), check.problem(toolchain).startsWith("the project JDK at " + graal + " is a GraalVM build"));
     }
 
     @Test

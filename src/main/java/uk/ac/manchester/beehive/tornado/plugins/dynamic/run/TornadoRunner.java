@@ -63,6 +63,17 @@ public final class TornadoRunner {
         return command("--printKernel", "-jar", jar.toString());
     }
 
+    /**
+     * The command that runs a harness jar with program arguments.
+     */
+    public @NotNull GeneralCommandLine runCommand(@NotNull Path jar, @NotNull String... programArguments) {
+        String[] args = new String[programArguments.length + 2];
+        args[0] = "-jar";
+        args[1] = jar.toString();
+        System.arraycopy(programArguments, 0, args, 2, programArguments.length);
+        return command(args);
+    }
+
     private GeneralCommandLine command(String... args) {
         GeneralCommandLine commandLine = sdk.launcherCommand(javaHome, args);
         commandLine.setWorkDirectory(workDir.toFile());

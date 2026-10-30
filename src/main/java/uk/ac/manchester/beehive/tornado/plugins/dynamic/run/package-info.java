@@ -22,7 +22,7 @@
  * {@link JavacRunner} compiles the harnesses, {@link JarPacker} packs each into a jar and
  * {@link TornadoRunner} runs it with the {@code tornado} launcher; {@link Processes} runs the
  * child processes. {@link TornadoToolchain} puts them together for an SDK and the project JDK, and
- * checks the JDK against the SDK's contract.
+ * checks the JDK against the SDK's contract; AI-assisted transformation verifies its kernels with it too.
  * </p>
  */
 package uk.ac.manchester.beehive.tornado.plugins.dynamic.run;
