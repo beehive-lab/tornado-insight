@@ -39,6 +39,7 @@ import uk.ac.manchester.beehive.tornado.plugins.dynamic.harness.UnsupportedParam
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.JarPacker;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.JavacRunner;
 import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.TornadoRunner;
+import uk.ac.manchester.beehive.tornado.plugins.dynamic.run.TornadoToolchain;
 import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoJdkContract;
 import uk.ac.manchester.beehive.tornado.plugins.sdk.TornadoSdk;
 import uk.ac.manchester.beehive.tornado.plugins.settings.TornadoSettingState;
@@ -50,10 +51,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Runs dynamic inspection for the selected tasks: checks the project JDK and the
@@ -88,6 +87,7 @@ public final class DynamicInspectionPipeline {
     private final DynamicInspectionReporter reporter;
     private final TornadoSdk sdk;
     private final ProjectJdk jdk;
+    private final TornadoToolchain toolchain;
     private final List<TaskEntry> tasks;
     private final int parameterSize;
     /** The internal debug dump, or {@code null} when it is off; cleared if it cannot be prepared. */
@@ -102,6 +102,7 @@ public final class DynamicInspectionPipeline {
         this.reporter = reporter;
         this.sdk = sdk;
         this.jdk = jdk;
+        this.toolchain = new TornadoToolchain(sdk, jdk.homePath(), jdk.feature());
         this.tasks = List.copyOf(tasks);
         this.parameterSize = parameterSize;
         this.dump = dump;
@@ -236,7 +237,7 @@ public final class DynamicInspectionPipeline {
             Path classDir = Files.createDirectory(workDir.resolve("classes"));
             Path jarDir = Files.createDirectory(workDir.resolve("jars"));
             // tornado puts its working directory on the module path, so run it in an empty one
-            TornadoRunner tornado = new TornadoRunner(sdk, jdk.homePath(), Files.createDirectory(workDir.resolve("run")));
+            TornadoRunner tornado = toolchain.runner(Files.createDirectory(workDir.resolve("run")));
 
             List<String> sourceFiles = writeSources(harnesses, sourceDir);
 
@@ -293,7 +294,7 @@ public final class DynamicInspectionPipeline {
         if (sb.isEmpty()) {
             sb.append("JDK ").append(jdk.feature());
         }
-        if (isGraalVmDistribution(jdk.homePath())) {
+        if (TornadoToolchain.isGraalVm(jdk.homePath())) {
             sb.append(" [GraalVM]");
         }
         return sb.toString();
@@ -308,45 +309,21 @@ public final class DynamicInspectionPipeline {
      * deep inside TornadoVM, so failing fast here gives a clearer diagnostic.
      */
     private boolean validateJdkCompatibility(ProgressIndicator indicator) {
-        TornadoSdk.JdkContractResult result = sdk.jdkContract(indicator, jdk.homePath(), TornadoRunner.PROBE_TIMEOUT_MS);
-        TornadoJdkContract contract = result.contract();
+        TornadoToolchain.JdkCheck check = toolchain.checkJdk(indicator);
+        TornadoJdkContract contract = check.contract();
         if (contract == null) {
-            LOG.warn("tornado --version check failed: " + result.failure());
-            reporter.tornadoVersionFailure(String.valueOf(result.failure()));
+            LOG.warn("tornado --version check failed: " + check.failure());
+            reporter.tornadoVersionFailure(String.valueOf(check.failure()));
             return false;
         }
 
-        int projectJdk = jdk.feature();
         reporter.jdkRequirement(contract, describeProjectJdk(jdk));
-
-        if (!contract.accepts(projectJdk)) {
-            reporter.incompatibleJdk(projectJdk, sdk.homeValue(), contract);
-            return false;
-        }
-        if (contract.vendorsGraal() && isGraalVmDistribution(jdk.homePath())) {
-            reporter.graalVmJdk(jdk.homePath(), contract);
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Detects a GraalVM JDK (Community or Oracle) from the {@code release} file
-     * in its home directory (see {@link TornadoJdkContract#isGraalVmRelease}).
-     * Recognising this lets us refuse with a clear message instead of a core dump.
-     */
-    private static boolean isGraalVmDistribution(@Nullable String home) {
-        if (home == null || home.isEmpty()) {
-            return false;
-        }
-        Path release = Path.of(home, "release");
-        if (!Files.isRegularFile(release)) {
-            return false;
-        }
-        try {
-            return TornadoJdkContract.isGraalVmRelease(Files.readAllLines(release));
-        } catch (IOException ignore) {
-            // Cannot read it - assume a stock JDK rather than block the run.
+        switch (check.fit()) {
+            case INCOMPATIBLE -> reporter.incompatibleJdk(jdk.feature(), sdk.homeValue(), contract);
+            case GRAALVM -> reporter.graalVmJdk(jdk.homePath(), contract);
+            default -> {
+                return true;
+            }
         }
         return false;
     }
@@ -418,12 +395,7 @@ public final class DynamicInspectionPipeline {
             return false;
         }
 
-        // The whole SDK, so that imports of the libraries it ships (e.g. tornado-mlx) resolve
-        Set<String> classpath = new LinkedHashSet<>(List.of(apiPath, matricesPath, unitTestPath));
-        classpath.addAll(sdk.jars());
-        JavacRunner.Result result = JavacRunner.run(JavacRunner.commandLine(String.valueOf(jdk.homePath()),
-                JavacRunner.release(jdk.feature()), new ArrayList<>(classpath), outputDir, javaFiles,
-                sdk.isWindows()), indicator);
+        JavacRunner.Result result = toolchain.compile(javaFiles, outputDir, indicator);
         switch (result.status()) {
             case OK -> {
                 return true;
