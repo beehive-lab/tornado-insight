@@ -87,6 +87,21 @@ public class TornadoSdkTest {
     }
 
     @Test
+    public void theLauncherGetsTheConsoleEnvironmentWithoutTheApiKeys() {
+        GeneralCommandLine command = TornadoSdk.forHome(home.toString(), false).launcherCommand(null, "--version");
+        // The parent environment would be added when the process starts, keys included
+        assertEquals(GeneralCommandLine.ParentEnvironmentType.NONE, command.getParentEnvironmentType());
+        for (String secret : TornadoSdk.SECRET_VARIABLES) {
+            assertFalse(secret, command.getEnvironment().containsKey(secret));
+        }
+        assertEquals(home.toString(), command.getEnvironment().get(TornadoSdk.HOME_VARIABLE));
+        assertTrue(command.getEnvironment().get("PATH"), command.getEnvironment().get("PATH").startsWith(home.resolve("bin").toString()));
+        if (System.getenv("HOME") != null) {
+            assertEquals(System.getenv("HOME"), command.getEnvironment().get("HOME"));
+        }
+    }
+
+    @Test
     public void jarsAreFoundByPrefix() {
         TornadoSdk sdk = TornadoSdk.forHome(home.toString(), false);
         Path jars = home.resolve("share/java/tornado");
@@ -131,7 +146,6 @@ public class TornadoSdkTest {
 
         assertEquals(home.resolve("bin/tornado").toString(), commandLine.getExePath());
         assertEquals(List.of("--version"), commandLine.getParametersList().getList());
-        assertEquals(GeneralCommandLine.ParentEnvironmentType.CONSOLE, commandLine.getParentEnvironmentType());
         Map<String, String> env = commandLine.getEnvironment();
         assertEquals("/opt/jdk-25", env.get("JAVA_HOME"));
         assertEquals(home.toString(), env.get("TORNADOVM_HOME"));

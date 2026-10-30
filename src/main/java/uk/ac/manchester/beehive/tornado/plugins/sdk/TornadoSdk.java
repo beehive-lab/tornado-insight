@@ -27,6 +27,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.util.SystemInfo;
+import com.intellij.util.EnvironmentUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,6 +36,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +55,9 @@ public final class TornadoSdk {
     private static final Logger LOG = Logger.getInstance(TornadoSdk.class);
 
     public static final String HOME_VARIABLE = "TORNADOVM_HOME";
+
+    /** Environment variables that hold credentials, kept from the processes the plugin starts. */
+    static final List<String> SECRET_VARIABLES = List.of("ANTHROPIC_API_KEY");
 
     private static final String[] JAR_DIRECTORY = {"share", "java", "tornado"};
 
@@ -192,11 +197,17 @@ public final class TornadoSdk {
 
     /**
      * Creates a command line for the {@code tornado} launcher with the
-     * environment of {@link #configureEnvironment}.
+     * environment of {@link #configureEnvironment}, and the user's console
+     * environment without {@link #SECRET_VARIABLES}.
      */
     public @NotNull GeneralCommandLine launcherCommand(@Nullable String javaHome, @NotNull String... args) {
         GeneralCommandLine commandLine = new GeneralCommandLine();
-        commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
+        // The launcher runs project code, which does not need the user's API keys. The parent
+        // environment is added when the process starts, so it is copied here instead
+        commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.NONE);
+        Map<String, String> environment = new HashMap<>(EnvironmentUtil.getEnvironmentMap());
+        SECRET_VARIABLES.forEach(environment::remove);
+        commandLine.withEnvironment(environment);
         commandLine.setExePath(launcherPath());
         configureEnvironment(commandLine, javaHome);
         commandLine.addParameters(args);
