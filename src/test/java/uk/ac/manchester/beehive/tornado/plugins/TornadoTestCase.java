@@ -53,6 +53,7 @@ public abstract class TornadoTestCase extends LightJavaCodeInsightFixtureTestCas
                     public int[] allocateIntLocalArray(int size) { return new int[size]; }
                     public float[] allocateFloatLocalArray(int size) { return new float[size]; }
                     public void localBarrier() { }
+                    public void atomicAdd(uk.ac.manchester.tornado.api.types.arrays.FloatArray array, int index, float val) { }
                 }""");
         myFixture.addClass("package uk.ac.manchester.tornado.api.enums; public enum DataTransferMode { FIRST_EXECUTION, EVERY_EXECUTION }");
         myFixture.addClass("package uk.ac.manchester.tornado.api.annotations; public @interface Parallel {}");
