@@ -1,0 +1,5 @@
+static void saxpy(float a, float[] x, float[] y) {
+    for (@Parallel int i = 0; i < x.length; i++) {
+        y[i] += a * x[i];
+    }
+}

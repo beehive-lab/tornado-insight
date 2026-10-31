@@ -279,6 +279,11 @@ The plugin is described in <i>Dynamic and Static Code Analysis for Java Programs
         <liveTemplateContext contextId="TORNADOVM_TILE_DECLARATION" baseContextId="JAVA_CODE"
                              implementation="uk.ac.manchester.beehive.tornado.plugins.templates.TornadoVMContextType$TileDeclaration"/>
         <defaultLiveTemplates file="/liveTemplates/TornadoVM.xml"/>
+        <intentionAction>
+            <language>JAVA</language>
+            <className>uk.ac.manchester.beehive.tornado.plugins.convert.ConvertToKernelIntention</className>
+            <categoryKey>convert.intention.category</categoryKey>
+        </intentionAction>
     </extensions>
     <actions>
         <group id="tornado.bar">
@@ -294,6 +299,9 @@ The plugin is described in <i>Dynamic and Static Code Analysis for Java Programs
             <action id="tornado.doc" class="uk.ac.manchester.beehive.tornado.plugins.actions.OpenTornadoDocsAction"
                     icon="AllIcons.Toolwindows.Documentation"/>
         </group>
+        <action id="tornado.convertToKernel" class="uk.ac.manchester.beehive.tornado.plugins.convert.ConvertToKernelAction">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </action>
     </actions>
     <projectListeners>
         <listener class="uk.ac.manchester.beehive.tornado.plugins.sync.ToolWindowOpen"

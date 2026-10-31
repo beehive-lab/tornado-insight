@@ -56,7 +56,10 @@ public final class TornadoSdk {
 
     public static final String HOME_VARIABLE = "TORNADOVM_HOME";
 
-    /** Environment variables that hold credentials, kept from the processes the plugin starts. */
+    /**
+     * Environment variables that hold credentials (the Claude API key, see
+     * {@code AiCredentials.CLAUDE_KEY_VARIABLE}), kept from the processes the plugin starts.
+     */
     static final List<String> SECRET_VARIABLES = List.of("ANTHROPIC_API_KEY");
 
     private static final String[] JAR_DIRECTORY = {"share", "java", "tornado"};
@@ -202,8 +205,8 @@ public final class TornadoSdk {
      */
     public @NotNull GeneralCommandLine launcherCommand(@Nullable String javaHome, @NotNull String... args) {
         GeneralCommandLine commandLine = new GeneralCommandLine();
-        // The launcher runs project code, which does not need the user's API keys. The parent
-        // environment is added when the process starts, so it is copied here instead
+        // The launcher runs project code and, to verify a transformation, the model's: neither gets the
+        // API keys. The parent environment is added when the process starts, so it is copied here instead
         commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.NONE);
         Map<String, String> environment = new HashMap<>(EnvironmentUtil.getEnvironmentMap());
         SECRET_VARIABLES.forEach(environment::remove);
