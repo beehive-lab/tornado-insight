@@ -29,12 +29,13 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
  * A TornadoVM SDK with the project JDK: checks that they work together, compiles generated
- * programs against the SDK and runs them with its launcher, so that the JDK check, the classpath
- * and the launcher are defined in one place.
+ * programs against the SDK and runs them with its launcher. Shared by dynamic inspection and
+ * the verification of transformed kernels, so both refuse the same JDKs and see the same jars.
  *
  * @param sdk        the TornadoVM installation
  * @param jdkHome    the project JDK's home, or {@code null} if the SDK does not say
@@ -62,6 +63,19 @@ public record TornadoToolchain(@NotNull TornadoSdk sdk, @Nullable String jdkHome
      * @param failure  why the contract could not be read, for {@link JdkFit#UNKNOWN}
      */
     public record JdkCheck(@NotNull JdkFit fit, @Nullable TornadoJdkContract contract, @Nullable String failure) {
+
+        /** Why the project JDK cannot run the SDK, in a sentence for the user; {@code null} if it can. */
+        public @Nullable String problem(@NotNull TornadoToolchain toolchain) {
+            return switch (fit) {
+                case OK -> null;
+                case UNKNOWN -> "TornadoVM's JDK requirement could not be read: " + failure;
+                case INCOMPATIBLE -> "TornadoVM at " + toolchain.sdk().homeValue() + " needs "
+                        + Objects.requireNonNull(contract).requirement() + ", and the project JDK is JDK " + toolchain.jdkFeature();
+                case GRAALVM -> "the project JDK at " + toolchain.jdkHome() + " is a GraalVM build, whose Graal "
+                        + "compiler clashes with the one TornadoVM bundles; set a standard OpenJDK build, "
+                        + Objects.requireNonNull(contract).requirement() + ", as the project JDK";
+            };
+        }
     }
 
     /**

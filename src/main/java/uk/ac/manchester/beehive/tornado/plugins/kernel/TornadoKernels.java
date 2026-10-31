@@ -49,6 +49,8 @@ import java.util.Optional;
  */
 public final class TornadoKernels {
 
+    /** The package prefix of the TornadoVM API. */
+    public static final String TORNADO_API = "uk.ac.manchester.tornado.api.";
     public static final String PARALLEL = "uk.ac.manchester.tornado.api.annotations.Parallel";
     public static final String REDUCE = "uk.ac.manchester.tornado.api.annotations.Reduce";
     public static final String KERNEL_CONTEXT = "uk.ac.manchester.tornado.api.KernelContext";

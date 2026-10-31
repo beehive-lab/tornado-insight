@@ -73,19 +73,41 @@ import java.util.Set;
  */
 public final class HarnessModelBuilder {
 
-    private static final String TORNADO_API = "uk.ac.manchester.tornado.api.";
 
     private HarnessModelBuilder() {
     }
 
     /**
-     * Builds the model of the harness that runs {@code kernel} as class {@code className}.
+     * The project code a harness copies with a kernel, and so runs.
+     *
+     * @param helpers the methods the kernel calls, directly or not
+     * @param fields  the fields copied with their initializers
+     */
+    public record Copied(@NotNull List<PsiMethod> helpers, @NotNull List<PsiField> fields) {
+    }
+
+    /**
+     * Builds the model of the harness that runs {@code kernel} as class {@code className}, with
+     * every field of the kernel's class (see {@link #build(PsiMethod, String, boolean)}).
      */
     @RequiresReadLock
     public static @NotNull HarnessModel build(@NotNull PsiMethod kernel, @NotNull String className) {
+        return build(kernel, className, true);
+    }
+
+    /**
+     * Builds the model of the harness that runs {@code kernel} as class {@code className}.
+     *
+     * @param classFields whether every field of the kernel's class is copied, so that an
+     *                    {@code int} parameter can take the value of a static field of its name,
+     *                    or only the fields that the copied code uses
+     */
+    @RequiresReadLock
+    public static @NotNull HarnessModel build(@NotNull PsiMethod kernel, @NotNull String className, boolean classFields) {
         PsiFile psiFile = kernel.getContainingFile();
-        List<PsiMethod> helperMethods = helpers(kernel);
-        List<PsiField> psiFields = fields(kernel, helperMethods);
+        Copied copied = copied(kernel, classFields);
+        List<PsiMethod> helperMethods = copied.helpers();
+        List<PsiField> psiFields = copied.fields();
         Map<PsiMember, String> names = harnessNames(kernel, helperMethods, psiFields);
         List<String> helpers = new ArrayList<>();
         for (PsiMethod helper : helperMethods) {
@@ -276,6 +298,16 @@ public final class HarnessModelBuilder {
     }
 
     /**
+     * The helpers and fields that {@link #build(PsiMethod, String, boolean)} copies with
+     * {@code kernel}.
+     */
+    @RequiresReadLock
+    public static @NotNull Copied copied(@NotNull PsiMethod kernel, boolean classFields) {
+        List<PsiMethod> helpers = helpers(kernel);
+        return new Copied(helpers, fields(kernel, helpers, classFields));
+    }
+
+    /**
      * The helper methods copied with the kernel: the methods the kernel inspections
      * analyse as inlined into it (see {@link KernelCallGraphAnalyzer}), so code
      * generation and the inspections agree on what the kernel runs. {@code @Override}
@@ -292,17 +324,17 @@ public final class HarnessModelBuilder {
     }
 
     /**
-     * The fields copied into the harness: those of the kernel's class, and those of
-     * other project classes that the kernel or a helper uses, together with the
-     * fields their initializers use. A field comes after the copied fields its
+     * The fields copied into the harness: those of the kernel's class (if
+     * {@code classFields}), and those of project classes that the kernel or a helper
+     * uses, together with the fields their initializers use. A field comes after the copied fields its
      * initializer refers to, and otherwise in declaration order, so the copy has no
      * illegal forward reference. Fields with the same name are renamed by
      * {@link #harnessNames}.
      */
-    private static List<PsiField> fields(PsiMethod kernel, List<PsiMethod> helpers) {
+    private static List<PsiField> fields(PsiMethod kernel, List<PsiMethod> helpers, boolean classFields) {
         Set<PsiField> candidates = new LinkedHashSet<>();
         PsiClass kernelClass = kernel.getContainingClass();
-        if (kernelClass != null) {
+        if (classFields && kernelClass != null) {
             for (PsiField field : kernelClass.getFields()) {
                 if (!(field instanceof PsiEnumConstant)) {
                     candidates.add(field);
@@ -355,7 +387,7 @@ public final class HarnessModelBuilder {
     // even when it is in the sources (e.g. when working on TornadoVM itself)
     private static boolean isProjectClass(PsiClass psiClass) {
         String name = psiClass.getQualifiedName();
-        return isProjectSource(psiClass) && (name == null || !name.startsWith(TORNADO_API));
+        return isProjectSource(psiClass) && (name == null || !name.startsWith(TornadoKernels.TORNADO_API));
     }
 
     /**
@@ -381,7 +413,7 @@ public final class HarnessModelBuilder {
         PsiElement target = statement.resolve();
         if (target instanceof PsiPackage psiPackage) {
             PsiDirectory[] directories = psiPackage.getDirectories();
-            return !(psiPackage.getQualifiedName() + ".").startsWith(TORNADO_API) && directories.length > 0
+            return !(psiPackage.getQualifiedName() + ".").startsWith(TornadoKernels.TORNADO_API) && directories.length > 0
                     && Arrays.stream(directories).allMatch(HarnessModelBuilder::isProjectSource);
         }
         return target instanceof PsiClass psiClass && isProjectClass(psiClass);
