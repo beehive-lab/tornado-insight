@@ -25,6 +25,7 @@ import com.intellij.psi.util.CachedValueProvider;
 import com.intellij.psi.util.CachedValuesManager;
 import com.intellij.psi.util.PsiModificationTracker;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.intellij.psi.util.PsiUtilCore;
 
 import java.util.*;
 
@@ -230,9 +231,9 @@ public final class KernelCallGraphAnalyzer {
      * (as opposed to a library dependency).
      */
     public static boolean isUserProjectMethod(PsiMethod method) {
-        PsiFile file = method.getContainingFile();
-        if (file == null) return false;
-        VirtualFile vFile = file.getVirtualFile();
+        // A copy of a project file (e.g. one with a candidate kernel in it) has no file of its own;
+        // getVirtualFile falls back to the original's
+        VirtualFile vFile = PsiUtilCore.getVirtualFile(method);
         if (vFile == null) return false;
 
         Project project = method.getProject();

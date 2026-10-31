@@ -19,6 +19,7 @@ package uk.ac.manchester.beehive.tornado.plugins.inspection;
 
 import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemHighlightType;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
@@ -27,7 +28,9 @@ import uk.ac.manchester.beehive.tornado.plugins.kernel.KernelCallGraphAnalyzer;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.KernelProblemSink;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Decides whether a kernel has problems that stop it from running on TornadoVM,
@@ -71,6 +74,23 @@ public final class KernelValidator {
         return false;
     }
 
+    /**
+     * Returns the messages of every blocking problem in {@code kernel} and the helpers it
+     * inlines, each with the code it is about. Must be called with read access.
+     *
+     * @param kernel a method accepted by {@link TornadoKernels#isKernel}
+     */
+    public static @NotNull List<String> blockingProblems(@NotNull PsiMethod kernel) {
+        PsiFile file = kernel.getContainingFile();
+        if (file == null) return List.of();
+        KernelCallGraphAnalyzer.AnalysisScope scope = KernelCallGraphAnalyzer.resolve(kernel);
+        ListSink sink = new ListSink(file);
+        for (TornadoKernelInspection check : BLOCKING_CHECKS) {
+            check.checkKernel(kernel, scope, sink);
+        }
+        return List.copyOf(sink.problems);
+    }
+
     private static final class FoundSink implements KernelProblemSink {
         private final PsiFile file;
         private boolean found;
@@ -88,6 +108,27 @@ public final class KernelValidator {
         public void report(@NotNull PsiElement anchor, @NotNull String message, @NotNull ProblemHighlightType type,
                            @NotNull LocalQuickFix @NotNull ... fixes) {
             found = true;
+        }
+    }
+
+    private static final class ListSink implements KernelProblemSink {
+        private final PsiFile file;
+        private final Set<String> problems = new LinkedHashSet<>();
+
+        ListSink(PsiFile file) {
+            this.file = file;
+        }
+
+        @Override
+        public @NotNull PsiFile file() {
+            return file;
+        }
+
+        @Override
+        public void report(@NotNull PsiElement anchor, @NotNull String message, @NotNull ProblemHighlightType type,
+                           @NotNull LocalQuickFix @NotNull ... fixes) {
+            String code = anchor.getText().strip().replaceAll("\\s+", " ");
+            problems.add(code.isEmpty() ? message : message + " (at `" + StringUtil.first(code, 80, true) + "`)");
         }
     }
 }
