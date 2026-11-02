@@ -33,23 +33,17 @@
     <description><![CDATA[TornadoInsight makes it easier to develop <a href="https://github.com/beehive-lab/TornadoVM">TornadoVM</a>
 applications in IntelliJ IDEA. It checks TornadoVM kernels for unsupported Java features as you type, runs individual
 kernels on your TornadoVM installation to show what TornadoVM generates for them, and writes TornadoVM boilerplate for
-you through live templates.
+you through live templates. Experimentally, it can also ask an AI model to transform a Java method into a TornadoVM kernel.
 
-<h2>What's New in 2.0.0</h2>
+<h2>What's New in 2.1.0</h2>
 <ul>
-    <li><b>Live templates</b> for TaskGraphs, execution plans and kernels (<code>tg</code>, <code>tep</code>,
-        <code>tparallel</code>, <code>tkernel</code>, <code>ttile</code>), listed with a preview in the new
-        <i>Live Templates</i> tab of the TornadoVM tool window.</li>
-    <li><b>TileContext kernels</b> are recognised by the static checks, the task list and dynamic inspection.</li>
-    <li><b>Static checks:</b> two new checks (kernels that return a value, and helpers that cannot be checked),
-        a faster recursion check that reports each cycle once, and fewer false reports for your own helper
-        methods and for unresolved types.</li>
-    <li><b>Dynamic inspection</b> runs in the background with progress and Cancel, generates test data for every
-        supported parameter type, runs KernelContext and TileContext kernels with a GridScheduler, and reports
-        results more clearly.</li>
-    <li>New icons, matching the TornadoVM logo.</li>
-    <li><b>Removed:</b> the bytecode visualizer, and the debug options in the settings.
-        TornadoInsight now requires IntelliJ IDEA 2023.1 or newer.</li>
+    <li><b>AI-assisted transformation (experimental, off by default):</b> transforms a Java method into a TornadoVM
+        kernel (Loop Parallel API, Kernel API or Tile API) with a local model server or the Claude API, checks it,
+        optionally runs it against the method, and shows a diff before applying it.</li>
+    <li><b>Quick fixes</b> for <code>assert</code> statements, unused system and native calls, <code>throw</code>,
+        <code>try</code>/<code>catch</code>, <code>throws</code> clauses and kernels that return a value.</li>
+    <li><b>Dynamic inspection</b> compiles its test program against every jar of the TornadoVM SDK, and copies the
+        kernel's code with correct imports, type names and class-qualified references.</li>
 </ul>
 
 <h2>Static checks</h2>
@@ -67,7 +61,9 @@ and explains why in a tooltip. It checks the kernel and the helper methods it ca
     <li>kernel methods that return a value instead of <code>void</code></li>
     <li>calls to helper methods that cannot be checked</li>
 </ul>
-The <i>Inspector Guide</i> tab of the TornadoVM tool window explains each restriction.
+The <i>Inspector Guide</i> tab of the TornadoVM tool window explains each restriction. Press <b>Alt+Enter</b> on a
+reported <code>assert</code>, unused system or native call, <code>throw</code>, <code>try</code>/<code>catch</code>,
+<code>throws</code> clause or non-<code>void</code> return type for a quick fix.
 
 <h2>Dynamic inspection</h2>
 Some problems only show up when TornadoVM compiles and runs a kernel. Select kernels in the <i>TornadoVM</i> tool window
@@ -92,6 +88,14 @@ For example, <code>tg</code> inserts:
 The templates are offered in modules that use the TornadoVM API, and in any Java project when <code>TORNADOVM_HOME</code>
 points at a TornadoVM SDK. The <i>Live Templates</i> tab of the TornadoVM tool window lists them with a preview.
 
+<h2>AI-assisted transformation (experimental)</h2>
+Right-click a plain Java method and choose <b>Transform into TornadoVM Kernel (AI)...</b>, or press <b>Alt+Enter</b> on
+its name. Choose the Loop Parallel API, the Kernel API, the Tile API (TornadoVM 7.0.0+, CUDA devices), or
+<i>Fastest (measured)</i>, which times a kernel for each and recommends one. Each answer is checked like a kernel in the
+editor and the problems go back to the model; optionally, each kernel is run with TornadoVM and compared with the
+method. A diff shows the result before it is applied, as one undoable step. It is off until you set up a model, because
+it sends your code to it.
+
 <h2>Getting started</h2>
 <h3>Requirements</h3>
 <ul>
@@ -102,6 +106,8 @@ points at a TornadoVM SDK. The <i>Live Templates</i> tab of the TornadoVM tool w
         <a href="https://www.tornadovm.org/downloads">tornadovm.org/downloads</a>.</li>
     <li>A JDK 21 or newer as the project JDK, matching the requirement of your TornadoVM SDK; a standard OpenJDK build,
         not a GraalVM one</li>
+    <li>For AI-assisted transformation, a local server with the OpenAI chat API (such as llama.cpp, vLLM, Ollama or
+        LM Studio), or a Claude API key</li>
 </ul>
 
 <h3>Point TornadoInsight at TornadoVM</h3>
@@ -121,6 +127,8 @@ process. IDEs started from a launcher, the Dock or JetBrains Toolbox do not read
 <i>Settings | Other Settings | TornadoInsight</i> has one setting, <b>Max array size</b>: the length of the arrays (and
 the size of the other inputs) that dynamic inspection creates as test data. Dynamic inspection uses the project JDK from
 <i>File | Project Structure</i>.
+<i>Settings | Other Settings | TornadoInsight | AI-Assisted Transformation</i> enables the AI-assisted transformation and
+sets up its model: a local server or the Claude API.
 
 <br/><br/>
 For more information, see the <a href="https://github.com/beehive-lab/tornado-insight">TornadoInsight repository</a>.
@@ -131,6 +139,28 @@ The plugin is described in <i>Dynamic and Static Code Analysis for Java Programs
     <!-- Change notes displayed in the plugin manager when users view updates.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#change-notes -->
     <change-notes><![CDATA[
+<h3>Version 2.1.0</h3>
+<ul>
+    <li><b>AI-assisted transformation (experimental, off by default):</b> <i>Transform into TornadoVM Kernel (AI)...</i>
+        in the editor menu, or Alt+Enter on a method name, transforms a Java method into a TornadoVM kernel with a
+        local model server (OpenAI chat API) or the Claude API, set up in <i>Settings | Other Settings |
+        TornadoInsight | AI-Assisted Transformation</i>.
+        <ul>
+            <li>Choose the Loop Parallel API, the Kernel API, the Tile API (TornadoVM 7.0.0+, CUDA devices), or
+                <i>Fastest (measured)</i>, which transforms it into each, times the kernels and recommends one.</li>
+            <li>Each answer is checked like a kernel in the editor; problems go back to the model, for up to three
+                answers.</li>
+            <li>Optionally, each kernel is run with TornadoVM and compared with the method, on this machine; it
+                is off until you tick it.</li>
+            <li>A diff preview; Accept adds the kernel beside the method or replaces it, as one undoable step.</li>
+        </ul></li>
+    <li><b>Quick fixes</b> (Alt+Enter) for the static checks: remove an <code>assert</code> statement, an unused
+        system or native call, a <code>throw</code> statement or a <code>throws</code> clause; unwrap a
+        <code>try</code>/<code>catch</code>; make a kernel return <code>void</code>.</li>
+    <li><b>Dynamic inspection fixes:</b> the test program is compiled against every jar of the TornadoVM SDK, and the
+        copied kernel code gets correct imports and type names, and class-qualified references rewritten.</li>
+</ul>
+
 <h3>Version 2.0.0</h3>
 <ul>
     <li><b>Live templates:</b> <code>tg</code> (TaskGraph), <code>tep</code> (TornadoExecutionPlan), and the kernel
