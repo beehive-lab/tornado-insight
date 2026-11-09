@@ -67,6 +67,7 @@ final class Converter {
      * @param methodText the method as it was sent to the model
      * @param problems   what the checks still report after the last round; empty if it passed
      * @param repaired   whether the plugin moved a misplaced {@code @Parallel} itself
+     * @param defaultLocal whether the plugin gave the kernel the default work-group size, as it declared none
      * @param callers    the calls that no longer match because the kernel's signature differs
      * @param outcome    the run of the kernel against the original method, or {@code null} if it
      *                   was not run (no verifier, or the static checks failed)
@@ -75,7 +76,7 @@ final class Converter {
      *                   or {@code null}
      */
     record Result(@NotNull String kernelText, @NotNull String methodName, @NotNull String methodText,
-                  @NotNull List<String> problems, int rounds, boolean repaired, @NotNull String model,
+                  @NotNull List<String> problems, int rounds, boolean repaired, boolean defaultLocal, @NotNull String model,
                   boolean fellBack, @NotNull String explanation, int callers,
                   @Nullable KernelVerifier.Outcome outcome, @NotNull Target target,
                   @Nullable VerificationModel harness) {
@@ -91,17 +92,18 @@ final class Converter {
         @NotNull KernelVerifier.Outcome verify(@NotNull VerificationModel model);
     }
 
-    private record Attempt(String kernelText, List<String> problems, boolean repaired, boolean signatureChanged,
-                           @Nullable VerificationModel model, @Nullable KernelVerifier.Outcome outcome) {
+    private record Attempt(String kernelText, List<String> problems, boolean repaired, boolean defaultLocal,
+                           boolean signatureChanged, @Nullable VerificationModel model, @Nullable KernelVerifier.Outcome outcome) {
 
         Attempt verified(KernelVerifier.Outcome outcome) {
             boolean failed = outcome.status() == KernelVerifier.Status.KERNEL_FAILED
                     || outcome.status() == KernelVerifier.Status.DIFFERENT;
-            return new Attempt(kernelText, failed ? outcome.details() : problems, repaired, signatureChanged, model, outcome);
+            return new Attempt(kernelText, failed ? outcome.details() : problems, repaired, defaultLocal, signatureChanged,
+                    model, outcome);
         }
 
         Attempt withProblems(List<String> problems) {
-            return new Attempt(kernelText, problems, repaired, signatureChanged, model, outcome);
+            return new Attempt(kernelText, problems, repaired, defaultLocal, signatureChanged, model, outcome);
         }
     }
 
@@ -249,6 +251,7 @@ final class Converter {
             return attempt.signatureChanged() ? MethodReferencesSearch.search(original).findAll().size() : 0;
         });
         return new Result(attempt.kernelText(), name[0], methodText, attempt.problems(), rounds, attempt.repaired(),
+                attempt.defaultLocal(),
                 response.model(), response.fellBack(), explanation, callers, attempt.outcome(), target,
                 attempt.model());
     }
@@ -308,11 +311,17 @@ final class Converter {
     private static Attempt check(SmartPsiElementPointer<PsiMethod> pointer, String code, Target target, boolean harness)
             throws ConversionException {
         PsiMethod original = element(pointer);
+        // A kernel without a work-group size gets the default, so that it is checked, run, timed
+        // and applied with the same one, rather than whatever the driver picks
+        String withLocal = target.hasLocalWork() ? KernelGrid.withDefaultLocal(code) : null;
+        if (withLocal != null) {
+            code = withLocal;
+        }
         PsiFile copy = (PsiFile) original.getContainingFile().copy();
         KernelReplacement.Replaced replaced = KernelReplacement.replace(PsiTreeUtil.findSameElementInCopy(original, copy), code);
         if (replaced == null) {
             return new Attempt(null, List.of("The answer must contain exactly one method, named `"
-                    + original.getName() + "`."), false, false, null, null);
+                    + original.getName() + "`."), false, false, false, null, null);
         }
         PsiMethod kernel = replaced.kernel();
         List<String> problems = CandidateChecker.problems(original, kernel, target);
@@ -328,7 +337,8 @@ final class Converter {
                         "convert.verify.notCopied", "`" + String.join("`, `", notCopied) + "`")), null, null);
             }
         }
-        return new Attempt(replaced.kernelText(), problems, replaced.repaired(), !sameSignature(original, kernel), model, outcome);
+        return new Attempt(replaced.kernelText(), problems, replaced.repaired(), withLocal != null,
+                !sameSignature(original, kernel), model, outcome);
     }
 
     // Everything the harness needs, copied out of the PSI

@@ -535,9 +535,39 @@ public class ConverterTest extends TornadoTestCase {
             public static void saxpy(KernelContext context, float a, float[] x, float[] y) {
                 // grid: x.length
                 int i = context.globalIdx;
-                y[i] += a * x[i];
+                if (i < x.length) {
+                    y[i] += a * x[i];
+                }
             }
             ```""";
+
+    public void testAKernelWithAWorkGroupSizeKeepsIt() throws Exception {
+        String own = KERNEL_API.replace("// grid: x.length", "// grid: x.length\n    // local: 256");
+        List<VerificationModel> runs = new ArrayList<>();
+        Converter.Result result = convert(new ScriptedModel(own), candidate -> {
+            runs.add(candidate);
+            return new KernelVerifier.Outcome(KernelVerifier.Status.EQUAL, List.of(), "4096 elements", null);
+        }, Target.KERNEL_API);
+        assertEquals(List.of("256"), runs.get(0).localWork());
+        assertFalse(result.defaultLocal());
+    }
+
+    // The grid is rounded up to the work-group size, so threads past the end must not touch the arrays
+    public void testAnUnguardedKernelApiKernelGoesBackToTheModel() throws Exception {
+        String unguarded = KERNEL_API.replace("if (i < x.length) {", "{");
+        String direct = KERNEL_API.replace("int i = context.globalIdx;", "int i = 0;")
+                .replace("if (i < x.length) {", "{ y[context.globalIdx] = 0;");
+        ScriptedModel model = new ScriptedModel(unguarded, direct, KERNEL_API);
+        Converter.Result result = convert(model, candidate ->
+                new KernelVerifier.Outcome(KernelVerifier.Status.EQUAL, List.of(), "4096 elements", null), Target.KERNEL_API);
+        String first = model.requests.get(1).messages().get(2).text();
+        assertTrue(first, first.contains("compare `i` with its bound"));
+        assertTrue(first, first.contains("`// local: 16`"));
+        String second = model.requests.get(2).messages().get(4).text();
+        assertTrue(second, second.contains("compare `context.globalIdx` with its bound"));
+        assertTrue(result.verified());
+        assertEquals(3, result.rounds());
+    }
 
     public void testKernelApiCandidateIsRunOnItsGrid() throws Exception {
         ScriptedModel model = new ScriptedModel(KERNEL_API);
@@ -555,6 +585,10 @@ public class ConverterTest extends TornadoTestCase {
                 "The kernel will run on NVIDIA GeForce RTX 5080 Laptop GPU, with TornadoVM's CUDA backend."));
         assertTrue(preview(result).contains("import uk.ac.manchester.tornado.api.KernelContext;"));
         assertEquals(List.of("x.length"), runs.get(0).grid());
+        // It gave no work-group size, so it was run with the default, which is in the kernel applied
+        assertEquals(List.of("16"), runs.get(0).localWork());
+        assertTrue(result.defaultLocal());
+        assertTrue(result.kernelText(), result.kernelText().matches("(?s).*// grid: x\\.length\n\\s*// local: 16\n.*"));
 
         String harness = VerificationHarnessGenerator.generate(runs.get(0)).source();
         String dump = System.getenv("INSIGHT_HARNESS_DUMP");
@@ -562,7 +596,11 @@ public class ConverterTest extends TornadoTestCase {
             java.nio.file.Files.writeString(java.nio.file.Path.of(dump.replace(".java", "Ka.java")), harness);
         }
         assertTrue(harness, harness.contains("new uk.ac.manchester.tornado.api.KernelContext()"));
-        assertTrue(harness, harness.contains("new uk.ac.manchester.tornado.api.WorkerGrid1D((int) (x.length))"));
+        assertTrue(harness, harness.contains("new uk.ac.manchester.tornado.api.WorkerGrid1D(insightRoundUp((int) (x.length), (int) (16)))"));
+        assertTrue(harness, harness.contains("insightWorkerGrid.setLocalWork((long) (16), 1L, 1L)"));
+        // TornadoVM reports the launch on the untimed run before the timed ones
+        assertTrue(harness, harness.contains("insightPlan.withThreadInfo();"));
+        assertTrue(harness, harness.contains("insightPlan.withoutThreadInfo();"));
         assertTrue(harness, harness.contains(".task(\"kernel\", InsightVerify::saxpy, context, a, x, y)"));
         assertTrue(harness, harness.contains("InsightOriginal.saxpy(a, insightRef2, insightRef3)"));
     }
@@ -1016,6 +1054,7 @@ public class ConverterTest extends TornadoTestCase {
 
     public void testKernelGrid() {
         KernelGrid grid = KernelGrid.parse("void f() {\n  // grid: Math.max(n, 1), n * 2\n  // local: 16, 16\n}");
+        assertEquals("workerGrid.setLocalWork(16, 16, 1)", grid.setLocalWork());
         assertNotNull(grid);
         assertEquals(List.of("Math.max(n, 1)", "n * 2"), grid.global());
         assertEquals(List.of("16", "16"), grid.local());

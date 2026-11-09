@@ -28,10 +28,10 @@ public class ComparisonTest extends TornadoTestCase {
 
     private static Comparison.Entry timed(Target target, long kernel) {
         KernelVerifier.Outcome verified = new KernelVerifier.Outcome(KernelVerifier.Status.EQUAL, List.of(), "4096 elements", null);
-        Converter.Result result = new Converter.Result("void k() { }", "k", "void k() { }", List.of(), 1, false, "m",
+        Converter.Result result = new Converter.Result("void k() { }", "k", "void k() { }", List.of(), 1, false, false, "m",
                 false, "", 0, verified, target, null);
         KernelVerifier.Outcome timing = new KernelVerifier.Outcome(KernelVerifier.Status.EQUAL, List.of(), "1048576 elements",
-                new KernelVerifier.Timing(1_000_000, kernel, kernel / 2, kernel / 4));
+                new KernelVerifier.Timing(1_000_000, kernel, kernel / 2, kernel / 4, null));
         return new Comparison.Entry(target, result, timing, null);
     }
 
@@ -45,6 +45,29 @@ public class ComparisonTest extends TornadoTestCase {
         // Slower
         assertEquals(0, Comparison.choose(List.of(timed(Target.LOOP_PARALLEL, 1_000_000),
                 timed(Target.KERNEL_API, 2_000_000)), 0));
+    }
+
+    public void testTheGridColumnShowsTheLaunch() {
+        assertEquals("1024 × 1024 / 16 × 16", Comparison.launch(new KernelVerifier.Launch(List.of(1024L, 1024L), List.of(16L, 16L))));
+        assertEquals("1024 / driver's choice", Comparison.launch(new KernelVerifier.Launch(List.of(1024L), List.of())));
+        assertEquals("", Comparison.launch(null));
+    }
+
+    public void testDefaultLocalPerDimension() {
+        assertEquals(List.of("16"), KernelGrid.defaultLocal(1));
+        assertEquals(List.of("16", "16"), KernelGrid.defaultLocal(2));
+        assertEquals(List.of("8", "8", "4"), KernelGrid.defaultLocal(3));
+    }
+
+    public void testTheDefaultLocalLineFollowsTheGridLine() {
+        assertEquals("void k(KernelContext c, int n) {\n    // grid: n, n\n    // local: 16, 16\n    int i = c.globalIdx;\n}",
+                KernelGrid.withDefaultLocal("void k(KernelContext c, int n) {\n    // grid: n, n\n    int i = c.globalIdx;\n}"));
+        assertEquals("void k() {\n\t// grid: n\n\t// local: 16\n}", KernelGrid.withDefaultLocal("void k() {\n\t// grid: n\n}"));
+        assertEquals("void k() {\n  // grid: a, b, c\n  // local: 8, 8, 4\n}", KernelGrid.withDefaultLocal("void k() {\n  // grid: a, b, c\n}"));
+        // A work-group size of its own, no grid, or a grid that the checks reject: unchanged
+        assertNull(KernelGrid.withDefaultLocal("void k() {\n  // grid: n\n  // local: 256\n}"));
+        assertNull(KernelGrid.withDefaultLocal("void k() { }"));
+        assertNull(KernelGrid.withDefaultLocal("void k() {\n  // grid: a, b, c, d\n}"));
     }
 
     public void testAKernelThatWasNotTimedIsNotRecommended() {

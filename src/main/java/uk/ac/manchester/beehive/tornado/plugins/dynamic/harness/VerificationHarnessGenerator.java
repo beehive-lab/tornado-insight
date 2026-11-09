@@ -312,7 +312,10 @@ public final class VerificationHarnessGenerator {
         }
         // With a bailout, TornadoVM runs the kernel in Java, and the profiler reports no time on the device
         main.append("insightPlan.withProfiler(").append(API).append("enums.ProfilerMode.SILENT);\n")
+                // Before a timed run, TornadoVM reports the grid it launches the kernel with, once, untimed
+                .append("if (insightRuns > 0) {\ninsightPlan.withThreadInfo();\n}\n")
                 .append("try {\n").append(API).append("TornadoExecutionResult insightChecked = insightPlan.execute();\n")
+                .append("insightPlan.withoutThreadInfo();\n")
                 .append("if (insightChecked.getProfilerResult().getDeviceKernelTime() <= 0) {\nSystem.out.println(").append(TAG)
                 .append("not-on-device\");\nreturn;\n}\n")
                 .append("} catch (Throwable insightE) {\nSystem.out.println(").append(TAG)

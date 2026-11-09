@@ -40,6 +40,40 @@ public class KernelVerifierTest {
     private static final String WARNING = "WARNING: Using incubator modules: jdk.incubator.vector\n";
 
     // The method under test does not know the tag, so what it prints is not a finding
+    // As TornadoVM 8.1.0 prints it with withThreadInfo(), on Metal
+    private static final String THREAD_INFO = """
+            Task info: insight.kernel
+            \tBackend           : METAL
+            \tDevice            : Apple M4 Pro METAL_DEVICE_TYPE_GPU (available)
+            \tDims              : 2
+            \tGlobal work offset: [0, 0]
+            \tGlobal work size  : [1024, 1024]
+            \tLocal  work size  : [32, 32, 1]
+            \tNumber of workgroups  : [32, 32]
+            """;
+
+    @Test
+    public void theLaunchIsReadFromTheThreadInfo() {
+        KernelVerifier.Launch launch = KernelVerifier.launch(THREAD_INFO);
+        assertEquals(List.of(1024L, 1024L), launch.global());
+        assertEquals(List.of(32L, 32L), launch.local());
+    }
+
+    @Test
+    public void aLaunchWithoutAWorkGroupSizeLeavesItToTheDriver() {
+        KernelVerifier.Launch launch = KernelVerifier.launch(THREAD_INFO
+                .replace("[1024, 1024]", "[1024, 1024, 1]").replace("[32, 32, 1]", "null"));
+        assertEquals(List.of(1024L, 1024L), launch.global());
+        assertEquals(List.of(), launch.local());
+    }
+
+    @Test
+    public void theFirstTaskIsTheTimedOneAndNoThreadInfoIsNoLaunch() {
+        KernelVerifier.Launch launch = KernelVerifier.launch(THREAD_INFO + THREAD_INFO.replace("[1024, 1024]", "[64, 64]"));
+        assertEquals(List.of(1024L, 1024L), launch.global());
+        assertNull(KernelVerifier.launch("INSIGHT t data 1\n"));
+    }
+
     @Test
     public void onlyLinesWithTheRunsTagAreFindings() {
         Outcome outcome = KernelVerifier.outcome("""

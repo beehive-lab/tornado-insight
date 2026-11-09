@@ -62,6 +62,11 @@ public class RulesExamplesTest extends TornadoTestCase {
         List<String> examples = examples(target.rules());
         assertEquals(examples.toString(), count, examples.size());
         for (String example : examples) {
+            // As Converter does: a Kernel API kernel without a work-group size gets the default
+            String withLocal = target.hasLocalWork() ? KernelGrid.withDefaultLocal(example) : null;
+            if (withLocal != null) {
+                example = withLocal;
+            }
             PsiMethod original = original(example);
             PsiFile copy = (PsiFile) original.getContainingFile().copy();
             KernelReplacement.Replaced replaced = KernelReplacement.replace(PsiTreeUtil.findSameElementInCopy(original, copy), example);

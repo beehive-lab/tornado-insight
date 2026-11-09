@@ -21,12 +21,14 @@ import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.JavaTokenType;
 import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiArrayType;
+import com.intellij.psi.PsiBinaryExpression;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiErrorElement;
 import com.intellij.psi.PsiExpression;
 import com.intellij.psi.PsiJavaCodeReferenceElement;
 import com.intellij.psi.PsiLiteralExpression;
+import com.intellij.psi.PsiLocalVariable;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.PsiModifier;
@@ -36,6 +38,7 @@ import com.intellij.psi.PsiPolyadicExpression;
 import com.intellij.psi.PsiPrefixExpression;
 import com.intellij.psi.PsiPrimitiveType;
 import com.intellij.psi.PsiReferenceExpression;
+import com.intellij.psi.PsiStatement;
 import com.intellij.psi.PsiType;
 import com.intellij.psi.PsiTypeCastExpression;
 import com.intellij.psi.PsiTypes;
@@ -144,6 +147,9 @@ final class CandidateChecker {
         } else if (grid.local().size() > grid.global().size()) {
             problems.add("The `// local:` comment gives more sizes than the grid has dimensions.");
         }
+        if (target.hasLocalWork() && !grid.local().isEmpty() && hasContext(kernel, target)) {
+            problems.addAll(unguardedIndices(kernel, grid));
+        }
         List<String> sizes = new ArrayList<>(grid.global());
         sizes.addAll(grid.local());
         for (String size : sizes) {
@@ -154,6 +160,62 @@ final class CandidateChecker {
         }
         return problems;
     }
+
+    private static final Set<String> GLOBAL_INDICES = Set.of("globalIdx", "globalIdy", "globalIdz");
+
+    /**
+     * With a work-group size, the harness and the preview round the grid up to a multiple of it,
+     * so threads past the end exist and must not touch the arrays: each global thread index (or
+     * the variable it initialises) must be compared somewhere, as in {@code if (i < n)}. An
+     * unguarded kernel may write past its arrays without failing, so the run would not tell.
+     */
+    private static List<String> unguardedIndices(PsiMethod kernel, KernelGrid grid) {
+        PsiParameter context = kernel.getParameterList().getParameters()[0];
+        Set<String> unguarded = new LinkedHashSet<>();
+        for (PsiReferenceExpression reference : PsiTreeUtil.findChildrenOfType(kernel.getBody(), PsiReferenceExpression.class)) {
+            if (!GLOBAL_INDICES.contains(reference.getReferenceName())
+                    || !(reference.getQualifierExpression() instanceof PsiReferenceExpression qualifier)
+                    || qualifier.resolve() != context) {
+                continue;
+            }
+            PsiLocalVariable variable = PsiTreeUtil.getParentOfType(reference, PsiLocalVariable.class, true, PsiStatement.class);
+            if (variable != null && PsiTreeUtil.isAncestor(variable.getInitializer(), reference, false)) {
+                if (!compared(kernel, variable)) {
+                    unguarded.add(variable.getName());
+                }
+            } else if (!inComparison(reference)) {
+                unguarded.add(reference.getText());
+            }
+        }
+        if (unguarded.isEmpty()) {
+            return List.of();
+        }
+        String names = "`" + String.join("`, `", unguarded) + "`";
+        return List.of("The grid is rounded up to a multiple of the work-group size (`// local: " + String.join(", ", grid.local())
+                + "`), so some threads are past the end of the data: compare " + names
+                + " with its bound before using it, for example `if (i < n) { ... }`.");
+    }
+
+    // Whether the variable appears in a <, <=, > or >= comparison
+    private static boolean compared(PsiMethod kernel, PsiLocalVariable variable) {
+        for (PsiReferenceExpression use : PsiTreeUtil.findChildrenOfType(kernel.getBody(), PsiReferenceExpression.class)) {
+            if (use.resolve() == variable && inComparison(use)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean inComparison(PsiElement element) {
+        for (PsiElement parent = element.getParent(); parent != null && !(parent instanceof PsiStatement); parent = parent.getParent()) {
+            if (parent instanceof PsiBinaryExpression binary && RELATIONAL.contains(binary.getOperationTokenType())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static final Set<IElementType> RELATIONAL = Set.of(JavaTokenType.LT, JavaTokenType.LE, JavaTokenType.GT, JavaTokenType.GE);
 
     private static boolean hasContext(PsiMethod kernel, Target target) {
         PsiParameter[] parameters = kernel.getParameterList().getParameters();

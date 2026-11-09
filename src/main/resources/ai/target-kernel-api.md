@@ -10,9 +10,12 @@ each thread computes its own part of the result from its thread index.
 - Start the method body with a comment that says how many threads to launch in each dimension,
   as Java `int` expressions over the parameters: `// grid: x.length` for one dimension,
   `// grid: n, n` for two, at most three. TornadoVM launches exactly these threads.
-- Optionally, the next line gives the work-group size per dimension: `// local: 256`. The grid
-  is then rounded up to a multiple of it, so some threads have no element: guard every access,
-  for example `if (i < x.length)`. Give a work-group size when you use local memory or barriers.
+- Optionally, the next line gives the work-group size per dimension: `// local: 256`. Without
+  it, the kernel runs with 16 threads per work-group in one dimension, 16, 16 in two and 8, 8, 4
+  in three. Either way the grid is rounded up to a multiple of the work-group size, so some
+  threads have no element: compare each thread index with its bound before using it, for example
+  `if (i < x.length)`. Give your own work-group size when you use local memory or barriers, and
+  size the local arrays to match it.
 
 ### Threads
 - `context.globalIdx`, `context.globalIdy`, `context.globalIdz`: the thread's index in the grid.
@@ -21,6 +24,9 @@ each thread computes its own part of the result from its thread index.
 - Replace the loop over the elements by the thread index; do not loop over all elements in
   every thread. A loop that is not parallel (for example the `k` loop of a matrix product) stays
   inside the thread.
+- Neighbouring threads in `x` run together, so give `context.globalIdx` to the index of the
+  array's last, contiguous dimension (the column `j` in `a[i * n + j]`) and `globalIdy` to the
+  row: their reads and writes are then to neighbouring elements.
 - Local memory, shared by the threads of a work-group:
   `float[] partial = context.allocateFloatLocalArray(256);` (also `Int`, `Long`, `Double`), with a
   constant size equal to the work-group size. `context.localBarrier()` waits until every thread
@@ -40,21 +46,26 @@ Vector addition:
 public static void vectorAdd(KernelContext context, float[] a, float[] b, float[] c) {
     // grid: c.length
     int i = context.globalIdx;
-    c[i] = a[i] + b[i];
+    if (i < c.length) {
+        c[i] = a[i] + b[i];
+    }
 }
 ```
 
-Matrix multiplication on a 2D grid (the `k` loop stays inside each thread):
+Matrix multiplication on a 2D grid (the `k` loop stays inside each thread; the column `j` is
+`x`, the row `i` is `y`):
 ```java
 public static void matMul(KernelContext context, float[] a, float[] b, float[] c, int n) {
     // grid: n, n
-    int i = context.globalIdx;
-    int j = context.globalIdy;
-    float sum = 0.0f;
-    for (int k = 0; k < n; k++) {
-        sum += a[i * n + k] * b[k * n + j];
+    int j = context.globalIdx;
+    int i = context.globalIdy;
+    if (i < n && j < n) {
+        float sum = 0.0f;
+        for (int k = 0; k < n; k++) {
+            sum += a[i * n + k] * b[k * n + j];
+        }
+        c[i * n + j] = sum;
     }
-    c[i * n + j] = sum;
 }
 ```
 

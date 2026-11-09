@@ -107,14 +107,20 @@ A dialog first asks which TornadoVM API to transform it into:
   (and `@Reduce` for reductions). The kernel still runs as plain Java when called directly.
 - **Kernel API**: a `KernelContext` kernel with explicit threads, work-groups, local memory and
   barriers. It declares its launch grid in comments at the start of its body (`// grid: n` and
-  optionally `// local: 16`); the preview says how to launch it with a `GridScheduler`.
+  optionally `// local: 16`); the preview says how to launch it with a `GridScheduler`. A kernel
+  without a `// local:` work-group size gets one: 16 in 1D, 16 × 16 in 2D, 8 × 8 × 4 in 3D, added
+  to its comments, so that it is checked, timed and applied with the same size (left to the
+  driver, it can make the kernel several times slower). The grid is then rounded up to a multiple
+  of it, so the kernel must compare each thread index with its bound; one that does not goes back
+  to the model.
 - **Tile API**: a `TileContext` kernel that works on whole tiles of elements. It needs TornadoVM
   7.0.0 or newer, a method whose arrays are TornadoVM arrays (`FloatArray`, `IntArray`, ...), and
   an NVIDIA GPU as TornadoVM's default device, with the CUDA backend.
 - **Fastest (measured)**: transforms the method into each API it can, runs and times each verified
   kernel on arrays of the size you choose (1M elements by default) and recommends one. The Loop
   Parallel kernel is recommended unless another is faster by more than a threshold (20% by
-  default). It can take several minutes and makes up to three model requests per API.
+  default). The table shows the grid and work-group size TornadoVM launched each kernel with. It
+  can take several minutes and makes up to three model requests per API.
 
 An API the project cannot use is not offered, and the dialog says why: for example, a TornadoVM
 API without `TileContext`.
