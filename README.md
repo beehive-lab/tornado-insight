@@ -67,7 +67,7 @@ with a preview of the code each one inserts.
 | Abbreviation | Inserts | Where it works |
 |---|---|---|
 | `tg` | A `TaskGraph` that transfers inputs, runs a task and transfers outputs back | Inside a method body |
-| `tep` | A `TornadoExecutionPlan` for a `TaskGraph`, in a try-with-resources block | Inside a method body |
+| `tep` | A `TornadoExecutionPlan` for a `TaskGraph`, in a try-with-resources block; adds `throws TornadoExecutionPlanException` to the method (or a `catch` where a method cannot declare it, such as in a lambda) | Inside a method body |
 | `tparallel` | A kernel method with a `@Parallel` loop | In a class body |
 | `tkernel` | A kernel method that takes a `KernelContext` | In a class body |
 | `ttile` | A kernel method that takes a `TileContext` | In a class body (TornadoVM 7.0.0+) |

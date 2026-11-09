@@ -75,7 +75,8 @@ generated for it (e.g. OpenCL C or CUDA), or the error it hit.
 Type an abbreviation in a Java editor and press <b>Tab</b>:
 <ul>
     <li><code>tg</code>: a <code>TaskGraph</code> that transfers inputs, runs a task and transfers outputs back</li>
-    <li><code>tep</code>: a <code>TornadoExecutionPlan</code> for a <code>TaskGraph</code>, in a try-with-resources block</li>
+    <li><code>tep</code>: a <code>TornadoExecutionPlan</code> for a <code>TaskGraph</code>, in a try-with-resources block; adds
+        <code>throws TornadoExecutionPlanException</code> to the method, or a <code>catch</code> where it cannot (e.g. in a lambda)</li>
     <li><code>tparallel</code>: a kernel method with a <code>@Parallel</code> loop</li>
     <li><code>tkernel</code>: a kernel method that takes a <code>KernelContext</code></li>
     <li><code>ttile</code>: a kernel method that takes a <code>TileContext</code> (TornadoVM 7.0.0+)</li>
@@ -311,6 +312,7 @@ The plugin is described in <i>Dynamic and Static Code Analysis for Java Programs
         <liveTemplateContext contextId="TORNADOVM_TILE_DECLARATION" baseContextId="JAVA_CODE"
                              implementation="uk.ac.manchester.beehive.tornado.plugins.templates.TornadoVMContextType$TileDeclaration"/>
         <defaultLiveTemplates file="/liveTemplates/TornadoVM.xml"/>
+        <liveTemplateOptionalProcessor implementation="uk.ac.manchester.beehive.tornado.plugins.templates.ExecutionPlanExceptionProcessor"/>
         <intentionAction>
             <language>JAVA</language>
             <className>uk.ac.manchester.beehive.tornado.plugins.convert.ConvertToKernelIntention</className>
