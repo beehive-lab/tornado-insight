@@ -35,15 +35,15 @@ applications in IntelliJ IDEA. It checks TornadoVM kernels for unsupported Java 
 kernels on your TornadoVM installation to show what TornadoVM generates for them, and writes TornadoVM boilerplate for
 you through live templates. Experimentally, it can also ask an AI model to transform a Java method into a TornadoVM kernel.
 
-<h2>What's New in 2.1.0</h2>
+<h2>What's New in 2.2.0</h2>
 <ul>
-    <li><b>AI-assisted transformation (experimental, off by default):</b> transforms a Java method into a TornadoVM
-        kernel (Loop Parallel API, Kernel API or Tile API) with a local model server or the Claude API, checks it,
-        optionally runs it against the method, and shows a diff before applying it.</li>
-    <li><b>Quick fixes</b> for <code>assert</code> statements, unused system and native calls, <code>throw</code>,
-        <code>try</code>/<code>catch</code>, <code>throws</code> clauses and kernels that return a value.</li>
-    <li><b>Dynamic inspection</b> compiles its test program against every jar of the TornadoVM SDK, and copies the
-        kernel's code with correct imports, type names and class-qualified references.</li>
+    <li><b>Faster Kernel API kernels:</b> the AI-assisted transformation gives a Kernel API kernel without a work-group
+        size a default one (16, 16 x 16 or 8 x 8 x 4), so it is timed and applied as it will run, and
+        <i>Fastest (measured)</i> shows the grid and work-group size of each kernel.</li>
+    <li><b><code>tep</code></b> declares <code>TornadoExecutionPlanException</code> in the method, so the code it inserts
+        compiles.</li>
+    <li><b>Missing TornadoVM API:</b> <i>Transform into TornadoVM Kernel (AI)...</i> is shown disabled and says which
+        <code>tornado-api</code> dependency to add, instead of disappearing.</li>
 </ul>
 
 <h2>Static checks</h2>
@@ -142,6 +142,29 @@ The plugin is described in <i>Dynamic and Static Code Analysis for Java Programs
     <!-- Change notes displayed in the plugin manager when users view updates.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#change-notes -->
     <change-notes><![CDATA[
+<h3>Version 2.2.0</h3>
+<ul>
+    <li><b>AI-assisted transformation, Kernel API:</b>
+        <ul>
+            <li>A kernel that declares no <code>// local:</code> work-group size gets a default one in its comments:
+                16 in 1D, 16, 16 in 2D, 8, 8, 4 in 3D. It is checked, run, timed and applied with it; left to the
+                driver, the same kernel can be several times slower. A size the kernel declares is kept.</li>
+            <li>The grid is rounded up to a multiple of the work-group size, so a kernel that does not compare each
+                thread index with its bound goes back to the model.</li>
+            <li>The model is asked to give the contiguous index of an array to <code>globalIdx</code>, so that
+                neighbouring threads read neighbouring elements.</li>
+            <li>The preview gives the <code>setLocalWork</code> call to launch the kernel with.</li>
+        </ul></li>
+    <li><b>Fastest (measured):</b> a <i>Grid / work-group</i> column shows the launch TornadoVM reports for each
+        kernel.</li>
+    <li><b>Live templates:</b> <code>tep</code> adds <code>throws TornadoExecutionPlanException</code> to the method, or
+        a <code>catch</code> where the method cannot declare it (in a lambda, for example), since the plan's
+        <code>close()</code> throws it.</li>
+    <li><b>Missing TornadoVM API:</b> without <code>tornado-api</code> on the module's classpath,
+        <i>Transform into TornadoVM Kernel (AI)...</i> is shown disabled, and says which Maven dependency to add for
+        the module's JDK (<code>8.1.0-jdk21</code> or <code>8.1.0-jdk22plus</code>).</li>
+</ul>
+
 <h3>Version 2.1.0</h3>
 <ul>
     <li><b>AI-assisted transformation (experimental, off by default):</b> <i>Transform into TornadoVM Kernel (AI)...</i>
