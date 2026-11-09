@@ -46,6 +46,7 @@ public abstract class TornadoTestCase extends LightJavaCodeInsightFixtureTestCas
                     public <T1, T2, T3> TaskGraph task(String id, Task3<T1, T2, T3> code, T1 arg1, T2 arg2, T3 arg3) { return this; }
                 }""");
         myFixture.addClass("package uk.ac.manchester.tornado.api; public class TornadoExecutionPlan {}");
+        myFixture.addClass("package uk.ac.manchester.tornado.api.exceptions; public class TornadoExecutionPlanException extends Exception {}");
         myFixture.addClass("""
                 package uk.ac.manchester.tornado.api;
                 public class KernelContext {

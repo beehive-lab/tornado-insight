@@ -55,9 +55,59 @@ record KernelGrid(@NotNull List<String> global, @NotNull List<String> local) {
         return new KernelGrid(split(grid.group(1)), local.find() ? split(local.group(1)) : List.of());
     }
 
+    /**
+     * The work-group size a Kernel API kernel gets when it declares none, per number of grid
+     * dimensions: 16 threads in 1D, 16 x 16 in 2D, 8 x 8 x 4 in 3D. Without one, TornadoVM leaves
+     * it to the driver, which can make the same kernel several times slower; these sizes fit the
+     * work-group limits of every TornadoVM backend.
+     */
+    static @NotNull List<String> defaultLocal(int dimensions) {
+        return switch (dimensions) {
+            case 1 -> List.of("16");
+            case 2 -> List.of("16", "16");
+            case 3 -> List.of("8", "8", "4");
+            default -> throw new IllegalArgumentException("A grid has one to three dimensions, not " + dimensions);
+        };
+    }
+
+    /**
+     * {@code code} with a {@code // local:} line after its {@code // grid:} line giving the
+     * {@linkplain #defaultLocal default work-group size}, if it has a grid of one to three
+     * dimensions and no work-group size.
+     *
+     * @return the code with the line, or {@code null} if it needs none
+     */
+    static @Nullable String withDefaultLocal(@NotNull String code) {
+        KernelGrid grid = parse(code);
+        if (grid == null || !grid.local().isEmpty() || grid.global().isEmpty() || grid.global().size() > 3) {
+            return null;
+        }
+        Matcher line = GRID.matcher(code);
+        if (!line.find()) {
+            return null;
+        }
+        int lineStart = code.lastIndexOf('\n', line.start()) + 1;
+        String before = code.substring(lineStart, line.start());
+        // The grid comment's own indentation, or none if it shares its line with code
+        String indent = before.isBlank() ? before : "";
+        int lineEnd = code.indexOf('\n', line.end());
+        int at = lineEnd < 0 ? code.length() : lineEnd;
+        return code.substring(0, at) + "\n" + indent + "// local: " + String.join(", ", defaultLocal(grid.global().size()))
+                + code.substring(at);
+    }
+
     /** The grid as the user writes it, e.g. {@code new WorkerGrid2D(n, n)}. */
     @NotNull String workerGrid() {
         return "new WorkerGrid" + global.size() + "D(" + String.join(", ", global) + ")";
+    }
+
+    /** The work-group size as the user sets it, e.g. {@code workerGrid.setLocalWork(16, 16, 1)}; only with one. */
+    @NotNull String setLocalWork() {
+        List<String> sizes = new ArrayList<>(local);
+        while (sizes.size() < 3) {
+            sizes.add("1");
+        }
+        return "workerGrid.setLocalWork(" + String.join(", ", sizes) + ")";
     }
 
     // Splits at the commas outside parentheses, so Math.max(a, b) stays one size

@@ -21,6 +21,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
+import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -29,6 +30,7 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 /**
  * <em>Convert to TornadoVM Kernel (AI)…</em> in the editor's context menu, for the method at
@@ -44,9 +46,23 @@ public class ConvertToKernelAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {
         PsiMethod method = methodAtCaret(e);
-        // Only in modules that use TornadoVM, so that it does not clutter every Java project
-        e.getPresentation().setEnabledAndVisible(ConversionLauncher.isConvertible(method)
-                && ConversionLauncher.hasTornadoApi(method));
+        Presentation presentation = e.getPresentation();
+        if (!ConversionLauncher.isConvertible(method)) {
+            presentation.setEnabledAndVisible(false);
+            return;
+        }
+        // Shown, but disabled, where the TornadoVM API is missing, saying how to add it: a
+        // hidden item gives no hint why it is not there
+        presentation.setVisible(true);
+        if (ConversionLauncher.hasTornadoApi(method)) {
+            presentation.setEnabled(true);
+            presentation.setText(MessageBundle.message("action.tornado.convertToKernel.text"));
+            presentation.setDescription(MessageBundle.message("action.tornado.convertToKernel.description"));
+        } else {
+            presentation.setEnabled(false);
+            presentation.setText(MessageBundle.message("action.tornado.convertToKernel.noApi.text"));
+            presentation.setDescription(ConversionLauncher.missingApiMessage(method));
+        }
     }
 
     @Override

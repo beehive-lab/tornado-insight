@@ -127,7 +127,8 @@ record Comparison(@NotNull List<Entry> entries, int chosen, int length, int runs
                 .append(MessageBundle.message("convert.compare.time")).append("</th><th align='right'>")
                 .append(MessageBundle.message("convert.compare.speedup")).append("</th><th align='right'>")
                 .append(MessageBundle.message("convert.compare.device")).append("</th><th align='right'>")
-                .append(MessageBundle.message("convert.compare.transfers")).append("</th><th align='left'></th></tr>");
+                .append(MessageBundle.message("convert.compare.transfers")).append("</th><th align='left'>")
+                .append(MessageBundle.message("convert.compare.grid")).append("</th><th align='left'></th></tr>");
         Long java = null;
         for (Entry entry : entries) {
             if (entry.timing() != null && entry.timing().java() >= 0) {
@@ -137,7 +138,7 @@ record Comparison(@NotNull List<Entry> entries, int chosen, int length, int runs
         }
         if (java != null) {
             html.append("<tr><td>").append(MessageBundle.message("convert.compare.java")).append("</td><td align='right'>")
-                    .append(duration(java)).append("</td><td align='right'>1×</td><td></td><td></td><td></td></tr>");
+                    .append(duration(java)).append("</td><td align='right'>1×</td><td></td><td></td><td></td><td></td></tr>");
         }
         for (int i = 0; i < entries.size(); i++) {
             Entry entry = entries.get(i);
@@ -149,9 +150,10 @@ record Comparison(@NotNull List<Entry> entries, int chosen, int length, int runs
                         .append(java == null ? "" : speedup(java, timing.kernel())).append("</td><td align='right'>")
                         .append(duration(timing.deviceKernel())).append("</td><td align='right'>")
                         .append(duration(timing.transfers())).append("</td><td>")
+                        .append(StringUtil.escapeXmlEntities(launch(timing.launch()))).append("</td><td>")
                         .append(i == chosen ? MessageBundle.message("convert.compare.recommended") : "").append("</td>");
             } else {
-                html.append("<td colspan='4'></td><td>").append(StringUtil.escapeXmlEntities(whyNotTimed(entry))).append("</td>");
+                html.append("<td colspan='5'></td><td>").append(StringUtil.escapeXmlEntities(whyNotTimed(entry))).append("</td>");
             }
             html.append("</tr>");
         }
@@ -170,6 +172,23 @@ record Comparison(@NotNull List<Entry> entries, int chosen, int length, int runs
         KernelVerifier.Outcome timed = entry.timed();
         return timed == null || timed.details().isEmpty() ? MessageBundle.message("convert.compare.notTimed")
                 : MessageBundle.message("convert.compare.timingFailed", timed.details().get(0));
+    }
+
+    /** A launch as {@code "1024 × 1024 / 16 × 16"}, or with the driver's work-group size if TornadoVM gave none. */
+    static @NotNull String launch(@Nullable KernelVerifier.Launch launch) {
+        if (launch == null) {
+            return "";
+        }
+        return times(launch.global()) + " / " + (launch.local().isEmpty() ? MessageBundle.message("convert.compare.grid.driver")
+                : times(launch.local()));
+    }
+
+    private static String times(List<Long> sizes) {
+        List<String> parts = new ArrayList<>();
+        for (long size : sizes) {
+            parts.add(String.valueOf(size));
+        }
+        return String.join(" × ", parts);
     }
 
     static @NotNull String duration(long nanos) {

@@ -290,9 +290,13 @@ final class ConversionPreviewDialog extends DialogWrapper {
         KernelGrid grid = result.target().context() == null ? null : KernelGrid.parse(result.kernelText());
         if (grid != null) {
             String local = grid.local().isEmpty() ? ""
-                    : MessageBundle.message("convert.preview.launchLocal", StringUtil.escapeXmlEntities(String.join(", ", grid.local())));
+                    : MessageBundle.message("convert.preview.launchLocal", StringUtil.escapeXmlEntities(grid.setLocalWork()));
             html.append("<br>").append(MessageBundle.message("convert.preview.launch",
                     StringUtil.escapeXmlEntities(grid.workerGrid()), local, result.target().contextSimpleName()));
+        }
+        if (result.defaultLocal() && grid != null) {
+            html.append("<br>").append(MessageBundle.message("convert.preview.defaultLocal",
+                    StringUtil.escapeXmlEntities(String.join(", ", grid.local()))));
         }
         if (result.repaired()) {
             html.append("<br>").append(MessageBundle.message("convert.preview.repaired"));

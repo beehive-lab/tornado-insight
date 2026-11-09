@@ -65,12 +65,57 @@ public class TornadoVMLiveTemplatesTest extends TornadoTestCase {
         assertExpanded("""
                 import uk.ac.manchester.tornado.api.TaskGraph;
                 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
+                import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
 
-                class Demo { void run(TaskGraph graph) {
+                class Demo { void run(TaskGraph graph) throws TornadoExecutionPlanException {
                     try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(graph.snapshot())) {
                         executionPlan.execute();
                     }
                 } }""");
+    }
+
+    public void testExecutionPlanKeepsAnExistingThrows() {
+        addTornadoApi();
+        addExceptionStubs();
+        expand("""
+                import uk.ac.manchester.tornado.api.TaskGraph;
+                class Demo { void run(TaskGraph graph) throws Exception { tep<caret> } }""");
+        assertExpanded("""
+                import uk.ac.manchester.tornado.api.TaskGraph;
+                import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
+
+                class Demo { void run(TaskGraph graph) throws Exception {
+                    try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(graph.snapshot())) {
+                        executionPlan.execute();
+                    }
+                } }""");
+    }
+
+    public void testExecutionPlanInALambdaCatches() {
+        addTornadoApi();
+        addExceptionStubs();
+        myFixture.addClass("package java.lang; public interface Runnable { void run(); }");
+        expand("""
+                import uk.ac.manchester.tornado.api.TaskGraph;
+                class Demo { void run(TaskGraph graph) { Runnable r = () -> { tep<caret> }; } }""");
+        assertExpanded("""
+                import uk.ac.manchester.tornado.api.TaskGraph;
+                import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
+                import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
+
+                class Demo { void run(TaskGraph graph) { Runnable r = () -> {
+                    try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(graph.snapshot())) {
+                        executionPlan.execute();
+                    } catch (TornadoExecutionPlanException e) {
+                        throw new RuntimeException(e);
+                    }
+                }; } }""");
+    }
+
+    private void addExceptionStubs() {
+        myFixture.addClass("package java.lang; public class Throwable { }");
+        myFixture.addClass("package java.lang; public class Exception extends Throwable { }");
+        myFixture.addClass("package java.lang; public class RuntimeException extends Exception { public RuntimeException(Throwable cause) { } }");
     }
 
     public void testParallelKernel() {

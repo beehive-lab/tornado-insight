@@ -112,8 +112,63 @@ public final class KernelVerifier {
      * @param kernel       one execution of the kernel's task graph, transfers included
      * @param deviceKernel the kernel on the device, as TornadoVM's profiler reports it
      * @param transfers    the data transfers, as TornadoVM's profiler reports them
+     * @param launch       the grid TornadoVM launched the kernel with, as it reported it, or
+     *                     {@code null} if it did not
      */
-    public record Timing(long java, long kernel, long deviceKernel, long transfers) {
+    public record Timing(long java, long kernel, long deviceKernel, long transfers, @Nullable Launch launch) {
+    }
+
+    /**
+     * The threads of a kernel's launch.
+     *
+     * @param global the threads per dimension
+     * @param local  the work-group size per dimension, or empty if TornadoVM left it to the driver
+     */
+    public record Launch(@NotNull List<Long> global, @NotNull List<Long> local) {
+        public Launch {
+            global = List.copyOf(global);
+            local = List.copyOf(local);
+        }
+    }
+
+    private static final Pattern DIMS = Pattern.compile("^\\s*Dims\\s*:\\s*(\\d+)");
+    private static final Pattern GLOBAL_WORK = Pattern.compile("^\\s*Global work size\\s*:\\s*\\[([\\d,\\s]*)]");
+    private static final Pattern LOCAL_WORK = Pattern.compile("^\\s*Local\\s+work size\\s*:\\s*(?:\\[([\\d,\\s]*)]|null)");
+
+    /**
+     * The launch in TornadoVM's thread info ({@code withThreadInfo}) in {@code stdout}: its
+     * first task's, cut to its dimensions. {@code null} if there is none.
+     */
+    static @Nullable Launch launch(@NotNull String stdout) {
+        Integer dims = null;
+        List<Long> global = null;
+        for (String line : stdout.lines().toList()) {
+            Matcher m;
+            if (dims == null && (m = DIMS.matcher(line)).find()) {
+                dims = Integer.parseInt(m.group(1));
+            } else if (global == null && (m = GLOBAL_WORK.matcher(line)).find()) {
+                global = numbers(m.group(1));
+            } else if (global != null && (m = LOCAL_WORK.matcher(line)).find()) {
+                List<Long> local = m.group(1) == null ? List.of() : numbers(m.group(1));
+                int n = dims != null ? dims : global.size();
+                if (global.isEmpty() || n < 1) {
+                    return null;
+                }
+                return new Launch(global.subList(0, Math.min(n, global.size())),
+                        local.isEmpty() ? List.of() : local.subList(0, Math.min(n, local.size())));
+            }
+        }
+        return null;
+    }
+
+    private static List<Long> numbers(String list) {
+        List<Long> numbers = new ArrayList<>();
+        for (String part : list.split(",")) {
+            if (!part.isBlank()) {
+                numbers.add(Long.parseLong(part.strip()));
+            }
+        }
+        return numbers;
     }
 
     /**
@@ -429,7 +484,8 @@ public final class KernelVerifier {
                 different = true;
             } else if (finding.startsWith("time ")) {
                 String[] t = finding.split(" ");
-                timing = new Timing(Long.parseLong(t[1]), Long.parseLong(t[2]), Long.parseLong(t[3]), Long.parseLong(t[4]));
+                timing = new Timing(Long.parseLong(t[1]), Long.parseLong(t[2]), Long.parseLong(t[3]), Long.parseLong(t[4]),
+                        launch(stdout));
             }
         }
         String data = shapes.isEmpty() ? null : String.join(", and ", shapes)

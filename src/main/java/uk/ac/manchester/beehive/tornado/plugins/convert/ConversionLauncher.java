@@ -22,10 +22,16 @@ import com.intellij.notification.NotificationType;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.module.Module;
+import com.intellij.openapi.module.ModuleUtilCore;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.projectRoots.JavaSdkVersion;
+import com.intellij.openapi.projectRoots.Sdk;
+import com.intellij.openapi.roots.ModuleRootManager;
+import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiDocumentManager;
@@ -100,6 +106,29 @@ public final class ConversionLauncher {
         return JavaPsiFacade.getInstance(method.getProject()).findClass(TornadoKernels.PARALLEL, method.getResolveScope()) != null;
     }
 
+    /** The release of the {@code tornado-api} Maven artifact that the missing-API message suggests. */
+    static final String TORNADO_API_RELEASE = "8.1.0";
+
+    /**
+     * What to add when the TornadoVM API is missing from {@code method}'s module: the
+     * {@code tornado-api} Maven dependency, in the variant for the module's JDK (one for JDK 21,
+     * one for JDK 22 and newer), or both variants if the JDK is unknown. Must be called with read
+     * access.
+     */
+    public static @NotNull String missingApiMessage(@NotNull PsiMethod method) {
+        Module module = ModuleUtilCore.findModuleForPsiElement(method);
+        Sdk sdk = module != null ? ModuleRootManager.getInstance(module).getSdk()
+                : ProjectRootManager.getInstance(method.getProject()).getProjectSdk();
+        JavaSdkVersion version = sdk != null ? JavaSdkVersion.fromVersionString(sdk.getVersionString()) : null;
+        if (version == null) {
+            return MessageBundle.message("convert.noApi.anyJdk", TORNADO_API_RELEASE + "-jdk21",
+                    TORNADO_API_RELEASE + "-jdk22plus");
+        }
+        int feature = version.getMaxLanguageLevel().toJavaVersion().feature;
+        String artifactVersion = TORNADO_API_RELEASE + (feature >= 22 ? "-jdk22plus" : "-jdk21");
+        return MessageBundle.message("convert.noApi.jdk", artifactVersion, version.getDescription());
+    }
+
     /**
      * Converts {@code method}; call on the EDT. The lookups run in the background, then the
      * dialog asks for the target, then the conversion runs as a background task, once the
@@ -146,7 +175,7 @@ public final class ConversionLauncher {
         // Class and method, so that the notifications of several transformations can be told apart
         String name = method.getContainingClass().getName() + "." + method.getName();
         if (!hasTornadoApi(method)) {
-            return new Plan(name, null, null, Map.of(), MessageBundle.message("convert.error.noApi"));
+            return new Plan(name, null, null, Map.of(), MessageBundle.message("convert.error.noApi", missingApiMessage(method)));
         }
         KernelVerifier.EnvironmentCheck environment = KernelVerifier.environment(project);
         List<String> parameterTypes = new ArrayList<>();

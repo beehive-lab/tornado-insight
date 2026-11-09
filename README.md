@@ -67,7 +67,7 @@ with a preview of the code each one inserts.
 | Abbreviation | Inserts | Where it works |
 |---|---|---|
 | `tg` | A `TaskGraph` that transfers inputs, runs a task and transfers outputs back | Inside a method body |
-| `tep` | A `TornadoExecutionPlan` for a `TaskGraph`, in a try-with-resources block | Inside a method body |
+| `tep` | A `TornadoExecutionPlan` for a `TaskGraph`, in a try-with-resources block; adds `throws TornadoExecutionPlanException` to the method (or a `catch` where a method cannot declare it, such as in a lambda) | Inside a method body |
 | `tparallel` | A kernel method with a `@Parallel` loop | In a class body |
 | `tkernel` | A kernel method that takes a `KernelContext` | In a class body |
 | `ttile` | A kernel method that takes a `TileContext` | In a class body (TornadoVM 7.0.0+) |
@@ -89,19 +89,38 @@ The templates are offered in modules that use the TornadoVM API, and in any Java
 In a module that uses the TornadoVM API, right-click a plain Java method and choose
 **Transform into TornadoVM Kernel (AI)...**, or press Alt+Enter on its name. It is off until you set up a model in [Configure](#configure).
 
+The IDE must see the TornadoVM API on the module's classpath. If it does not, the menu item is
+shown disabled, as **(needs tornado-api)**, and its description says which version to add. Add the
+`tornado-api` dependency for your project JDK to your `pom.xml` and reload the Maven project:
+
+```xml
+<dependency>
+  <groupId>io.github.beehive-lab</groupId>
+  <artifactId>tornado-api</artifactId>
+  <!-- JDK 21: 8.1.0-jdk21; JDK 22 and newer: 8.1.0-jdk22plus -->
+  <version>8.1.0-jdk22plus</version>
+</dependency>
+```
+
 A dialog first asks which TornadoVM API to transform it into:
 - **Readable: Loop Parallel API**: the method's loops, with `@Parallel` on the independent ones
   (and `@Reduce` for reductions). The kernel still runs as plain Java when called directly.
 - **Kernel API**: a `KernelContext` kernel with explicit threads, work-groups, local memory and
   barriers. It declares its launch grid in comments at the start of its body (`// grid: n` and
-  optionally `// local: 16`); the preview says how to launch it with a `GridScheduler`.
+  optionally `// local: 16`); the preview says how to launch it with a `GridScheduler`. A kernel
+  without a `// local:` work-group size gets one: 16 in 1D, 16 × 16 in 2D, 8 × 8 × 4 in 3D, added
+  to its comments, so that it is checked, timed and applied with the same size (left to the
+  driver, it can make the kernel several times slower). The grid is then rounded up to a multiple
+  of it, so the kernel must compare each thread index with its bound; one that does not goes back
+  to the model.
 - **Tile API**: a `TileContext` kernel that works on whole tiles of elements. It needs TornadoVM
   7.0.0 or newer, a method whose arrays are TornadoVM arrays (`FloatArray`, `IntArray`, ...), and
   an NVIDIA GPU as TornadoVM's default device, with the CUDA backend.
 - **Fastest (measured)**: transforms the method into each API it can, runs and times each verified
   kernel on arrays of the size you choose (1M elements by default) and recommends one. The Loop
   Parallel kernel is recommended unless another is faster by more than a threshold (20% by
-  default). It can take several minutes and makes up to three model requests per API.
+  default). The table shows the grid and work-group size TornadoVM launched each kernel with. It
+  can take several minutes and makes up to three model requests per API.
 
 An API the project cannot use is not offered, and the dialog says why: for example, a TornadoVM
 API without `TileContext`.
