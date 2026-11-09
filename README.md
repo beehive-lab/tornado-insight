@@ -89,6 +89,19 @@ The templates are offered in modules that use the TornadoVM API, and in any Java
 In a module that uses the TornadoVM API, right-click a plain Java method and choose
 **Transform into TornadoVM Kernel (AI)...**, or press Alt+Enter on its name. It is off until you set up a model in [Configure](#configure).
 
+The IDE must see the TornadoVM API on the module's classpath. If it does not, the menu item is
+shown disabled, as **(needs tornado-api)**, and its description says which version to add. Add the
+`tornado-api` dependency for your project JDK to your `pom.xml` and reload the Maven project:
+
+```xml
+<dependency>
+  <groupId>io.github.beehive-lab</groupId>
+  <artifactId>tornado-api</artifactId>
+  <!-- JDK 21: 8.1.0-jdk21; JDK 22 and newer: 8.1.0-jdk22plus -->
+  <version>8.1.0-jdk22plus</version>
+</dependency>
+```
+
 A dialog first asks which TornadoVM API to transform it into:
 - **Readable: Loop Parallel API**: the method's loops, with `@Parallel` on the independent ones
   (and `@Reduce` for reductions). The kernel still runs as plain Java when called directly.

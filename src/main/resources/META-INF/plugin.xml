@@ -94,7 +94,9 @@ its name. Choose the Loop Parallel API, the Kernel API, the Tile API (TornadoVM 
 <i>Fastest (measured)</i>, which times a kernel for each and recommends one. Each answer is checked like a kernel in the
 editor and the problems go back to the model; optionally, each kernel is run with TornadoVM and compared with the
 method. A diff shows the result before it is applied, as one undoable step. It is off until you set up a model, because
-it sends your code to it.
+it sends your code to it. The module needs the TornadoVM API on its classpath: add the Maven dependency
+<code>io.github.beehive-lab:tornado-api</code>, version <code>8.1.0-jdk21</code> for JDK 21 or
+<code>8.1.0-jdk22plus</code> for JDK 22 and newer. Until then the menu item is shown disabled.
 
 <h2>Getting started</h2>
 <h3>Requirements</h3>
