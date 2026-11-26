@@ -92,7 +92,8 @@ points at a TornadoVM SDK. The <i>Live Templates</i> tab of the TornadoVM tool w
 <h2>AI-assisted transformation (experimental)</h2>
 Right-click a plain Java method and choose <b>Tornadify...</b> (Transform into TornadoVM Kernel (AI)), or press <b>Alt+Enter</b> on
 its name. Once it is set up, a brain icon in the gutter marks each method with a loop that can be transformed: click
-it to Tornadify the method. Choose the Loop Parallel API, the Kernel API, the Tile API (TornadoVM 7.0.0+, CUDA devices), or
+it to Tornadify the method, or use the <b>Tornadify</b> button in the <i>TornadoVM</i> tool window for the method at
+the caret. Choose the Loop Parallel API, the Kernel API, the Tile API (TornadoVM 7.0.0+, CUDA devices), or
 <i>Fastest (measured)</i>, which times a kernel for each and recommends one. Each answer is checked like a kernel in the
 editor and the problems go back to the model; optionally, each kernel is run with TornadoVM and compared with the
 method. A diff shows the result before it is applied, as one undoable step. It is off until you set up a model, because
@@ -353,6 +354,8 @@ The plugin is described in <i>Dynamic and Static Code Analysis for Java Programs
                     icon="AllIcons.Actions.Execute"/>
             <action id="tornado.debugDump" class="uk.ac.manchester.beehive.tornado.plugins.actions.DebugDumpAction"
                     icon="AllIcons.Actions.StartDebugger"/>
+            <action id="tornado.tornadify" class="uk.ac.manchester.beehive.tornado.plugins.convert.TornadifyAction"
+                    icon="icons.TornadoIcons.AiTransform"/>
             <separator/>
             <action id="tornado.settings" class="uk.ac.manchester.beehive.tornado.plugins.actions.SettingsAction"
                     icon="AllIcons.General.GearPlain"/>
