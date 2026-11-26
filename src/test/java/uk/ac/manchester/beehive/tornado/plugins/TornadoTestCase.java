@@ -32,7 +32,9 @@ public abstract class TornadoTestCase extends LightJavaCodeInsightFixtureTestCas
                     interface Task1<T1> { void apply(T1 arg1); }
                     interface Task2<T1, T2> { void apply(T1 arg1, T2 arg2); }
                     interface Task3<T1, T2, T3> { void apply(T1 arg1, T2 arg2, T3 arg3); }
+                    interface Task4<T1, T2, T3, T4> { void apply(T1 arg1, T2 arg2, T3 arg3, T4 arg4); }
                 }""");
+        myFixture.addClass("package uk.ac.manchester.tornado.api; public class ImmutableTaskGraph {}");
         myFixture.addClass("""
                 package uk.ac.manchester.tornado.api;
                 import uk.ac.manchester.tornado.api.common.TornadoFunctions.*;
@@ -44,8 +46,22 @@ public abstract class TornadoTestCase extends LightJavaCodeInsightFixtureTestCas
                     public <T1> TaskGraph task(String id, Task1<T1> code, T1 arg1) { return this; }
                     public <T1, T2> TaskGraph task(String id, Task2<T1, T2> code, T1 arg1, T2 arg2) { return this; }
                     public <T1, T2, T3> TaskGraph task(String id, Task3<T1, T2, T3> code, T1 arg1, T2 arg2, T3 arg3) { return this; }
+                    public <T1, T2, T3, T4> TaskGraph task(String id, Task4<T1, T2, T3, T4> code, T1 arg1, T2 arg2, T3 arg3, T4 arg4) { return this; }
+                    public ImmutableTaskGraph snapshot() { return null; }
                 }""");
-        myFixture.addClass("package uk.ac.manchester.tornado.api; public class TornadoExecutionPlan {}");
+        myFixture.addClass("""
+                package uk.ac.manchester.tornado.api;
+                import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
+                public class TornadoExecutionPlan implements AutoCloseable {
+                    public TornadoExecutionPlan(ImmutableTaskGraph... graphs) { }
+                    public TornadoExecutionPlan withGridScheduler(GridScheduler scheduler) { return this; }
+                    public TornadoExecutionPlan execute() { return this; }
+                    public void close() throws TornadoExecutionPlanException { }
+                }""");
+        myFixture.addClass("package uk.ac.manchester.tornado.api; public class WorkerGrid { public void setLocalWork(long x, long y, long z) { } }");
+        myFixture.addClass("package uk.ac.manchester.tornado.api; public class WorkerGrid1D extends WorkerGrid { public WorkerGrid1D(int x) { } }");
+        myFixture.addClass("package uk.ac.manchester.tornado.api; public class WorkerGrid2D extends WorkerGrid { public WorkerGrid2D(int x, int y) { } }");
+        myFixture.addClass("package uk.ac.manchester.tornado.api; public class GridScheduler { public GridScheduler(String name, WorkerGrid grid) { } }");
         myFixture.addClass("package uk.ac.manchester.tornado.api.exceptions; public class TornadoExecutionPlanException extends Exception {}");
         myFixture.addClass("""
                 package uk.ac.manchester.tornado.api;

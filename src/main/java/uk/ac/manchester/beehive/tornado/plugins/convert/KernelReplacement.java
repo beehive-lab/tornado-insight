@@ -91,6 +91,38 @@ final class KernelReplacement {
         return place(PsiTreeUtil.findSameElementInCopy(original, copy), code, placement) == null ? null : copy.getText();
     }
 
+    /**
+     * The file after {@code code} replaces {@code original} and the calls to it in its file are
+     * rewritten to launch it with TornadoVM (see {@link CallSiteRewriter}), as
+     * {@link #place(PsiMethod, String, Placement, boolean)} does; the file itself is not changed.
+     * Must be called with read access.
+     *
+     * @return the text and what was done to the calls, or {@code null} if {@code code} declares no method
+     */
+    static @Nullable Rewritten previewWithCalls(@NotNull PsiMethod original, @NotNull String code) {
+        PsiFile copy = (PsiFile) original.getContainingFile().copy();
+        PsiMethod inCopy = PsiTreeUtil.findSameElementInCopy(original, copy);
+        PsiMethod kernel = pick(parseMethods(inCopy, code), original.getName());
+        if (kernel == null) {
+            return null;
+        }
+        CallSites calls = rewriteCalls(inCopy, kernel);
+        if (place(inCopy, code, Placement.REPLACE) == null) {
+            return null;
+        }
+        tidyImports(copy, calls);
+        return new Rewritten(copy.getText(), calls);
+    }
+
+    /**
+     * A file with the kernel in place of the method and the calls rewritten.
+     *
+     * @param text  the file
+     * @param calls what was done to the calls
+     */
+    record Rewritten(@NotNull String text, @NotNull CallSites calls) {
+    }
+
     /** The name {@link Placement#BESIDE} gives the kernel: {@code <name>Kernel}, numbered if the class has one. */
     static @NotNull String besideName(@NotNull PsiMethod original) {
         PsiClass owner = original.getContainingClass();
@@ -107,6 +139,43 @@ final class KernelReplacement {
     }
 
     /**
+     * {@link #place(PsiMethod, String, Placement)}, after rewriting the calls to {@code original}
+     * in its file to launch the kernel with TornadoVM if {@code rewriteCalls}; only with
+     * {@link Placement#REPLACE}, where the kernel takes the method's name. Needs write access.
+     *
+     * @return the kernel in the file, or {@code null} if {@code code} declares no method
+     */
+    static @Nullable Replaced place(@NotNull PsiMethod original, @NotNull String code, @NotNull Placement placement,
+                                    boolean rewriteCalls) {
+        if (rewriteCalls && placement == Placement.REPLACE) {
+            PsiMethod kernel = pick(parseMethods(original, code), original.getName());
+            if (kernel == null) {
+                return null;
+            }
+            PsiFile file = original.getContainingFile();
+            CallSites calls = rewriteCalls(original, kernel);
+            Replaced replaced = place(original, code, placement);
+            tidyImports(file, calls);
+            return replaced;
+        }
+        return place(original, code, placement);
+    }
+
+    // The calls first, while they still resolve to the method
+    private static CallSites rewriteCalls(PsiMethod original, PsiMethod kernel) {
+        return CallSiteRewriter.rewrite(original, kernel);
+    }
+
+    // In a non-physical copy, the imports added after the first share its line until formatted; the
+    // file itself is formatted the same, so that Accept gives the preview's text
+    private static void tidyImports(PsiFile file, CallSites calls) {
+        if (calls.rewritten() > 0 && file instanceof PsiJavaFile javaFile && javaFile.getImportList() != null) {
+            CodeStyleManager.getInstance(file.getProject()).reformat(javaFile.getImportList());
+            separateImports(javaFile);
+        }
+    }
+
+    /**
      * Puts the method of the same name in {@code code} (or its only method) where
      * {@code placement} says. The kernel gets the original's access modifier and, in its place,
      * its name and its doc comment if the answer has none. Needs write access unless
@@ -120,7 +189,7 @@ final class KernelReplacement {
             return null;
         }
         Project project = original.getProject();
-        PsiMethod kernel = pick(parse(original, code), original.getName());
+        PsiMethod kernel = pick(parseMethods(original, code), original.getName());
         if (kernel == null) {
             return null;
         }
@@ -148,7 +217,8 @@ final class KernelReplacement {
         return new Replaced(replaced, repaired, doc != null);
     }
 
-    private static List<PsiMethod> parse(PsiMethod context, String code) {
+    /** The methods declared in {@code code}, resolved in the context of {@code context}'s class. */
+    static @NotNull List<PsiMethod> parseMethods(@NotNull PsiElement context, @NotNull String code) {
         // The model may add imports or a package line although it is asked not to
         String body = code.lines()
                 .filter(line -> !line.strip().startsWith("import ") && !line.strip().startsWith("package "))
