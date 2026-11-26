@@ -91,7 +91,7 @@ In a module that uses the TornadoVM API, right-click a plain Java method and cho
 Once it is on, a brain icon in the gutter marks each method with a loop that can be transformed; click it to Tornadify the method.
 Hide the icon under *Settings | Editor | General | Gutter Icons*. The **Tornadify** button (the same brain icon) in
 the toolbar of the *TornadoVM* tool window transforms the method at the caret of the selected editor. Hover over it:
-its tooltip names that method, or, while it is disabled, says how to use it.
+its tooltip names that method, or, while it is disabled, says how to use it, or which `tornado-api` dependency to add.
 
 The IDE must see the TornadoVM API on the module's classpath. If it does not, the menu item is
 shown disabled, as **Tornadify (needs tornado-api)**, and its description says which version to add. Add the

@@ -22,11 +22,13 @@ import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.Presentation;
+import com.intellij.openapi.actionSystem.ex.TooltipDescriptionProvider;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.TextEditor;
 import com.intellij.openapi.project.Project;
+import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -35,6 +37,7 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 import uk.ac.manchester.beehive.tornado.plugins.settings.AiSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
@@ -44,10 +47,11 @@ import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
  * usually comes from {@link FileEditorManager}, not from the data context.
  * <p>
  * Its tooltip is a short guide: it names the method it will transform, or, while it is disabled,
- * says how to use it (click inside a method, then the button) and the other ways to start.
+ * says how to use it (click inside a method, then the button) and the other ways to start. A
+ * toolbar button shows the description under the title only for a {@link TooltipDescriptionProvider}.
  * </p>
  */
-public class TornadifyAction extends AnAction {
+public class TornadifyAction extends AnAction implements TooltipDescriptionProvider {
 
     @Override
     public @NotNull ActionUpdateThread getActionUpdateThread() {
@@ -57,8 +61,9 @@ public class TornadifyAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {
         Presentation presentation = e.getPresentation();
+        PsiJavaFile file = javaFile(e);
         PsiMethod method = methodAtCaret(e);
-        String problem = problem(method);
+        String problem = problem(file, method);
         presentation.setEnabled(problem == null);
         if (problem == null) {
             // Names the method, so it is clear the button acts on it alone
@@ -80,32 +85,42 @@ public class TornadifyAction extends AnAction {
 
     /**
      * What the tooltip says while the button cannot transform {@code method}, the method at the
-     * caret, or {@code null} if it can: how to use it when there is no method to transform.
+     * caret of {@code file}, or {@code null} if it can. In order: the transformation is off; the
+     * file's module lacks the TornadoVM API, wherever the caret is; else how to use the button.
      */
-    private static @Nullable String problem(@Nullable PsiMethod method) {
+    private static @Nullable String problem(@Nullable PsiJavaFile file, @Nullable PsiMethod method) {
         if (!AiSettingState.getInstance().enabled) {
             return MessageBundle.message("convert.toolbar.off");
         }
+        if (file != null && JavaPsiFacade.getInstance(file.getProject())
+                .findClass(TornadoKernels.PARALLEL, file.getResolveScope()) == null) {
+            String release = ConversionLauncher.TORNADO_API_RELEASE;
+            return MessageBundle.message("convert.toolbar.noApi", release + "-jdk21", release + "-jdk22plus");
+        }
         if (!ConversionLauncher.isConvertible(method)) {
             return MessageBundle.message("action.tornado.tornadify.description");
-        }
-        if (!ConversionLauncher.hasTornadoApi(method)) {
-            return MessageBundle.message("convert.toolbar.noApi", ConversionLauncher.missingApiMessage(method));
         }
         return null;
     }
 
     private static @Nullable PsiMethod methodAtCaret(AnActionEvent e) {
         Editor editor = editor(e);
-        if (editor == null || e.getProject() == null) {
-            return null;
-        }
-        PsiFile file = PsiDocumentManager.getInstance(e.getProject()).getPsiFile(editor.getDocument());
-        if (!(file instanceof PsiJavaFile)) {
+        PsiJavaFile file = javaFile(e);
+        if (editor == null || file == null) {
             return null;
         }
         PsiElement element = file.findElementAt(editor.getCaretModel().getOffset());
         return PsiTreeUtil.getParentOfType(element, PsiMethod.class, false);
+    }
+
+    // The Java file in the editor, or null if the editor has another kind of file
+    private static @Nullable PsiJavaFile javaFile(AnActionEvent e) {
+        Editor editor = editor(e);
+        if (editor == null || e.getProject() == null) {
+            return null;
+        }
+        PsiFile file = PsiDocumentManager.getInstance(e.getProject()).getPsiFile(editor.getDocument());
+        return file instanceof PsiJavaFile javaFile ? javaFile : null;
     }
 
     // The editor in the data context, else the selected one. getSelectedTextEditor() needs the

@@ -22,6 +22,7 @@ import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.actionSystem.Presentation;
+import com.intellij.openapi.actionSystem.ex.TooltipDescriptionProvider;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx;
@@ -38,6 +39,10 @@ public class TornadifyActionTest extends TornadoTestCase {
     private static final String HOW_TO = "Transform a method into a TornadoVM kernel with AI. "
             + "Click inside the method you want to tornadify, then click this button. "
             + "You can also right-click the method and choose Tornadify..., or click the brain icon next to its name.";
+
+    private static final String NO_API = "Add the tornado-api dependency to your pom.xml to enable this action: "
+            + "io.github.beehive-lab:tornado-api, version 8.1.0-jdk21 for JDK 21 or 8.1.0-jdk22plus for JDK 22 and newer. "
+            + "Then reload the Maven project.";
 
     private boolean wasEnabled;
 
@@ -65,6 +70,9 @@ public class TornadifyActionTest extends TornadoTestCase {
         int debug = ids.indexOf("tornado.debugDump");
         assertTrue(ids.toString(), debug >= 0);
         assertEquals(ids.toString(), "tornado.tornadify", ids.get(debug + 1));
+
+        // Without it, the toolbar's tooltip shows the title alone, not the description
+        assertTrue(actions.getAction("tornado.tornadify") instanceof TooltipDescriptionProvider);
 
         Presentation template = actions.getAction("tornado.tornadify").getTemplatePresentation();
         assertEquals("Tornadify", template.getText());
@@ -125,14 +133,25 @@ public class TornadifyActionTest extends TornadoTestCase {
 
     public void testDisabledWithoutTheTornadoApiSayingWhatToAdd() {
         myFixture.configureByText("Demo.java", "class Demo { void run() { int <caret>x = 0; } }");
-        assertDisabled("io.github.beehive-lab:tornado-api");
+        assertDisabled(NO_API);
+    }
+
+    public void testSaysWhatToAddWithoutTheTornadoApiWhereverTheCaretIs() {
+        // Outside a method the missing dependency still comes first, not the how-to
+        myFixture.configureByText("Demo.java", "class Demo { int <caret>x; }");
+        assertDisabled(NO_API);
+    }
+
+    public void testSaysItIsOffBeforeTheMissingTornadoApi() {
+        AiSettingState.getInstance().enabled = false;
+        myFixture.configureByText("Demo.java", "class Demo { void run() { int <caret>x = 0; } }");
+        assertDisabled("It is off: enable it in Settings");
     }
 
     private void assertDisabled(String reason) {
         Presentation presentation = updateFromToolWindow();
         assertFalse(presentation.isEnabled());
         assertEquals("Tornadify", presentation.getText());
-        assertTrue(presentation.getDescription(), presentation.getDescription().startsWith("Transform a method into a TornadoVM kernel with AI. "));
         assertTrue(presentation.getDescription(), presentation.getDescription().contains(reason));
     }
 
