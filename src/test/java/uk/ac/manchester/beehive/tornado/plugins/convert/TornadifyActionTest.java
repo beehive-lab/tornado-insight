@@ -23,6 +23,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.actionSystem.ex.TooltipDescriptionProvider;
+import com.intellij.openapi.actionSystem.ex.TooltipLinkProvider;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx;
@@ -31,18 +32,19 @@ import icons.TornadoIcons;
 import uk.ac.manchester.beehive.tornado.plugins.TornadoTestCase;
 import uk.ac.manchester.beehive.tornado.plugins.settings.AiSettingState;
 
+import javax.swing.*;
 import java.util.Arrays;
 import java.util.List;
 
 public class TornadifyActionTest extends TornadoTestCase {
 
-    private static final String HOW_TO = "Transform a method into a TornadoVM kernel with AI. "
-            + "Click inside the method you want to tornadify, then click this button. "
-            + "You can also right-click the method and choose Tornadify..., or click the brain icon next to its name.";
+    private static final String HOW_TO = "Click inside a method, then click here to turn it into a TornadoVM kernel with AI. "
+            + "Tip: the brain icon next to a method's name works too.";
 
-    private static final String NO_API = "Add the tornado-api dependency to your pom.xml to enable this action: "
-            + "io.github.beehive-lab:tornado-api, version 8.1.0-jdk21 for JDK 21 or 8.1.0-jdk22plus for JDK 22 and newer. "
-            + "Then reload the Maven project.";
+    private static final String NO_API = "This module needs tornado-api. Add io.github.beehive-lab:tornado-api:8.1.0-jdk21 "
+            + "(JDK 21) or :8.1.0-jdk22plus (JDK 22+) to your pom.xml, then reload Maven.";
+
+    private static final String OFF = "AI-assisted transformation is off. Turn it on to tornadify your methods.";
 
     private boolean wasEnabled;
 
@@ -93,7 +95,7 @@ public class TornadifyActionTest extends TornadoTestCase {
         Presentation presentation = updateFromToolWindow();
         assertTrue(presentation.isEnabled());
         assertEquals("Tornadify add", presentation.getText());
-        assertEquals("Transform add into a TornadoVM kernel with AI. To tornadify another method, click inside it first.",
+        assertEquals("Turn add into a TornadoVM kernel with AI. For another method, click inside it first.",
                 presentation.getDescription());
     }
 
@@ -101,7 +103,14 @@ public class TornadifyActionTest extends TornadoTestCase {
         AiSettingState.getInstance().enabled = false;
         addTornadoApi();
         myFixture.configureByText("Demo.java", "class Demo { void run() { int <caret>x = 0; } }");
-        assertDisabled("It is off: enable it in Settings");
+        assertDisabled(OFF);
+    }
+
+    public void testTooltipLinksToTheSettingsOnlyWhileTheTransformationIsOff() {
+        TooltipLinkProvider action = (TooltipLinkProvider) ActionManager.getInstance().getAction("tornado.tornadify");
+        assertNull(action.getTooltipLink(new JLabel()));
+        AiSettingState.getInstance().enabled = false;
+        assertEquals("Open settings", action.getTooltipLink(new JLabel()).tooltip);
     }
 
     public void testDisabledWithoutAnEditor() {
@@ -145,7 +154,7 @@ public class TornadifyActionTest extends TornadoTestCase {
     public void testSaysItIsOffBeforeTheMissingTornadoApi() {
         AiSettingState.getInstance().enabled = false;
         myFixture.configureByText("Demo.java", "class Demo { void run() { int <caret>x = 0; } }");
-        assertDisabled("It is off: enable it in Settings");
+        assertDisabled(OFF);
     }
 
     private void assertDisabled(String reason) {

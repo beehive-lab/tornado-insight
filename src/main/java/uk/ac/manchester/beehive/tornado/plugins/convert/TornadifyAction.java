@@ -17,16 +17,19 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.convert;
 
+import com.intellij.ide.DataManager;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.actionSystem.ex.TooltipDescriptionProvider;
+import com.intellij.openapi.actionSystem.ex.TooltipLinkProvider;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.TextEditor;
+import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiDocumentManager;
@@ -37,8 +40,11 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import javax.swing.*;
 import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 import uk.ac.manchester.beehive.tornado.plugins.settings.AiSettingState;
+import uk.ac.manchester.beehive.tornado.plugins.settings.AiSettingsConfigurable;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 /**
@@ -49,9 +55,10 @@ import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
  * Its tooltip is a short guide: it names the method it will transform, or, while it is disabled,
  * says how to use it (click inside a method, then the button) and the other ways to start. A
  * toolbar button shows the description under the title only for a {@link TooltipDescriptionProvider}.
+ * While the transformation is off, the tooltip has an <em>Open settings</em> link.
  * </p>
  */
-public class TornadifyAction extends AnAction implements TooltipDescriptionProvider {
+public class TornadifyAction extends AnAction implements TooltipDescriptionProvider, TooltipLinkProvider {
 
     @Override
     public @NotNull ActionUpdateThread getActionUpdateThread() {
@@ -73,6 +80,19 @@ public class TornadifyAction extends AnAction implements TooltipDescriptionProvi
             presentation.setText(MessageBundle.message("action.tornado.tornadify.text"), false);
             presentation.setDescription(problem);
         }
+    }
+
+    // The button rebuilds its tooltip when the description changes, so this follows the setting
+    @Override
+    public @Nullable TooltipLink getTooltipLink(@Nullable JComponent owner) {
+        if (AiSettingState.getInstance().enabled) {
+            return null;
+        }
+        return new TooltipLink(MessageBundle.message("convert.toolbar.off.link"), () -> {
+            Project project = owner == null ? null
+                    : CommonDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext(owner));
+            ShowSettingsUtil.getInstance().showSettingsDialog(project, AiSettingsConfigurable.class);
+        });
     }
 
     @Override
