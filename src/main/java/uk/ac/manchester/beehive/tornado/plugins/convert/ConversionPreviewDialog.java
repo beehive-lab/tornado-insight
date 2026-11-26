@@ -33,10 +33,16 @@ import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.wm.WindowManager;
 import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiReference;
+import com.intellij.psi.javadoc.PsiDocComment;
+import com.intellij.psi.search.searches.MethodReferencesSearch;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.psi.SmartPsiElementPointer;
 import com.intellij.ui.OnePixelSplitter;
 import com.intellij.ui.ScreenUtil;
+import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBRadioButton;
@@ -64,7 +70,9 @@ import java.util.stream.Collectors;
  * API or Tile API kernel cannot stand in for the method in its callers, so it is added beside it
  * unless the user says otherwise. Both sides are made from the file as it is when the dialog
  * opens, since it may have been edited while the model answered. After <em>Fastest (measured)</em>
- * it shows the timings and lets the user pick the kernel, the recommended one first.
+ * it shows the timings and lets the user pick the kernel, the recommended one first. Replacing the
+ * method also rewrites the calls to it in the file to launch the kernel with TornadoVM (see
+ * {@link CallSiteRewriter}), shown in the diff, unless the user unticks it.
  */
 final class ConversionPreviewDialog extends DialogWrapper {
 
@@ -75,6 +83,10 @@ final class ConversionPreviewDialog extends DialogWrapper {
     private final List<Converter.Result> results;
     /** The file after each result, for each placement. */
     private final List<Map<Placement, String>> afters;
+    /** The file after each result replaces the method and the calls in the file are rewritten, or {@code null}. */
+    private final List<KernelReplacement.Rewritten> withCalls;
+    /** The calls to the method in other files, which are not rewritten. */
+    private final int elsewhere;
     private final @Nullable Comparison comparison;
     private final String before;
     private final String currentText;
@@ -82,12 +94,15 @@ final class ConversionPreviewDialog extends DialogWrapper {
     private int selected;
     /** Replace by default, for every API; the user's choice stays when another kernel is picked. */
     private Placement placement = Placement.REPLACE;
+    /** Whether replacing the method rewrites the calls to it too. */
+    private boolean rewriteCalls = true;
+    private @Nullable JBCheckBox callsBox;
     private DiffRequestPanel diff;
     private JBLabel summary;
 
     private ConversionPreviewDialog(@NotNull Project project, @NotNull SmartPsiElementPointer<PsiMethod> pointer,
                                     @NotNull List<Converter.Result> results, @NotNull List<Map<Placement, String>> afters,
-                                    int selected, @Nullable Comparison comparison, @NotNull String before,
+                                    @NotNull List<KernelReplacement.Rewritten> withCalls, int elsewhere, int selected, @Nullable Comparison comparison, @NotNull String before,
                                     @NotNull String currentText, @NotNull String besideName, @NotNull String name) {
         super(project, true);
         this.name = name;
@@ -95,6 +110,8 @@ final class ConversionPreviewDialog extends DialogWrapper {
         this.pointer = pointer;
         this.results = results;
         this.afters = afters;
+        this.withCalls = withCalls;
+        this.elsewhere = elsewhere;
         this.selected = selected;
         this.comparison = comparison;
         this.before = before;
@@ -135,7 +152,9 @@ final class ConversionPreviewDialog extends DialogWrapper {
     }
 
     /** The file as the dialog shows it, before and after each result in each placement. */
-    private record Previews(List<Map<Placement, String>> afters, String before, String currentText, String besideName) {
+    private record Previews(List<Map<Placement, String>> afters, List<KernelReplacement.Rewritten> withCalls, int elsewhere,
+                            String before, String currentText,
+                            String besideName) {
     }
 
     private static void open(Project project, SmartPsiElementPointer<PsiMethod> pointer, List<Converter.Result> results,
@@ -151,7 +170,9 @@ final class ConversionPreviewDialog extends DialogWrapper {
                         if (previews == null) {
                             methodGone(project, name);
                         } else {
-                            new ConversionPreviewDialog(project, pointer, results, previews.afters(), selected, comparison,
+                            new ConversionPreviewDialog(project, pointer, results, previews.afters(), previews.withCalls(),
+                                    previews.elsewhere(),
+                                    selected, comparison,
                                     previews.before(), previews.currentText(), previews.besideName(), name).show();
                         }
                     })
@@ -166,7 +187,9 @@ final class ConversionPreviewDialog extends DialogWrapper {
             return null;
         }
         List<Map<Placement, String>> afters = new ArrayList<>();
+        List<KernelReplacement.Rewritten> withCalls = new ArrayList<>();
         for (Converter.Result result : results) {
+            withCalls.add(KernelReplacement.previewWithCalls(original, result.kernelText()));
             Map<Placement, String> after = new EnumMap<>(Placement.class);
             for (Placement placement : Placement.values()) {
                 String text = KernelReplacement.preview(original, result.kernelText(), placement);
@@ -177,12 +200,36 @@ final class ConversionPreviewDialog extends DialogWrapper {
             }
             afters.add(after);
         }
-        return new Previews(afters, original.getContainingFile().getText(), original.getText(),
+        return new Previews(afters, withCalls, callsElsewhere(original), original.getContainingFile().getText(), original.getText(),
                 KernelReplacement.besideName(original));
     }
 
     private Converter.Result result() {
         return results.get(selected);
+    }
+
+    // Whether Accept rewrites the calls: the method is replaced, and some calls can be rewritten
+    private boolean callsRewritten() {
+        return placement == Placement.REPLACE && rewriteCalls && rewrites(selected) > 0;
+    }
+
+    // The calls the result's preview rewrites
+    private int rewrites(int index) {
+        KernelReplacement.Rewritten rewritten = withCalls.get(index);
+        return rewritten == null ? 0 : rewritten.calls().rewritten();
+    }
+
+    // The calls to the method from other files, which are left as they are; not javadoc links
+    private static int callsElsewhere(PsiMethod original) {
+        int calls = 0;
+        for (PsiReference reference : MethodReferencesSearch.search(original).findAll()) {
+            PsiElement element = reference.getElement();
+            if (element.getContainingFile() != original.getContainingFile()
+                    && PsiTreeUtil.getParentOfType(element, PsiDocComment.class) == null) {
+                calls++;
+            }
+        }
+        return calls;
     }
 
     private void updateOkText() {
@@ -229,7 +276,23 @@ final class ConversionPreviewDialog extends DialogWrapper {
             placing.add(button);
         }
         JPanel bottom = new JPanel(new BorderLayout(0, JBUI.scale(8)));
-        bottom.add(placing, BorderLayout.NORTH);
+        int mostCalls = 0;
+        for (int i = 0; i < withCalls.size(); i++) {
+            mostCalls = Math.max(mostCalls, rewrites(i));
+        }
+        if (mostCalls > 0) {
+            callsBox = new JBCheckBox(MessageBundle.message("convert.preview.calls.choice"), rewriteCalls);
+            callsBox.addActionListener(e -> {
+                rewriteCalls = callsBox.isSelected();
+                show(selected);
+            });
+            JPanel placingAndCalls = new JPanel(new BorderLayout(0, JBUI.scale(4)));
+            placingAndCalls.add(placing, BorderLayout.NORTH);
+            placingAndCalls.add(callsBox, BorderLayout.SOUTH);
+            bottom.add(placingAndCalls, BorderLayout.NORTH);
+        } else {
+            bottom.add(placing, BorderLayout.NORTH);
+        }
         bottom.add(summary, BorderLayout.CENTER);
         top.add(bottom, BorderLayout.SOUTH);
 
@@ -258,8 +321,12 @@ final class ConversionPreviewDialog extends DialogWrapper {
         DiffContentFactory contents = DiffContentFactory.getInstance();
         diff.setRequest(new SimpleDiffRequest(null,
                 contents.create(project, before, JavaFileType.INSTANCE),
-                contents.create(project, afters.get(index).get(placement), JavaFileType.INSTANCE),
+                contents.create(project, callsRewritten() ? withCalls.get(index).text() : afters.get(index).get(placement),
+                        JavaFileType.INSTANCE),
                 MessageBundle.message("convert.preview.before"), MessageBundle.message("convert.preview.after")));
+        if (callsBox != null) {
+            callsBox.setEnabled(placement == Placement.REPLACE && rewrites(index) > 0);
+        }
         updateSummary();
         updateOkText();
     }
@@ -272,13 +339,30 @@ final class ConversionPreviewDialog extends DialogWrapper {
         if (result.fellBack()) {
             html.append(' ').append(MessageBundle.message("convert.preview.fellBack"));
         }
+        KernelReplacement.Rewritten rewritten = withCalls.get(selected);
+        CallSites sites = rewritten == null ? null : rewritten.calls();
         if (placement == Placement.BESIDE) {
             html.append("<br>").append(MessageBundle.message("convert.preview.beside", result.methodName(), besideName));
+        } else if (callsRewritten()) {
+            html.append("<br>").append(MessageBundle.message("convert.preview.calls.rewritten", sites.rewritten(),
+                    sites.methods(), sites.graphs(), result.methodName()));
+            int left = sites.skipped().size() + elsewhere;
+            if (left > 0) {
+                html.append("<br><b>").append(MessageBundle.message(result.target().context() != null
+                        ? "convert.preview.calls.leftBroken" : "convert.preview.calls.left", left)).append("</b>");
+            }
         } else if (result.target().context() != null) {
             html.append("<br><b>").append(MessageBundle.message("convert.preview.replaceContext", result.methodName(),
                     result.target().contextSimpleName())).append("</b>");
         } else if (result.callers() > 0) {
             html.append("<br>").append(MessageBundle.message("convert.preview.callers", result.callers()));
+        }
+        if (placement == Placement.REPLACE && sites != null && !sites.skipped().isEmpty() && (callsRewritten() || sites.rewritten() == 0)) {
+            html.append("<br>").append(MessageBundle.message("convert.preview.calls.skipped", sites.skipped().size(),
+                    StringUtil.escapeXmlEntities(String.join("; ", new java.util.LinkedHashSet<>(sites.skipped())))));
+        }
+        if (placement == Placement.REPLACE && callsRewritten() && elsewhere > 0) {
+            html.append("<br>").append(MessageBundle.message("convert.preview.calls.elsewhere", elsewhere));
         }
         if (result.verified()) {
             html.append("<br>").append(MessageBundle.message("convert.preview.verified",
@@ -325,11 +409,12 @@ final class ConversionPreviewDialog extends DialogWrapper {
         // The replacement resolves names, so it waits for indexing too
         String kernelText = result().kernelText();
         Placement chosen = placement;
-        DumbService.getInstance(project).smartInvokeLater(() -> accept(project, pointer, kernelText, chosen, name));
+        boolean rewrite = callsRewritten();
+        DumbService.getInstance(project).smartInvokeLater(() -> accept(project, pointer, kernelText, chosen, rewrite, name));
     }
 
     private static void accept(Project project, SmartPsiElementPointer<PsiMethod> pointer, String kernelText,
-                               Placement placement, String name) {
+                               Placement placement, boolean rewriteCalls, String name) {
         PsiDocumentManager.getInstance(project).commitAllDocuments();
         PsiMethod original = pointer.getElement();
         if (original == null) {
@@ -339,7 +424,7 @@ final class ConversionPreviewDialog extends DialogWrapper {
         KernelReplacement.Replaced[] replaced = new KernelReplacement.Replaced[1];
         WriteCommandAction.writeCommandAction(project, original.getContainingFile())
                 .withName(MessageBundle.message("convert.command", original.getName()))
-                .run(() -> replaced[0] = KernelReplacement.place(original, kernelText, placement));
+                .run(() -> replaced[0] = KernelReplacement.place(original, kernelText, placement, rewriteCalls));
         if (replaced[0] != null && replaced[0].kernel().canNavigate()) {
             replaced[0].kernel().navigate(true);
         }

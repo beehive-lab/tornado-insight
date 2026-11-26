@@ -158,7 +158,22 @@ keeping its name, access modifier and doc comment; Undo restores the original. A
 API kernel does one thread's part of the work and must be launched from a TaskGraph, so the preview
 warns that the method's calls stop working if it replaces the method. Replacing is the default for
 every API. If a replacing kernel changes the signature, the preview says how many calls must be
-updated. The transformation runs in the background and can be cancelled; you can keep editing
+updated.
+
+When the kernel replaces the method, TornadoInsight also rewrites the calls to it in the same file so
+that they launch the kernel with TornadoVM, and shows them in the diff; untick **Also rewrite the
+calls** to leave them as they are. The first call builds a `TaskGraph` and a `TornadoExecutionPlan`
+in a try-with-resources block and executes it; the later calls with the same arguments only replay
+the plan with `executionPlan.execute()`, and a call in a loop whose arguments do not change gets its
+plan built before the loop. The TaskGraph transfers the arrays the kernel reads to the device once
+(`FIRST_EXECUTION`), or at every execution if the code changes them between executions, and the
+arrays it writes back to the host after every execution. Kernel API and Tile API kernels are
+launched on their grid with a `GridScheduler`. This is done by the plugin, not the model: only the
+calls change, and the statements the TaskGraph and the plan need are added around them. A call whose
+value is used, one in a kernel or outside a method, or one with an array argument that is not a
+variable is left as it is, and the preview says why; calls in other files are not changed.
+
+The transformation runs in the background and can be cancelled; you can keep editing
 meanwhile, and the preview warns if the method itself was changed. Transformations run one at a
 time, in the order they were started, since a local server may answer one request at a time and
 timings need the GPU to themselves: the others wait in the status bar.
