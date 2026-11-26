@@ -91,7 +91,8 @@ points at a TornadoVM SDK. The <i>Live Templates</i> tab of the TornadoVM tool w
 
 <h2>AI-assisted transformation (experimental)</h2>
 Right-click a plain Java method and choose <b>Transform into TornadoVM Kernel (AI)...</b>, or press <b>Alt+Enter</b> on
-its name. Choose the Loop Parallel API, the Kernel API, the Tile API (TornadoVM 7.0.0+, CUDA devices), or
+its name. Once it is set up, a brain icon in the gutter marks each method with a loop that can be transformed: click
+it to start. Choose the Loop Parallel API, the Kernel API, the Tile API (TornadoVM 7.0.0+, CUDA devices), or
 <i>Fastest (measured)</i>, which times a kernel for each and recommends one. Each answer is checked like a kernel in the
 editor and the problems go back to the model; optionally, each kernel is run with TornadoVM and compared with the
 method. A diff shows the result before it is applied, as one undoable step. It is off until you set up a model, because
@@ -341,6 +342,8 @@ The plugin is described in <i>Dynamic and Static Code Analysis for Java Programs
             <className>uk.ac.manchester.beehive.tornado.plugins.convert.ConvertToKernelIntention</className>
             <categoryKey>convert.intention.category</categoryKey>
         </intentionAction>
+        <codeInsight.lineMarkerProvider language="JAVA"
+                                        implementationClass="uk.ac.manchester.beehive.tornado.plugins.convert.ConvertToKernelLineMarkerProvider"/>
     </extensions>
     <actions>
         <group id="tornado.bar">
@@ -356,7 +359,8 @@ The plugin is described in <i>Dynamic and Static Code Analysis for Java Programs
             <action id="tornado.doc" class="uk.ac.manchester.beehive.tornado.plugins.actions.OpenTornadoDocsAction"
                     icon="AllIcons.Toolwindows.Documentation"/>
         </group>
-        <action id="tornado.convertToKernel" class="uk.ac.manchester.beehive.tornado.plugins.convert.ConvertToKernelAction">
+        <action id="tornado.convertToKernel" class="uk.ac.manchester.beehive.tornado.plugins.convert.ConvertToKernelAction"
+                icon="icons.TornadoIcons.AiTransform">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </action>
     </actions>

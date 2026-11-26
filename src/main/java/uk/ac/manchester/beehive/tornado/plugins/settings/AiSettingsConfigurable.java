@@ -17,10 +17,13 @@
 
 package uk.ac.manchester.beehive.tornado.plugins.settings;
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.options.ConfigurationException;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectManager;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
@@ -73,8 +76,15 @@ public class AiSettingsConfigurable implements Configurable {
         if (error != null) {
             throw new ConfigurationException(error);
         }
+        boolean wasEnabled = AiSettingState.getInstance().enabled;
         AiSettingState.getInstance().loadState(component.toState());
         generation++;
+        if (wasEnabled != AiSettingState.getInstance().enabled) {
+            // Show or hide the transformation's gutter icons in the open editors
+            for (Project project : ProjectManager.getInstance().getOpenProjects()) {
+                DaemonCodeAnalyzer.getInstance(project).restart();
+            }
+        }
         if (!storedLocalKey.equals(component.localKey())) {
             AiCredentials.store(AiSettingState.Provider.LOCAL, component.localKey());
             storedLocalKey = component.localKey();

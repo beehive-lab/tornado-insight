@@ -23,4 +23,6 @@ import javax.swing.*;
 
 public interface TornadoIcons {
     Icon TornadoIcon = IconLoader.getIcon("/icons/tornadovm.svg", TornadoIcons.class);
+    /** AI-assisted transformation into a TornadoVM kernel; aiTransform_dark.svg is used in dark themes. */
+    Icon AiTransform = IconLoader.getIcon("/icons/aiTransform.svg", TornadoIcons.class);
 }
