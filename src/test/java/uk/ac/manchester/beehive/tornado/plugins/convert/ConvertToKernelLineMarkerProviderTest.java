@@ -77,7 +77,7 @@ public class ConvertToKernelLineMarkerProviderTest extends TornadoTestCase {
         addTornadoApi();
         myFixture.configureByText("Demo.java", SOURCE);
         // Not the method without a loop, the kernel or the constructor
-        assertEquals(List.of("Transform add into a TornadoVM kernel (AI)..."), tooltips());
+        assertEquals(List.of("Tornadify add: Transform into TornadoVM Kernel (AI)"), tooltips());
     }
 
     public void testNoIconWhileTheTransformationIsOff() {
@@ -104,6 +104,14 @@ public class ConvertToKernelLineMarkerProviderTest extends TornadoTestCase {
                 ActionManager.getInstance().getAction("tornado.convertToKernel").getTemplatePresentation().getIcon());
     }
 
+    public void testEntryPointsAreCalledTornadify() {
+        var presentation = ActionManager.getInstance().getAction("tornado.convertToKernel").getTemplatePresentation();
+        assertEquals("Tornadify...", presentation.getText());
+        assertEquals("Transform into TornadoVM Kernel (AI)", presentation.getDescription());
+        assertEquals("Tornadify: Transform into TornadoVM Kernel (AI)", new ConvertToKernelIntention().getText());
+        assertEquals("Tornadify: Transform into TornadoVM Kernel (AI)", new ConvertToKernelLineMarkerProvider().getName());
+    }
+
     public void testIconHasALightAndADarkVariantOf16By16() throws IOException {
         for (String path : List.of("/icons/aiTransform.svg", "/icons/aiTransform_dark.svg")) {
             try (InputStream in = TornadoIcons.class.getResourceAsStream(path)) {
@@ -117,7 +125,7 @@ public class ConvertToKernelLineMarkerProviderTest extends TornadoTestCase {
     private List<String> tooltips() {
         return myFixture.findAllGutters().stream()
                 .map(GutterMark::getTooltipText)
-                .filter(text -> text != null && text.contains("TornadoVM kernel (AI)"))
+                .filter(text -> text != null && text.startsWith("Tornadify"))
                 .toList();
     }
 }

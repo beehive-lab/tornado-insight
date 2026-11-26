@@ -30,7 +30,7 @@ import uk.ac.manchester.beehive.tornado.plugins.settings.AiSettingState;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 /**
- * Alt+Enter on a method's name: <em>Convert to TornadoVM kernel (AI)</em>. Offered only when
+ * Alt+Enter on a method's name: <em>Tornadify: Transform into TornadoVM Kernel (AI)</em>. Offered only when
  * AI-assisted conversion is enabled, so it does not clutter every method otherwise.
  */
 public class ConvertToKernelIntention extends PsiElementBaseIntentionAction {

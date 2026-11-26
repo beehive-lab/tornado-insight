@@ -90,9 +90,9 @@ The templates are offered in modules that use the TornadoVM API, and in any Java
 points at a TornadoVM SDK. The <i>Live Templates</i> tab of the TornadoVM tool window lists them with a preview.
 
 <h2>AI-assisted transformation (experimental)</h2>
-Right-click a plain Java method and choose <b>Transform into TornadoVM Kernel (AI)...</b>, or press <b>Alt+Enter</b> on
+Right-click a plain Java method and choose <b>Tornadify...</b> (Transform into TornadoVM Kernel (AI)), or press <b>Alt+Enter</b> on
 its name. Once it is set up, a brain icon in the gutter marks each method with a loop that can be transformed: click
-it to start. Choose the Loop Parallel API, the Kernel API, the Tile API (TornadoVM 7.0.0+, CUDA devices), or
+it to Tornadify the method. Choose the Loop Parallel API, the Kernel API, the Tile API (TornadoVM 7.0.0+, CUDA devices), or
 <i>Fastest (measured)</i>, which times a kernel for each and recommends one. Each answer is checked like a kernel in the
 editor and the problems go back to the model; optionally, each kernel is run with TornadoVM and compared with the
 method. A diff shows the result before it is applied, as one undoable step. It is off until you set up a model, because

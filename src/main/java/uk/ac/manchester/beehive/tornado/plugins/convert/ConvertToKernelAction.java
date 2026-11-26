@@ -33,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 /**
- * <em>Convert to TornadoVM Kernel (AI)…</em> in the editor's context menu, for the method at
+ * <em>Tornadify…</em> (Transform into TornadoVM Kernel (AI)) in the editor's context menu, for the method at
  * the caret.
  */
 public class ConvertToKernelAction extends AnAction {
