@@ -35,7 +35,9 @@ import java.util.List;
 
 public class TornadifyActionTest extends TornadoTestCase {
 
-    private static final String DESCRIPTION = "Transform into TornadoVM Kernel (AI)";
+    private static final String HOW_TO = "Transform a method into a TornadoVM kernel with AI. "
+            + "Click inside the method you want to tornadify, then click this button. "
+            + "You can also right-click the method and choose Tornadify..., or click the brain icon next to its name.";
 
     private boolean wasEnabled;
 
@@ -66,11 +68,11 @@ public class TornadifyActionTest extends TornadoTestCase {
 
         Presentation template = actions.getAction("tornado.tornadify").getTemplatePresentation();
         assertEquals("Tornadify", template.getText());
-        assertEquals(DESCRIPTION, template.getDescription());
+        assertEquals(HOW_TO, template.getDescription());
         assertSame(TornadoIcons.AiTransform, template.getIcon());
     }
 
-    public void testEnabledForTheConvertibleMethodAtTheCaretOfTheSelectedEditor() {
+    public void testEnabledForTheConvertibleMethodAtTheCaretOfTheSelectedEditorAndNamesIt() {
         addTornadoApi();
         myFixture.configureByText("Demo.java", """
                 class Demo {
@@ -82,7 +84,9 @@ public class TornadifyActionTest extends TornadoTestCase {
                 }""");
         Presentation presentation = updateFromToolWindow();
         assertTrue(presentation.isEnabled());
-        assertEquals(DESCRIPTION, presentation.getDescription());
+        assertEquals("Tornadify add", presentation.getText());
+        assertEquals("Transform add into a TornadoVM kernel with AI. To tornadify another method, click inside it first.",
+                presentation.getDescription());
     }
 
     public void testDisabledWhileTheTransformationIsOff() {
@@ -96,13 +100,13 @@ public class TornadifyActionTest extends TornadoTestCase {
         addTornadoApi();
         myFixture.configureByText("Demo.java", "class Demo { void run() { int <caret>x = 0; } }");
         FileEditorManagerEx.getInstanceEx(getProject()).closeAllFiles();
-        assertDisabled("Open a Java file and put the caret in a method.");
+        assertDisabled(HOW_TO);
     }
 
     public void testDisabledOutsideAMethod() {
         addTornadoApi();
         myFixture.configureByText("Demo.java", "class Demo { int <caret>x; void run() { } }");
-        assertDisabled("Put the caret in a method with a body that is not a TornadoVM kernel yet.");
+        assertDisabled(HOW_TO);
     }
 
     public void testDisabledInAKernel() {
@@ -116,7 +120,7 @@ public class TornadifyActionTest extends TornadoTestCase {
                         }
                     }
                 }""");
-        assertDisabled("not a TornadoVM kernel yet");
+        assertDisabled(HOW_TO);
     }
 
     public void testDisabledWithoutTheTornadoApiSayingWhatToAdd() {
@@ -127,7 +131,8 @@ public class TornadifyActionTest extends TornadoTestCase {
     private void assertDisabled(String reason) {
         Presentation presentation = updateFromToolWindow();
         assertFalse(presentation.isEnabled());
-        assertTrue(presentation.getDescription(), presentation.getDescription().startsWith(DESCRIPTION + "."));
+        assertEquals("Tornadify", presentation.getText());
+        assertTrue(presentation.getDescription(), presentation.getDescription().startsWith("Transform a method into a TornadoVM kernel with AI. "));
         assertTrue(presentation.getDescription(), presentation.getDescription().contains(reason));
     }
 
