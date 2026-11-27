@@ -28,6 +28,7 @@ import com.intellij.psi.PsiCatchSection;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiClassInitializer;
 import com.intellij.psi.PsiClassType;
+import com.intellij.psi.PsiConditionalExpression;
 import com.intellij.psi.PsiCodeBlock;
 import com.intellij.psi.PsiDeclarationStatement;
 import com.intellij.psi.PsiElement;
@@ -36,9 +37,9 @@ import com.intellij.psi.PsiExpression;
 import com.intellij.psi.PsiExpressionList;
 import com.intellij.psi.PsiExpressionStatement;
 import com.intellij.psi.PsiField;
+import com.intellij.psi.PsiIfStatement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiLambdaExpression;
-import com.intellij.psi.PsiLiteralExpression;
 import com.intellij.psi.PsiLocalVariable;
 import com.intellij.psi.PsiLoopStatement;
 import com.intellij.psi.PsiMethod;
@@ -46,12 +47,16 @@ import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.PsiModifier;
 import com.intellij.psi.PsiNewExpression;
 import com.intellij.psi.PsiParameter;
+import com.intellij.psi.PsiPolyadicExpression;
 import com.intellij.psi.PsiPrimitiveType;
 import com.intellij.psi.PsiReference;
 import com.intellij.psi.PsiReferenceExpression;
 import com.intellij.psi.PsiStatement;
+import com.intellij.psi.PsiSwitchBlock;
+import com.intellij.psi.PsiSwitchLabelStatementBase;
 import com.intellij.psi.PsiTryStatement;
 import com.intellij.psi.PsiType;
+import com.intellij.psi.PsiTypeCastExpression;
 import com.intellij.psi.PsiUnaryExpression;
 import com.intellij.psi.PsiVariable;
 import com.intellij.psi.codeStyle.CodeStyleManager;
@@ -66,6 +71,7 @@ import uk.ac.manchester.beehive.tornado.plugins.kernel.TornadoKernels;
 import uk.ac.manchester.beehive.tornado.plugins.util.MessageBundle;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -234,12 +240,23 @@ final class CallSiteRewriter {
         if (block == null || !PsiTreeUtil.isAncestor(group.get(0).owner(), block, true)) {
             return null;
         }
+        // The TaskGraph is built before the first call, so that call must run whenever the code reaches it
+        if (group.get(0).statement().getParent() != block) {
+            return null;
+        }
         PsiStatement first = childOf(block, group.get(0).statement());
         PsiStatement last = childOf(block, group.get(group.size() - 1).statement());
         if (first == null || last == null) {
             return null;
         }
         List<PsiElement> range = range(first, last);
+        for (PsiElement element : range) {
+            // A case label cannot move into the try block, and a class declared there would be out of scope after it
+            if (element instanceof PsiSwitchLabelStatementBase || element instanceof PsiDeclarationStatement declaration
+                    && Arrays.stream(declaration.getDeclaredElements()).anyMatch(PsiClass.class::isInstance)) {
+                return null;
+            }
+        }
         Set<PsiMethodCallExpression> own = new HashSet<>();
         for (Call call : group) {
             own.add(call.call());
@@ -260,8 +277,16 @@ final class CallSiteRewriter {
         }
         PsiElement owner = unit.calls().get(0).owner();
         Unit best = unit;
+        // Built before a loop, the TaskGraph is built even if the loop runs no iteration: only arguments
+        // that cannot throw when evaluated (variables, literals, operators that cannot fail) may move there
+        if (!liftable(unit.calls().get(0).call())) {
+            return unit;
+        }
         for (PsiElement parent = unit.block(); parent != null && parent != owner; parent = parent.getParent()) {
-            if (parent instanceof PsiLambdaExpression || parent instanceof PsiClass) {
+            // Not out of a branch: the TaskGraph would be built where the call may never run
+            if (parent instanceof PsiLambdaExpression || parent instanceof PsiClass || parent instanceof PsiIfStatement
+                    || parent instanceof PsiSwitchBlock || parent instanceof PsiTryStatement || parent instanceof PsiCatchSection
+                    || parent instanceof PsiConditionalExpression) {
                 break;
             }
             if (parent instanceof PsiLoopStatement loop) {
@@ -276,10 +301,10 @@ final class CallSiteRewriter {
         return best;
     }
 
-    // Whether nothing in element assigns the variables, or, for a field of a scalar type, may assign it in a call
+    // Whether nothing in element assigns the variables, or, for a field that is not final, may assign it in a call
     private static boolean invariant(PsiElement element, Set<PsiVariable> variables, Set<PsiMethodCallExpression> own) {
         boolean scalarField = variables.stream().anyMatch(v -> v instanceof PsiField field
-                && !field.hasModifierProperty(PsiModifier.FINAL) && isScalar(field.getType()));
+                && !field.hasModifierProperty(PsiModifier.FINAL));
         for (PsiElement inside : PsiTreeUtil.findChildrenOfAnyType(element, false, PsiAssignmentExpression.class,
                 PsiUnaryExpression.class, PsiCallExpression.class)) {
             if (inside instanceof PsiAssignmentExpression assignment && variables.contains(variable(assignment.getLExpression()))) {
@@ -393,6 +418,8 @@ final class CallSiteRewriter {
             Use use = entry.getValue();
             String name = names.get(entry.getKey());
             boolean changed = unit.replays() && hostWrites(range, entry.getKey(), own);
+            // An array the kernel only writes is not sent to the device, unless the code changes it between
+            // executions: TornadoVM 8.2.0 keeps the host values of the elements the kernel does not write
             if (use.read() || changed || !use.write()) {
                 (changed ? everyExecution : firstExecution).add(name);
             }
@@ -560,9 +587,26 @@ final class CallSiteRewriter {
         return use.read() || use.write() ? use : new Use(true, false);
     }
 
-    // Whether the code between the executions (not the calls themselves) may change the array's contents
+    // Whether the code between the executions (not the calls themselves) may change the array's contents:
+    // directly, through another variable or a lambda that holds it, or, for a field, in any method it calls
     private static boolean hostWrites(List<PsiElement> range, PsiVariable array, Set<PsiMethodCallExpression> own) {
+        boolean field = array instanceof PsiField;
         for (PsiElement element : range) {
+            for (PsiElement inside : PsiTreeUtil.findChildrenOfAnyType(element, false, PsiVariable.class,
+                    PsiAssignmentExpression.class, PsiLambdaExpression.class, PsiClass.class, PsiCallExpression.class)) {
+                if (inside instanceof PsiVariable alias && alias != array && variable(alias.getInitializer()) == array) {
+                    return true;
+                }
+                if (inside instanceof PsiAssignmentExpression assignment && variable(assignment.getRExpression()) == array) {
+                    return true;
+                }
+                if ((inside instanceof PsiLambdaExpression || inside instanceof PsiClass) && refersTo(inside, array)) {
+                    return true;
+                }
+                if (field && inside instanceof PsiCallExpression call && !own.contains(call)) {
+                    return true;
+                }
+            }
             for (PsiElement inside : PsiTreeUtil.findChildrenOfAnyType(element, false, PsiAssignmentExpression.class,
                     PsiUnaryExpression.class, PsiMethodCallExpression.class)) {
                 if (inside instanceof PsiAssignmentExpression assignment && root(assignment.getLExpression()) == array
@@ -589,6 +633,34 @@ final class CallSiteRewriter {
             }
         }
         return false;
+    }
+
+    private static boolean refersTo(PsiElement element, PsiVariable variable) {
+        for (PsiReferenceExpression reference : PsiTreeUtil.findChildrenOfType(element, PsiReferenceExpression.class)) {
+            if (reference.resolve() == variable) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Arguments that can be evaluated before a loop that may run no iteration: unqualified variables,
+    // literals, and operators other than / and %
+    private static boolean liftable(PsiMethodCallExpression call) {
+        for (PsiExpression argument : call.getArgumentList().getExpressions()) {
+            for (PsiElement inside : PsiTreeUtil.findChildrenOfAnyType(argument, false, PsiReferenceExpression.class,
+                    PsiArrayAccessExpression.class, PsiPolyadicExpression.class, PsiTypeCastExpression.class)) {
+                if (inside instanceof PsiReferenceExpression reference && reference.getQualifierExpression() != null
+                        || inside instanceof PsiArrayAccessExpression || inside instanceof PsiTypeCastExpression) {
+                    return false;
+                }
+                if (inside instanceof PsiPolyadicExpression polyadic && (polyadic.getOperationTokenType() == JavaTokenType.DIV
+                        || polyadic.getOperationTokenType() == JavaTokenType.PERC)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     // The variable an array element belongs to: a in a[i][j]
@@ -652,8 +724,9 @@ final class CallSiteRewriter {
         for (PsiNewExpression construction : PsiTreeUtil.findChildrenOfType(file, PsiNewExpression.class)) {
             if (construction.getClassReference() != null && "TaskGraph".equals(construction.getClassReference().getReferenceName())
                     && construction.getArgumentList() != null && construction.getArgumentList().getExpressions().length > 0
-                    && construction.getArgumentList().getExpressions()[0] instanceof PsiLiteralExpression literal
-                    && literal.getValue() instanceof String name) {
+                    && JavaPsiFacade.getInstance(file.getProject()).getConstantEvaluationHelper()
+                    .computeConstantExpression(construction.getArgumentList().getExpressions()[0]) instanceof String name) {
+                // A literal, or a constant such as a static final field
                 used.add(name);
             }
         }

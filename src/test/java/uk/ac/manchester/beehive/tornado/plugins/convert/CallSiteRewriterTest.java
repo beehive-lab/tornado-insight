@@ -301,6 +301,133 @@ public class CallSiteRewriterTest extends TornadoTestCase {
                 rewritten.calls().skipped());
     }
 
+    public void testCallsInDifferentCasesDoNotShareAPlan() {
+        KernelReplacement.Rewritten rewritten = rewrite("""
+                static void run(float[] a, float[] b, float[] c, int size, int mode) {
+                    switch (mode) {
+                        case 0:
+                            matrixMultiply(a, b, c, size);
+                            break;
+                        case 1:
+                            matrixMultiply(a, b, c, size);
+                            break;
+                    }
+                }""", KERNEL);
+        // One TaskGraph per case: a shared try block would take the case label in between
+        assertEquals(2, rewritten.calls().graphs());
+        assertContains(run(rewritten), """
+                    case 1:
+                        TaskGraph taskGraph1 = new TaskGraph("s1")""");
+    }
+
+    public void testNoTaskGraphIsBuiltWhereTheCallMayNotRun() {
+        String run = run(rewrite("""
+                static void run(float[] a, float[] b, float[] c, int size, int k, boolean ready) {
+                    for (int i = 0; i < k; i++) {
+                        if (ready) {
+                            matrixMultiply(a, b, c, size);
+                        }
+                    }
+                    if (ready) {
+                        matrixMultiply(b, a, c, size);
+                    }
+                    matrixMultiply(b, a, c, size);
+                }""", KERNEL));
+        // Not out of the if into the loop, and not shared from a call in an if with the call after it
+        assertContains(run, """
+                    for (int i = 0; i < k; i++) {
+                        if (ready) {
+                            TaskGraph taskGraph = new TaskGraph("s0")""");
+        assertContains(run, """
+                    if (ready) {
+                        TaskGraph taskGraph = new TaskGraph("s1")""");
+        assertTrue(run, run.contains("new TaskGraph(\"s2\")"));
+    }
+
+    public void testArgumentsThatCanThrowAreNotEvaluatedBeforeALoop() {
+        String run = run(rewrite("""
+                static void run(float[] a, float[] b, float[] c, int k) {
+                    for (int i = 0; i < k; i++) {
+                        matrixMultiply(a, b, c, a.length / k);
+                    }
+                }""", KERNEL));
+        assertContains(run, """
+                    for (int i = 0; i < k; i++) {
+                        TaskGraph taskGraph = new TaskGraph("s0")""");
+    }
+
+    public void testChangesThroughAnAliasALambdaOrACalledMethodAreTransferredEachTime() {
+        String run = run(rewrite("""
+                static float[] data = new float[4];
+
+                static void refill() {
+                }
+
+                static void run(float[] a, float[] b, float[] c, int size) {
+                    matrixMultiply(a, b, c, size);
+                    float[] alias = a;
+                    alias[0] = 1.0f;
+                    Runnable r = () -> b[0] = 2.0f;
+                    matrixMultiply(a, b, c, size);
+                    matrixMultiply(data, b, c, size);
+                    refill();
+                    matrixMultiply(data, b, c, size);
+                }""", KERNEL));
+        assertContains(run, """
+                            .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b)
+                            .task("t0", Example::matrixMultiply, a, b, c, size)""");
+        // refill() may assign data: no replay across it
+        assertTrue(run, run.contains("new TaskGraph(\"s2\")"));
+    }
+
+    public void testALocalClassDeclaredBetweenTheCallsStaysInScope() {
+        KernelReplacement.Rewritten rewritten = rewrite("""
+                static void run(float[] a, float[] b, float[] c, int size) {
+                    matrixMultiply(a, b, c, size);
+                    class Stat {
+                    }
+                    matrixMultiply(a, b, c, size);
+                    new Stat();
+                }""", KERNEL);
+        assertEquals(2, rewritten.calls().graphs());
+    }
+
+    public void testGraphNamesGivenByConstantsAreNotReused() {
+        String run = run(rewrite("""
+                static final String NAME = "s0";
+
+                static void run(float[] a, float[] b, float[] c, int size) {
+                    new TaskGraph(NAME);
+                    matrixMultiply(a, b, c, size);
+                }""".replace("new TaskGraph", "new uk.ac.manchester.tornado.api.TaskGraph"), KERNEL));
+        assertTrue(run, run.contains("new TaskGraph(\"s1\")"));
+    }
+
+    public void testTheUsersImportsAreKeptAsTheyAre() {
+        myFixture.configureByText("Example.java", """
+                import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
+
+
+                import uk.ac.manchester.tornado.api.types.arrays.IntArray;
+
+                public class Example {
+                %s
+
+                    static void run(float[] a, float[] b, float[] c, int size) {
+                        matrixMultiply(a, b, c, size);
+                    }
+                }
+                """.formatted(METHOD.replace("matrixMultiply(float", "matrix<caret>Multiply(float")));
+        KernelReplacement.Rewritten rewritten = KernelReplacement.previewWithCalls(methodAtCaret(), KERNEL);
+        assertNotNull(rewritten);
+        assertTrue(rewritten.text(), rewritten.text().contains("""
+                import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
+
+
+                import uk.ac.manchester.tornado.api.types.arrays.IntArray;
+                """));
+    }
+
     public void testGridSizesAreRoundedUpOverTheArguments() {
         assertEquals("(n + 15) / 16 * 16", CallSiteRewriter.roundUp("n", "16"));
         assertEquals("(x.length + 255) / 256 * 256", CallSiteRewriter.roundUp("x.length", "256"));
