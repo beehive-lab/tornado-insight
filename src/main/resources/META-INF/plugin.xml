@@ -35,15 +35,14 @@ applications in IntelliJ IDEA. It checks TornadoVM kernels for unsupported Java 
 kernels on your TornadoVM installation to show what TornadoVM generates for them, and writes TornadoVM boilerplate for
 you through live templates. Experimentally, it can also ask an AI model to transform a Java method into a TornadoVM kernel.
 
-<h2>What's New in 2.2.0</h2>
+<h2>What's New in 2.3.0</h2>
 <ul>
-    <li><b>Faster Kernel API kernels:</b> the AI-assisted transformation gives a Kernel API kernel without a work-group
-        size a default one (16, 16 x 16 or 8 x 8 x 4), so it is timed and applied as it will run, and
-        <i>Fastest (measured)</i> shows the grid and work-group size of each kernel.</li>
-    <li><b><code>tep</code></b> declares <code>TornadoExecutionPlanException</code> in the method, so the code it inserts
-        compiles.</li>
-    <li><b>Missing TornadoVM API:</b> <i>Transform into TornadoVM Kernel (AI)...</i> is shown disabled and says which
-        <code>tornado-api</code> dependency to add, instead of disappearing.</li>
+    <li><b>Tornadify:</b> the AI-assisted transformation is now called <i>Tornadify</i>, and it starts from a brain icon
+        in the gutter of each method with a loop, or from a <b>Tornadify</b> button in the <i>TornadoVM</i> tool window,
+        as well as from the editor menu and Alt+Enter.</li>
+    <li><b>Calls launch the kernel:</b> when the kernel replaces the method, the calls to it in the same file are
+        rewritten to run it with TornadoVM: the first builds a <code>TaskGraph</code> and an execution plan, the later
+        ones replay it with <code>execute()</code>. The preview shows them in the diff.</li>
 </ul>
 
 <h2>Static checks</h2>
@@ -144,6 +143,40 @@ The plugin is described in <i>Dynamic and Static Code Analysis for Java Programs
     <!-- Change notes displayed in the plugin manager when users view updates.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#change-notes -->
     <change-notes><![CDATA[
+<h3>Version 2.3.0</h3>
+<ul>
+    <li><b>Tornadify:</b> the AI-assisted transformation is renamed <i>Tornadify</i> (<i>Transform into TornadoVM Kernel
+        (AI)</i>) in the editor menu and Alt+Enter, and it can be started in two new ways:
+        <ul>
+            <li>A brain icon in the gutter of each method with a loop of its own that can be transformed (not
+                <code>main</code>); click it to Tornadify the method. It is shown while the transformation is on and
+                the module has the TornadoVM API, and can be hidden under <i>Settings | Editor | General | Gutter
+                Icons</i>.</li>
+            <li>A <b>Tornadify</b> button in the toolbar of the <i>TornadoVM</i> tool window, after Run and Debug, for
+                the method at the caret. Its tooltip names that method or, while it is disabled, says how to use it,
+                links to the settings when the transformation is off, or gives the <code>tornado-api</code> dependency
+                for the module's JDK.</li>
+        </ul></li>
+    <li><b>Calls launch the kernel:</b> when the kernel replaces the method, the calls to it in the same file are
+        rewritten to launch it with TornadoVM, and shown in the preview's diff; <i>Also rewrite the calls</i> leaves
+        them as they are.
+        <ul>
+            <li>The first call builds a <code>TaskGraph</code> and a <code>TornadoExecutionPlan</code> in a
+                try-with-resources block and executes it; the later calls with the same arguments replay it with
+                <code>execute()</code>. A call in a loop whose arguments do not change gets its plan built before the
+                loop; a changed argument starts a new TaskGraph.</li>
+            <li>Arrays the kernel reads are transferred once (<code>FIRST_EXECUTION</code>), or at every execution if
+                the code changes them between executions, also through another variable, a lambda or a called method;
+                arrays it writes come back after every execution.</li>
+            <li>Kernel API and Tile API kernels are launched on their grid with a <code>GridScheduler</code>, rounded up
+                to the work-group size. <code>TornadoExecutionPlanException</code> is caught only where the method does
+                not handle it.</li>
+            <li>Only the calls change. A call whose value is used, one in a kernel or outside a method, or one with an
+                array argument that is not a variable is left as it is, and the preview says why; calls in other files
+                are not changed.</li>
+        </ul></li>
+</ul>
+
 <h3>Version 2.2.0</h3>
 <ul>
     <li><b>AI-assisted transformation, Kernel API:</b>
