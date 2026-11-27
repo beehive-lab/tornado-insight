@@ -68,16 +68,29 @@ public class TornadifyAction extends AnAction implements TooltipDescriptionProvi
     @Override
     public void update(@NotNull AnActionEvent e) {
         Presentation presentation = e.getPresentation();
-        PsiJavaFile file = javaFile(e);
+        presentation.setText(MessageBundle.message("action.tornado.tornadify.text"), false);
+        if (!AiSettingState.getInstance().enabled) {
+            presentation.setEnabled(false);
+            presentation.setDescription(MessageBundle.message("convert.toolbar.off"));
+            return;
+        }
+        Editor editor = editor(e);
+        if (editor != null && e.getProject() != null
+                && PsiDocumentManager.getInstance(e.getProject()).isUncommited(editor.getDocument())) {
+            // Just typed: the PSI does not match the caret yet, so it is not read and no method
+            // is named until the document is committed; actionPerformed commits it first
+            presentation.setEnabled(true);
+            presentation.setDescription(MessageBundle.message("action.tornado.tornadify.description"));
+            return;
+        }
         PsiMethod method = methodAtCaret(e);
-        String problem = problem(file, method);
+        String problem = problem(javaFile(e), method);
         presentation.setEnabled(problem == null);
         if (problem == null) {
             // Names the method, so it is clear the button acts on it alone
             presentation.setText(MessageBundle.message("convert.toolbar.method.text", method.getName()), false);
             presentation.setDescription(MessageBundle.message("convert.toolbar.method.description", method.getName()));
         } else {
-            presentation.setText(MessageBundle.message("action.tornado.tornadify.text"), false);
             presentation.setDescription(problem);
         }
     }
@@ -97,6 +110,11 @@ public class TornadifyAction extends AnAction implements TooltipDescriptionProvi
 
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
+        Editor editor = editor(e);
+        if (editor != null && e.getProject() != null) {
+            // The caret offset is in the document, so the PSI must match it
+            PsiDocumentManager.getInstance(e.getProject()).commitDocument(editor.getDocument());
+        }
         PsiMethod method = methodAtCaret(e);
         if (e.getProject() != null && ConversionLauncher.isConvertible(method)) {
             ConversionLauncher.start(e.getProject(), method);
@@ -105,17 +123,15 @@ public class TornadifyAction extends AnAction implements TooltipDescriptionProvi
 
     /**
      * What the tooltip says while the button cannot transform {@code method}, the method at the
-     * caret of {@code file}, or {@code null} if it can. In order: the transformation is off; the
-     * file's module lacks the TornadoVM API, wherever the caret is; else how to use the button.
+     * caret of {@code file}, or {@code null} if it can, with the transformation on: the file's
+     * module lacks the TornadoVM API, wherever the caret is; else how to use the button.
      */
     private static @Nullable String problem(@Nullable PsiJavaFile file, @Nullable PsiMethod method) {
-        if (!AiSettingState.getInstance().enabled) {
-            return MessageBundle.message("convert.toolbar.off");
-        }
         if (file != null && JavaPsiFacade.getInstance(file.getProject())
                 .findClass(TornadoKernels.PARALLEL, file.getResolveScope()) == null) {
-            String release = ConversionLauncher.TORNADO_API_RELEASE;
-            return MessageBundle.message("convert.toolbar.noApi", release + "-jdk21", release + "-jdk22plus");
+            // The same advice as the editor menu, for the JDK of the method's module
+            return MessageBundle.message("convert.toolbar.noApi",
+                    ConversionLauncher.missingApiMessage(method != null ? method : file));
         }
         if (!ConversionLauncher.isConvertible(method)) {
             return MessageBundle.message("action.tornado.tornadify.description");

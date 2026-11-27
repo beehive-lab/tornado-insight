@@ -21,10 +21,13 @@ import com.intellij.codeInsight.daemon.GutterIconNavigationHandler;
 import com.intellij.codeInsight.daemon.LineMarkerInfo;
 import com.intellij.codeInsight.daemon.LineMarkerProviderDescriptor;
 import com.intellij.openapi.editor.markup.GutterIconRenderer;
+import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiIdentifier;
+import com.intellij.psi.PsiLambdaExpression;
 import com.intellij.psi.PsiLoopStatement;
 import com.intellij.psi.PsiMethod;
+import com.intellij.psi.util.PsiMethodUtil;
 import com.intellij.psi.util.PsiTreeUtil;
 import icons.TornadoIcons;
 import org.jetbrains.annotations.NotNull;
@@ -39,8 +42,9 @@ import java.util.List;
 /**
  * A brain icon in the gutter of each method that AI-assisted transformation can turn into a
  * TornadoVM kernel; a click starts it. Shown only while the transformation is enabled, in
- * modules that have the TornadoVM API, and for methods with a loop, since a method without one
- * has no work to spread over GPU threads; the editor menu and Alt+Enter still offer the others.
+ * modules that have the TornadoVM API, and for methods with a loop of their own, since a method
+ * without one has no work to spread over GPU threads; not for {@code main}, the program's entry
+ * point rather than a kernel. The editor menu and Alt+Enter still offer the others.
  * Users can hide it under <em>Settings | Editor | General | Gutter Icons</em>.
  * <p>
  * The checks resolve types and look up the TornadoVM API in the index, so they run in the
@@ -94,14 +98,23 @@ public class ConvertToKernelLineMarkerProvider extends LineMarkerProviderDescrip
      */
     static @Nullable PsiMethod candidate(@NotNull PsiElement element) {
         if (!(element instanceof PsiIdentifier) || !(element.getParent() instanceof PsiMethod method)
-                || method.getNameIdentifier() != element || !hasLoop(method)) {
+                || method.getNameIdentifier() != element || !hasLoop(method) || PsiMethodUtil.isMainMethod(method)) {
             return null;
         }
         return ConversionLauncher.isConvertible(method) ? method : null;
     }
 
+    // A loop of the method itself: not one in a lambda, or in an anonymous or local class
     private static boolean hasLoop(PsiMethod method) {
-        return method.getBody() != null && PsiTreeUtil.findChildOfType(method.getBody(), PsiLoopStatement.class) != null;
+        if (method.getBody() == null) {
+            return false;
+        }
+        for (PsiLoopStatement loop : PsiTreeUtil.findChildrenOfType(method.getBody(), PsiLoopStatement.class)) {
+            if (PsiTreeUtil.getParentOfType(loop, PsiMethod.class, PsiLambdaExpression.class, PsiClass.class) == method) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static LineMarkerInfo<PsiIdentifier> marker(PsiIdentifier name, PsiMethod method) {

@@ -80,6 +80,43 @@ public class ConvertToKernelLineMarkerProviderTest extends TornadoTestCase {
         assertEquals(List.of("Tornadify add: Transform into TornadoVM Kernel (AI)"), tooltips());
     }
 
+    public void testNoIconForLoopsInLambdasOrNestedClassesOrForMain() {
+        AiSettingState.getInstance().enabled = true;
+        addTornadoApi();
+        addSystemStubs();
+        myFixture.configureByText("Demo.java", """
+                interface Body { void run(); }
+                class Demo {
+                    public static void main(String[] args) {
+                        for (int i = 0; i < args.length; i++) { }
+                    }
+                    void inLambda(int[] a) {
+                        Body body = () -> {
+                            for (int i = 0; i < a.length; i++) { a[i] = 0; }
+                        };
+                    }
+                    void inAnonymousClass(int[] a) {
+                        Body body = new Body() {
+                            public void run() {
+                                for (int i = 0; i < a.length; i++) { a[i] = 0; }
+                            }
+                        };
+                    }
+                    void inLocalClass(int[] a) {
+                        class Local {
+                            void run() {
+                                for (int i = 0; i < a.length; i++) { a[i] = 0; }
+                            }
+                        }
+                    }
+                    void own(int[] a) {
+                        Body body = () -> { };
+                        for (int i = 0; i < a.length; i++) { a[i] = 0; }
+                    }
+                }""");
+        assertEquals(List.of("Tornadify own: Transform into TornadoVM Kernel (AI)"), tooltips());
+    }
+
     public void testNoIconWhileTheTransformationIsOff() {
         AiSettingState.getInstance().enabled = false;
         addTornadoApi();

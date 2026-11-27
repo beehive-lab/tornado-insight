@@ -26,7 +26,12 @@ import com.intellij.openapi.actionSystem.ex.TooltipDescriptionProvider;
 import com.intellij.openapi.actionSystem.ex.TooltipLinkProvider;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
 import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.command.WriteCommandAction;
+import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx;
+import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.PsiMethod;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.testFramework.TestActionEvent;
 import icons.TornadoIcons;
 import uk.ac.manchester.beehive.tornado.plugins.TornadoTestCase;
@@ -40,9 +45,6 @@ public class TornadifyActionTest extends TornadoTestCase {
 
     private static final String HOW_TO = "Click inside a method, then click here to turn it into a TornadoVM kernel with AI. "
             + "Tip: the brain icon next to a method's name works too.";
-
-    private static final String NO_API = "This module needs tornado-api. Add io.github.beehive-lab:tornado-api:8.1.0-jdk21 "
-            + "(JDK 21) or :8.1.0-jdk22plus (JDK 22+) to your pom.xml, then reload Maven.";
 
     private static final String OFF = "AI-assisted transformation is off. Turn it on to tornadify your methods.";
 
@@ -142,13 +144,47 @@ public class TornadifyActionTest extends TornadoTestCase {
 
     public void testDisabledWithoutTheTornadoApiSayingWhatToAdd() {
         myFixture.configureByText("Demo.java", "class Demo { void run() { int <caret>x = 0; } }");
-        assertDisabled(NO_API);
+        // The same advice as the editor menu, for the module's JDK
+        PsiMethod method = PsiTreeUtil.findChildOfType(myFixture.getFile(), PsiMethod.class);
+        assertDisabled("This module needs tornado-api. " + ConversionLauncher.missingApiMessage(method));
+        assertFalse(updateFromToolWindow().getDescription().contains("pom.xml"));
     }
 
     public void testSaysWhatToAddWithoutTheTornadoApiWhereverTheCaretIs() {
         // Outside a method the missing dependency still comes first, not the how-to
         myFixture.configureByText("Demo.java", "class Demo { int <caret>x; }");
-        assertDisabled(NO_API);
+        assertDisabled("This module needs tornado-api. " + ConversionLauncher.missingApiMessage(myFixture.getFile()));
+    }
+
+    public void testNamesNoMethodWhileTheDocumentIsNotCommitted() {
+        addTornadoApi();
+        myFixture.configureByText("Demo.java", """
+                class Demo {
+                    void add(int[] a) {
+                        for (int i = 0; i < a.length; i++) {
+                            a[i] = 0;<caret>
+                        }
+                    }
+                }""");
+        Document document = myFixture.getEditor().getDocument();
+        WriteCommandAction.runWriteCommandAction(getProject(), () -> document.insertString(document.getTextLength(), "\nclass Other { }"));
+        assertTrue(PsiDocumentManager.getInstance(getProject()).isUncommited(document));
+
+        Presentation presentation = updateFromToolWindow();
+        assertEquals("Tornadify", presentation.getText());
+        assertEquals(HOW_TO, presentation.getDescription());
+    }
+
+    public void testCommitsTheDocumentBeforeItLooksForTheMethod() {
+        addTornadoApi();
+        myFixture.configureByText("Demo.java", "class Demo { void run() { int <caret>x = 0; } }");
+        Document document = myFixture.getEditor().getDocument();
+        WriteCommandAction.runWriteCommandAction(getProject(), () -> document.insertString(0, "// edited\n"));
+        // Off, so starting it only shows a notification
+        AiSettingState.getInstance().enabled = false;
+        AnAction action = ActionManager.getInstance().getAction("tornado.tornadify");
+        action.actionPerformed(TestActionEvent.createTestEvent(action, SimpleDataContext.getProjectContext(getProject())));
+        assertTrue(PsiDocumentManager.getInstance(getProject()).isCommitted(document));
     }
 
     public void testSaysItIsOffBeforeTheMissingTornadoApi() {
