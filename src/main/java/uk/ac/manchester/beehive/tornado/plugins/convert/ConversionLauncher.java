@@ -35,6 +35,7 @@ import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.PsiType;
@@ -110,15 +111,16 @@ public final class ConversionLauncher {
     static final String TORNADO_API_RELEASE = "8.1.0";
 
     /**
-     * What to add when the TornadoVM API is missing from {@code method}'s module: the
+     * What to add when the TornadoVM API is missing from {@code element}'s module (a method, or
+     * a file when there is no method at hand): the
      * {@code tornado-api} Maven dependency, in the variant for the module's JDK (one for JDK 21,
      * one for JDK 22 and newer), or both variants if the JDK is unknown. Must be called with read
      * access.
      */
-    public static @NotNull String missingApiMessage(@NotNull PsiMethod method) {
-        Module module = ModuleUtilCore.findModuleForPsiElement(method);
+    public static @NotNull String missingApiMessage(@NotNull PsiElement element) {
+        Module module = ModuleUtilCore.findModuleForPsiElement(element);
         Sdk sdk = module != null ? ModuleRootManager.getInstance(module).getSdk()
-                : ProjectRootManager.getInstance(method.getProject()).getProjectSdk();
+                : ProjectRootManager.getInstance(element.getProject()).getProjectSdk();
         JavaSdkVersion version = sdk != null ? JavaSdkVersion.fromVersionString(sdk.getVersionString()) : null;
         if (version == null) {
             return MessageBundle.message("convert.noApi.anyJdk", TORNADO_API_RELEASE + "-jdk21",

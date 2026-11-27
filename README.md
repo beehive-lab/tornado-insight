@@ -87,10 +87,16 @@ The templates are offered in modules that use the TornadoVM API, and in any Java
 
 ### AI-assisted transformation (experimental)
 In a module that uses the TornadoVM API, right-click a plain Java method and choose
-**Transform into TornadoVM Kernel (AI)...**, or press Alt+Enter on its name. It is off until you set up a model in [Configure](#configure).
+**Tornadify...** (Transform into TornadoVM Kernel (AI)), or press Alt+Enter on its name. It is off until you set up a model in [Configure](#configure).
+Once it is on, a brain icon in the gutter marks each method that can be transformed and has a loop of its own (not one
+inside a lambda or a nested class); click it to Tornadify the method. `main` gets no icon, but the menu and Alt+Enter
+still offer it.
+Hide the icon under *Settings | Editor | General | Gutter Icons*. The **Tornadify** button (the same brain icon) in
+the toolbar of the *TornadoVM* tool window transforms the method at the caret of the selected editor. Hover over it:
+its tooltip names that method, or, while it is disabled, says how to use it, or which `tornado-api` dependency to add.
 
 The IDE must see the TornadoVM API on the module's classpath. If it does not, the menu item is
-shown disabled, as **(needs tornado-api)**, and its description says which version to add. Add the
+shown disabled, as **Tornadify (needs tornado-api)**, and its description says which version to add. Add the
 `tornado-api` dependency for your project JDK to your `pom.xml` and reload the Maven project:
 
 ```xml
