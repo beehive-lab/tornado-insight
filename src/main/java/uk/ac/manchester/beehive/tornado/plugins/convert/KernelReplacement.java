@@ -23,6 +23,7 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiImportList;
+import com.intellij.psi.PsiImportStatementBase;
 import com.intellij.psi.PsiJavaCodeReferenceElement;
 import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiMethod;
@@ -166,13 +167,20 @@ final class KernelReplacement {
         return CallSiteRewriter.rewrite(original, kernel);
     }
 
-    // In a non-physical copy, the imports added after the first share its line until formatted; the
-    // file itself is formatted the same, so that Accept gives the preview's text
+    // In a non-physical copy, an import added after another shares its line: a line break goes between
+    // them, and nothing else in the user's imports changes. The file itself gets the same, so that
+    // Accept gives the preview's text
     private static void tidyImports(PsiFile file, CallSites calls) {
-        if (calls.rewritten() > 0 && file instanceof PsiJavaFile javaFile && javaFile.getImportList() != null) {
-            CodeStyleManager.getInstance(file.getProject()).reformat(javaFile.getImportList());
-            separateImports(javaFile);
+        if (calls.rewritten() == 0 || !(file instanceof PsiJavaFile javaFile) || javaFile.getImportList() == null) {
+            return;
         }
+        PsiParserFacade parser = PsiParserFacade.getInstance(file.getProject());
+        for (PsiImportStatementBase statement : javaFile.getImportList().getAllImportStatements()) {
+            if (statement.getPrevSibling() instanceof PsiImportStatementBase) {
+                javaFile.getImportList().addBefore(parser.createWhiteSpaceFromText("\n"), statement);
+            }
+        }
+        separateImports(javaFile);
     }
 
     /**
